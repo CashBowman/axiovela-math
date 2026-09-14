@@ -1,0 +1,40 @@
+import {_electron as electron} from 'playwright';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+const profile=await fs.mkdtemp(path.join(os.tmpdir(),'math-desktop-acceptance-'));
+const env={...process.env,AXIOVELA_MATH_DESKTOP_PROFILE:profile,AXIOVELA_BRIDGE_DISCOVERY_PATHS:path.join(profile,'none'),WORKBENCH_PROVIDER_SETTINGS_PATH:path.join(profile,'providers.json'),WORKBENCH_CODEX_PATH:path.resolve('scripts/fixtures/assistant-rpc.mjs'),AXIOVELA_LAKE_PATH:'/nonexistent/fixture-lake'};
+for(const key of ['ELECTRON_RUN_AS_NODE','AXIOVELA_MATH_DESKTOP_SMOKE','OPENAI_API_KEY','ANTHROPIC_API_KEY','GEMINI_API_KEY','GOOGLE_API_KEY','WORKBENCH_COMPATIBLE_API_KEY'])delete env[key];
+let app,page;const checks=[];
+const executablePath=path.resolve('out/Axiovela Math-linux-x64/axiovela-math');
+async function launch(){app=await electron.launch({executablePath,args:[],env,timeout:30000});page=await app.firstWindow();page.on('dialog',()=>{});await page.getByRole('heading',{name:'Executive summary'}).waitFor();}
+try{
+ await launch();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ assert.equal(await page.evaluate(()=>typeof window.methodflowDesktop.chooseExperimentProject),'function');
+ assert.deepEqual(await app.evaluate(({Menu})=>Menu.getApplicationMenu().items.map(i=>i.label)),['File','Edit','View','Help']);
+ const selected=path.join(profile,'chosen-project');await fs.mkdir(selected);
+ await app.evaluate(({dialog},chosen)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[chosen]});},selected);
+ assert.equal(await page.evaluate(()=>window.methodflowDesktop.chooseExperimentProject()),selected);checks.push('packaged preload and trusted native folder picker');
+ await page.getByRole('button',{name:'Choose research model and provider'}).click();await page.getByRole('button',{name:'Use model',exact:true}).click();await page.getByRole('dialog').waitFor({state:'hidden'});
+ await page.getByLabel('research message').fill('FIXTURE_CODE');await page.getByRole('button',{name:'Send message',exact:true}).click();await page.getByText('Get-Location',{exact:false}).waitFor();
+ await page.bringToFront();await page.getByRole('button',{name:'Copy',exact:true}).click();for(let i=0;i<30;i++){if((await app.evaluate(({clipboard})=>clipboard.readText())).includes('Get-Location'))break;await new Promise(r=>setTimeout(r,100));}assert.ok((await app.evaluate(({clipboard})=>clipboard.readText())).includes('Get-Location'));checks.push('packaged fixture provider and native clipboard');
+ const shared=await page.getByLabel('research conversation',{exact:true}).inputValue();await page.getByRole('button',{name:'Lean Certificates',exact:true}).click();assert.equal(await page.getByLabel('research conversation',{exact:true}).inputValue(),shared);
+ await page.getByLabel('research message').fill('FIXTURE_LEAN_ARTIFACT');await page.getByRole('button',{name:'Send message',exact:true}).click();await page.getByRole('heading',{name:'Formal source saved',exact:true}).waitFor();await page.getByRole('heading',{name:'Addition of zero',exact:true}).waitFor();await page.getByRole('button',{name:'Set up Lean',exact:true}).waitFor();checks.push('shared native Research/Lean conversation saves formal source and renders certificate notes');
+ await page.getByRole('button',{name:'Research',exact:true}).click();
+ await page.getByLabel('research message').fill('Preserved chat draft');
+ for(const tab of ['Library','Lean Certificates','Write-up']){await page.getByRole('button',{name:tab,exact:true}).click();assert.equal(await page.getByLabel(/^(research|writing|lean) task$/).count(),0);}
+ await page.getByRole('button',{name:'LaTeX',exact:false}).first().click();await page.getByRole('button',{name:'Render PDF',exact:true}).click();await page.getByTitle('Publication PDF').waitFor({timeout:120000});checks.push('bundled Tectonic renders a real publication PDF');
+ await page.getByRole('button',{name:'Markdown',exact:false}).first().click();await page.getByLabel('Manuscript source').fill('# Desktop recovery fixture');
+ await app.evaluate(({dialog,app})=>{globalThis.closeAttempts=0;dialog.showMessageBoxSync=()=>{globalThis.closeAttempts++;return 0;};app.quit();});
+ await page.waitForFunction(()=>document.querySelector('[aria-label="Manuscript source"]').value==='# Desktop recovery fixture');
+ for(let i=0;i<50;i++){if(await app.evaluate(()=>globalThis.closeAttempts))break;await new Promise(r=>setTimeout(r,100));}
+ assert.equal(await app.evaluate(()=>globalThis.closeAttempts),1);assert.ok((await page.request.get(new URL('/api/activity',page.url()).href)).ok());checks.push('canceling Quit retains window, draft and backend');
+ const oldOrigin=new URL(page.url()).origin;
+ const closed=app.waitForEvent('close');await app.evaluate(({dialog,app})=>{dialog.showMessageBoxSync=()=>1;app.quit();});await closed;app=null;
+ await launch();await page.getByText('○ Recovered unsaved edits').waitFor();assert.equal(new URL(page.url()).origin,oldOrigin);assert.equal(await page.getByLabel('research message').inputValue(),'Preserved chat draft');
+ await page.getByRole('button',{name:'Write-up',exact:true}).click();assert.equal(await page.getByLabel('Manuscript source').inputValue(),'# Desktop recovery fixture');checks.push('actual unsaved manuscript and chat draft survive desktop relaunch');
+ await page.getByRole('button',{name:'Save workspace',exact:true}).click();await page.getByText('● Saved locally').waitFor();assert.deepEqual(errors,[]);
+ await fs.mkdir('.local/qa',{recursive:true});await page.screenshot({path:'.local/qa/desktop-acceptance.png'});
+ await fs.writeFile('docs/desktop-acceptance-validation.json',JSON.stringify({passed:true,checks,liveCredentialsUsed:false,checkedAt:new Date().toISOString()},null,2)+'\n');console.log(JSON.stringify(checks));
+}catch(e){if(page&&!page.isClosed()){await page.screenshot({path:'.local/qa/desktop-acceptance-failure.png'});console.error(await page.locator('[role=alert]').allTextContents());}throw e;}finally{if(app){await app.evaluate(({dialog})=>{dialog.showMessageBoxSync=()=>1;}).catch(()=>{});await app.close().catch(()=>{});}await fs.rm(profile,{recursive:true,force:true});}

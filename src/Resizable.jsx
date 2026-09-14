@@ -1,0 +1,11 @@
+import React,{useRef,useState} from 'react';
+export default function Resizable({id,children,defaults=[28,42,30],resetKey=0,vertical=false}){
+ const cache=`axiovela-math-layout:${id}`;
+ const [sizes,setSizes]=useState(()=>{try{const x=JSON.parse(localStorage.getItem(cache));return x?.length===children.length&&x.every(n=>Number.isFinite(n)&&n>=10)?x:defaults;}catch{return defaults;}});
+ const ref=useRef();
+ function change(next){setSizes(next);try{localStorage.setItem(cache,JSON.stringify(next));}catch{}}
+ function adjust(index,delta,start=sizes){const min=15;const d=Math.max(min-start[index],Math.min(delta,start[index+1]-min));const next=[...start];next[index]+=d;next[index+1]-=d;change(next);}
+ function drag(event,index){event.preventDefault();const start=[...sizes],origin=vertical?event.clientY:event.clientX;const bounds=ref.current.getBoundingClientRect();const total=vertical?bounds.height:bounds.width;event.currentTarget.setPointerCapture(event.pointerId);const target=event.currentTarget;const move=e=>adjust(index,((vertical?e.clientY:e.clientX)-origin)/total*100,start);const end=()=>{target.removeEventListener('pointermove',move);target.removeEventListener('pointerup',end);target.removeEventListener('pointercancel',end);};target.addEventListener('pointermove',move);target.addEventListener('pointerup',end);target.addEventListener('pointercancel',end);}
+ const template=sizes.flatMap((n,i)=>[`minmax(0,${n}fr)`,...(i<sizes.length-1?['9px']:[])]).join(' ');
+ return <div ref={ref} className={`resizable ${vertical?'vertical':''}`} style={{[vertical?'gridTemplateRows':'gridTemplateColumns']:template}}>{React.Children.map(children,(child,i)=><React.Fragment><div id={`${id}-pane-${i}`} className="resizablePane">{child}</div>{i<children.length-1&&<div className="splitter" role="separator" tabIndex={0} aria-label={`Resize ${id} panels ${i+1} and ${i+2}`} aria-controls={`${id}-pane-${i}`} aria-orientation={vertical?'horizontal':'vertical'} aria-valuemin={15} aria-valuemax={Math.round(sizes[i]+sizes[i+1]-15)} aria-valuenow={Math.round(sizes[i])} onPointerDown={e=>drag(e,i)} onKeyDown={e=>{const less=vertical?'ArrowUp':'ArrowLeft',more=vertical?'ArrowDown':'ArrowRight';if([less,more,'Home','End'].includes(e.key)){e.preventDefault();adjust(i,e.key===less?-2:e.key===more?2:e.key==='Home'?-100:100);}}}/>}</React.Fragment>)}</div>;
+}

@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.workspace/
+.local/
+.env*
+!.env.example
+*.log
+reports/evidence/
+.lavish/qa-*.png
+out/
+
+# Private development context and research are not release source.
+AGENTS.md
+.lavish/
+reports/
+docs/*
+!docs/getting-started.md
+!docs/development.md
+!docs/updates.md
+!docs/third-party.md
+*.pem
+*.key
