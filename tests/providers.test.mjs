@@ -38,6 +38,8 @@ test('conversation cancellation retains queue and separate roles stay independen
  process.env.WORKBENCH_CODEX_PATH=path.resolve('scripts/fixtures/assistant-rpc.mjs');const store=new Store(dir);const initial=await store.read();const s=await store.save(initial,0);const id=s.activeProjectId;const projects=new Projects(dir,store);await projects.init();const chats=new Chats(projects,store);const a=await chats.newConversation(id,'research'),b=await chats.newConversation(id,'writing');
  await chats.send(id,a.id,'FIXTURE_HANG');await chats.send(id,a.id,'Keep this queued');await chats.send(id,b.id,'FIXTURE_STATE');
  await chats.cancel(id,a.id);for(let i=0;i<150&&chats.controllers.size;i++)await new Promise(r=>setTimeout(r,30));assert.equal(a.turns[0].status,'canceled');assert.equal(a.queue.length,1);assert.equal(a.queuePaused,true);assert.equal(b.turns[0].status,'complete');assert.notEqual(a.sessionId,b.sessionId);
+ // Completion removes the process controller before its final disk write settles.
+ await chats.persist(id);
  const restored=new Chats(projects,store);const list=await restored.load(id);assert.equal(list.find(c=>c.id===a.id).queue.length,1);
 }));
 test('Lean missing project remains unverified and reports a useful obligation',async()=>fixture(async root=>{
