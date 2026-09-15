@@ -19,7 +19,7 @@ export default function AnnotationChips({
             onClick={() => onEdit?.(note)}
             disabled={sent}
             title={
-              (note.anchor.quote || "Selected passage") + "\n\n" + note.comment
+              (note.title?note.title+"\n":"")+(note.anchor.quote || "Selected passage") + "\n\n" + note.comment
             }
           >
             <span className="chipNumber">{i + 1}</span>
@@ -36,7 +36,7 @@ export default function AnnotationChips({
           )}
           {sent && (
             <details>
-              <summary>Passage</summary>
+              <summary>{note.title||"Passage"}{note.anchor.page?" · page "+note.anchor.page:""}</summary>
               <blockquote>{note.anchor.quote}</blockquote>
             </details>
           )}

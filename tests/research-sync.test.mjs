@@ -1,4 +1,4 @@
-import {blankProject} from '../shared/research.mjs';
+import {blankProject,legacyStarter} from '../shared/research.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -37,8 +37,10 @@ test('research reads real files with content revisions and rejects oversized fil
   await fs.mkdir(path.join(root,'research'));
   assert.deepEqual(await readResearchArtifacts(root),{});
   await fs.writeFile(path.join(root,'research/proof.md'),first.text);
+  assert.deepEqual(await readResearchArtifacts(root),{});
   const old=await readResearchArtifacts(root);assert.equal(old.proof.text,first.text);assert.equal(old.proof.hash.length,64);
   await fs.writeFile(path.join(root,'research/proof.md'),second.text);
+  assert.equal((await readResearchArtifacts(root)).proof,undefined);
   assert.notEqual((await readResearchArtifacts(root)).proof.hash,old.proof.hash);
   await fs.writeFile(path.join(root,'research/summary.md'),'x'.repeat(1024*1024+1));
   await assert.rejects(readResearchArtifacts(root),/under 1 MB/);
@@ -47,6 +49,8 @@ test('research reads real files with content revisions and rejects oversized fil
 
 test('preliminary paper replaces only the untouched starter and keeps edited drafts reviewable',()=>{
  const p=blankProject('draft-test');
+ assert.equal(p.markdown,'');assert.equal(p.latex,'');
+ p.latex=legacyStarter.latex;
  const remote={latex:{text:'A preliminary paper',hash:'one'}};
  assert.equal(reconcileResearch(p,remote).patch.latex,'A preliminary paper');
  p.latex='An actual author draft';

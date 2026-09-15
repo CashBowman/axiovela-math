@@ -1,3 +1,5 @@
+import {sourceImage} from './library-sources.mjs';
+import {saveManuscript} from './manuscript-artifacts.mjs';
 import {importSource,discoverSources} from './library-sources.mjs';
 import './desktop-storage.mjs';
 import {saveImage,readImage} from './writeup-assets.mjs';
@@ -26,7 +28,6 @@ const bridge=new ExperimentBridge(data,projects,store);await bridge.init();
 const leanWorkspace=new LeanWorkspace(data,projects);
 const chats=new Chats(projects,store,bridge,leanWorkspace);
 
-const activeArtifactEdits=new Set();
 const json=(res,code,value)=>{res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
 async function readBody(req,max=24*1024*1024){let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>max){const e=new Error('Upload exceeds the preview limit of 24 MB.');e.status=413;throw e;}chunks.push(c);}return Buffer.concat(chunks);}
 const server=http.createServer(async(req,res)=>{try{
@@ -52,23 +53,20 @@ const server=http.createServer(async(req,res)=>{try{
   if(url.pathname==='/api/conversations'&&req.method==='GET')return json(res,200,{conversations:await chats.load(projectId)});
   if(url.pathname==='/api/conversations'&&req.method==='POST'){const body=await bodyJson();return json(res,201,await chats.newConversation(projectId,body.role));}
   if(url.pathname==='/api/conversation'&&req.method==='PUT'){const body=await bodyJson();return json(res,200,await chats.patch(projectId,body.id,body));}
-  if(url.pathname==='/api/messages'&&req.method==='POST'){const body=await bodyJson();return json(res,202,await chats.send(projectId,body.id,body.message,{context:body.context,format:body.format,workspace:body.workspace,review:body.review}));}
+  if(url.pathname==='/api/messages'&&req.method==='POST'){const body=await bodyJson();return json(res,202,await chats.send(projectId,body.id,body.message,{context:body.context,format:body.format,workspace:body.workspace,review:body.review,annotations:body.annotations}));}
   if(url.pathname==='/api/cancel'&&req.method==='POST'){const body=await bodyJson();return json(res,200,await chats.cancel(projectId,body.id));}
   if(url.pathname==='/api/queue'&&req.method==='PUT'){const body=await bodyJson();return json(res,200,await chats.queueAction(projectId,body.id,body));}
   if(url.pathname==='/api/project-root'&&req.method==='GET')return json(res,200,{folder:await projects.root(projectId)});
   if(url.pathname==='/api/research-artifacts'&&req.method==='GET'){
-    const conversations=await chats.load(projectId);
-    const working=()=>conversations.some(c=>chats.controllers.has(c.id)||chats.admissions.has(c.id));
-    if(working())return json(res,200,{working:true});
     const artifacts=await readResearchArtifacts(await projects.root(projectId));
-    return json(res,200,working()?{working:true}:{working:false,artifacts});
+    return json(res,200,{working:false,artifacts});
   }
   if(url.pathname==='/api/artifact'&&req.method==='GET'){
     const names={summary:'research/summary.md',proof:'research/proof.md',markdown:'writeups/main.md',latex:'writeups/main.tex',bibliography:'references.bib'};const key=url.searchParams.get('kind');if(!Object.hasOwn(names,key))throw Error('Unknown artifact.');
     const file=await projectFile(await projects.root(projectId),names[key],true);let text='';try{text=await fs.readFile(file,'utf8');}catch(e){if(e.code!=='ENOENT')throw e;return json(res,404,{error:'No saved project artifact yet.'});}return json(res,200,{text,hash:createHash('sha256').update(text).digest('hex')});
   }
   if(url.pathname==='/api/artifact'&&req.method==='PUT'){
-    const body=await bodyJson();const names={markdown:'writeups/main.md',latex:'writeups/main.tex',bibliography:'references.bib'};if(!Object.hasOwn(names,body.kind)||typeof body.text!=='string')throw Error('Invalid manuscript artifact.');const file=await projectFile(await projects.root(projectId),names[body.kind],true);if(activeArtifactEdits.has(file))return json(res,409,{error:'This file is being saved. Retry after the current save completes.'});activeArtifactEdits.add(file);try{let previous=null;try{previous=await fs.readFile(file,'utf8');}catch(e){if(e.code!=='ENOENT')throw e;}const hash=previous===null?null:createHash('sha256').update(previous).digest('hex');if((body.expectedHash??null)!==hash)return json(res,409,{error:'The project file differs from this editor. Load the assistant’s saved draft before overwriting it.'});if(previous===body.text)return json(res,200,{hash});if(previous!==null){const backup=await projectFile(await projects.root(projectId),`writeups/backups/${randomUUID()}-${path.basename(file)}`,true);await fs.mkdir(path.dirname(backup),{recursive:true});await fs.writeFile(backup,previous);}await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file+'.tmp',body.text);await fs.rename(file+'.tmp',file);return json(res,200,{hash:createHash('sha256').update(body.text).digest('hex')});}finally{activeArtifactEdits.delete(file);}
+    const body=await bodyJson();return json(res,200,await saveManuscript(await projects.root(projectId),body.kind,body.text,body.expectedHash));
   }
   if(url.pathname==='/api/lean/setup'&&req.method==='POST'){
     if(chats.controllers.size||chats.admissions.size||leanWorkspace.active.has(projectId))throw Error('Finish the current assistant turn or check before setting up Lean.');
@@ -87,6 +85,11 @@ const server=http.createServer(async(req,res)=>{try{
   if(url.pathname==='/api/state'&&req.method==='PUT'){const value=JSON.parse((await readBody(req,8*1024*1024)).toString());return json(res,200,await store.save(value,Number(req.headers['if-match'])));}
   if(url.pathname==='/api/writeup-image'&&req.method==='POST')return json(res,201,{path:await saveImage(await projects.root(projectId),await readBody(req))});
   if(url.pathname==='/api/writeup-image'&&req.method==='GET'){const image=await readImage(await projects.root(projectId),url.searchParams.get('path'));res.writeHead(200,{'Content-Type':'image/'+image.type,'X-Content-Type-Options':'nosniff'});return res.end(image.bytes);}
+  if(url.pathname==='/api/library/image'&&req.method==='GET'){
+    const p=(await store.read()).projects.find(p=>p.id===projectId),paper=p?.papers.find(p=>p.id===url.searchParams.get('source'));
+    const asset=await sourceImage(paper,url.searchParams.get('url'),data);
+    res.writeHead(200,{'Content-Type':asset.type,'Cache-Control':'private, max-age=86400','X-Content-Type-Options':'nosniff'});return res.end(asset.bytes);
+  }
   if(url.pathname==='/api/library/link'&&req.method==='POST'){const {input}=await bodyJson();return json(res,201,await importSource(input,data));}
   if(url.pathname==='/api/library/discover'&&req.method==='GET'){const p=(await store.read()).projects.find(p=>p.id===projectId);if(!p)throw Error('Project not found.');return json(res,200,{papers:await discoverSources(await projects.root(projectId),data,p,await chats.load(projectId))});}
   if(url.pathname==='/api/papers/arxiv'&&req.method==='POST'){

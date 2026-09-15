@@ -1,4 +1,4 @@
-# Annotating a manuscript
+# Annotating manuscripts and sources
 
 In **Write-up**, choose **Annotate** in the preview toolbar. Click a sentence or drag across a passage, then type feedback in the small popover and choose **Add to message**. Selection expands to complete sentences, including across Markdown paragraphs. Display equations and inserted Markdown figures can also receive notes. With a keyboard text selection inside the preview, Alt+M opens a note; Ctrl/Cmd+Enter adds it and Escape cancels it.
 
@@ -17,6 +17,12 @@ Accepting a proposal updates only the selected Markdown or LaTeX draft. Normal s
 
 The source panel's **three-dot menu → Export annotations** exports all saved notes, including earlier revisions and notes detached from the composer. Turn off Annotate for a clean reading view. Print/PDF from the Markdown preview excludes review controls and highlights.
 
+## Proof write-ups and paper reader
+
+Choose **Annotate** beside Proof write-ups, or in the Library reader. The same sentence/passage selection, popover, margin pins and unsent blurbs apply to proofs, saved website articles and PDF text. Add notes from several sources to the shared Math Assistant conversation, then send them together with your instructions. Each blurb retains the source title, quoted passage and, for PDFs, page number. Clicking a queued source note opens its source for editing.
+
+These research messages use the conversation's existing access setting. Requested proof changes are saved to `research/proof.md`; imported articles and PDFs remain source material. A source revision change blocks sending its earlier notes. Publication annotations keep the separate read-only proposal and explicit Apply revision workflow described above. No annotation automatically starts a model call.
+
 ## Anchors and limits
 
 Notes retain the document format, exact source/bibliography revision, quoted text and rendered text offsets. PDF notes also store a page and position; figures retain their asset identity. Highlight geometry is recomputed after resizing or PDF zoom. Earlier-revision notes remain stored and exportable but cannot silently relocate or be sent as feedback on a different draft.
@@ -26,13 +32,13 @@ Notes retain the document format, exact source/bibliography revision, quoted tex
 - Feedback is limited to twenty notes, 24,000 characters of note data and a 100,000-character draft per request. Providers may impose smaller context/output limits.
 - The comparison shows source with surrounding context. It accepts the complete revised draft, not individual change fragments. A reply without exactly one complete matching source block cannot be applied.
 - These are app-owned comments, not annotations embedded in a PDF. Export notes separately to share them. Typed but unsubmitted popover text is temporary.
-- Annotate mode currently belongs to Write-up. Research and Lean have not gained these controls.
+- Proof write-ups and the Library reader also support annotations. Lean certificate annotations are not implemented.
 
 ## Design and implementation
 
 The interaction takes inspiration from Lavish's selected-passage feedback and batching. Axiovela's existing colors and controls remain the visual system. Contextual popovers and compact composer attachments follow [progressive disclosure](https://www.nngroup.com/articles/progressive-disclosure/): detailed controls appear when needed. [Zotero's PDF workflow](https://www.zotero.org/support/pdf_reader) supplies a precedent for connecting selected passages to review notes. Revision-bound quotes and offsets draw on the [W3C Web Annotation model](https://www.w3.org/TR/annotation-model/). The preview follows Axiovela’s document label and visible render/export controls, with Annotate added. PDF navigation occupies one slim row underneath. Additional source commands share one three-dot menu, following [menu proximity and scope guidance](https://www.nngroup.com/articles/contextual-menus-guidelines/). The revision comparison uses a native modal dialog with keyboard dismissal and focus containment, consistent with [W3C dialog guidance](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/). These are design precedents, not a measured usability study of this app.
 
-`src/AnnotationChips.jsx` displays unsent attachments and sent feedback. `src/ChatPanel.jsx` persists attachments per project/conversation and sends them with the user's message. `src/AnnotationSurface.jsx` computes highlight overlays without rewriting the renderer's text tree. `src/annotation-dom.mjs` projects visible text, excluding duplicate accessible math representations. `shared/annotations.mjs` expands sentences and parses revision proposals. `server/manuscript-review.mjs` validates selected notes against saved state; `server/chat.mjs` admits a read-only review turn. `src/RevisionReview.jsx` and the editor independently reject stale proposals. The underlying annotation surface can be reused after this Write-up workflow has been tried in practice.
+`src/AnnotationChips.jsx` displays unsent attachments and sent feedback. `src/ChatPanel.jsx` persists attachments per project/conversation and sends them with the user's message. `src/AnnotationSurface.jsx` computes highlight overlays without rewriting the renderer's text tree. `src/annotation-dom.mjs` projects visible text, excluding duplicate accessible math representations. `shared/annotations.mjs` expands sentences and parses revision proposals. `server/manuscript-review.mjs` validates selected notes against saved state; `server/chat.mjs` admits a read-only review turn. `src/RevisionReview.jsx` and the editor independently reject stale proposals. The same surface is used for proof and source review. `server/reading-feedback.mjs` validates each source revision independently before combining research notes.
 
 Run `npm run test:annotations` for isolated browser acceptance, including a real Tectonic PDF and a deterministic provider fixture. It does not validate a paid account or the quality of a real model's revision.
 

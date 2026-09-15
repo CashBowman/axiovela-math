@@ -6,10 +6,12 @@ A Linux-first workspace for mathematical research, experimental evidence, Lean c
 
 [Download for Linux](https://github.com/CashBowman/axiovela-math/releases/latest) · [Getting started](docs/getting-started.md) · [Report an issue](https://github.com/CashBowman/axiovela-math/issues)
 
-- **Research:** rendered Markdown summaries and arguments, a research assistant, and preliminary papers in your chosen format.
-- **Library:** paste arXiv IDs, PDF links or web pages; filter sources, retain your reading position and explore an interactive reference graph. Chat citations open recognizable source records. Bring selected experiments from [Axiovela](https://github.com/CashBowman/axiovela) into immutable evidence snapshots.
+- **Research:** rendered Markdown summaries and arguments, the Math Assistant, and preliminary papers in your chosen format.
+- **Library:** paste arXiv IDs, PDF links or web pages; filter sources, retain your reading position and explore an interactive reference graph. Assistant citations retrieve publication titles and readable PDFs or article snapshots automatically. Bring selected experiments from [Axiovela](https://github.com/CashBowman/axiovela) into immutable evidence snapshots.
 - **Lean Certificates:** formalization notes and actual checker results, with one-click Lean/mathlib setup. Research, Library and Lean share the same conversation.
-- **Write-up:** independent Markdown/LaTeX drafts, PDF rendering and a separate publication assistant. [Annotate sentences and passages](docs/annotations.md), combine annotation blurbs with your message, and review a proposed revision before applying it. Double-click a preview in reading mode to find its source line.
+- **Write-up:** independent Markdown/LaTeX drafts that start empty, PDF rendering and a separate publication assistant. [Annotate sentences and passages](docs/annotations.md), combine annotation blurbs with your message, and review a proposed revision before applying it. Double-click a preview in reading mode to find its source line.
+
+Proof write-ups, web articles and paper PDFs also support passage annotations. Feedback stays in the Math Assistant composer until you send it. Separate conversations, including publication and research chats in different projects, can run concurrently.
 
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Projects, conversations and writing stay on your computer. Connect Codex, Claude Code, Gemini CLI, OpenCode or Pi through CLI authentication, or use OpenAI, Anthropic, Gemini and compatible APIs. Account access and usage costs belong to the chosen provider.
 

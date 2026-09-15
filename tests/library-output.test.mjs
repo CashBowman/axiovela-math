@@ -125,11 +125,13 @@ test("automatic source discovery stays within the project and deduplicates known
     );
     const first = await discoverSources(root, data, { papers: [] }, [
       { turns: [{ output: "[A blog](https://example.org/note)" }] },
-    ]);
+    ],async()=>{throw Error('fixture unavailable');});
     assert.equal(first.length, 2);
     assert.ok(!first.some((p) => p.originalName === "symlink.pdf"));
     const second = await discoverSources(root, data, { papers: first }, []);
-    assert.equal(second.length, 0);
+    assert.ok(second.every(p=>first.some(x=>x.id===p.id)&&p.previewError));
+    const enriched={papers:first.map(p=>second.find(x=>x.id===p.id)||p)};
+    assert.deepEqual(await discoverSources(root,data,enriched,[]),[]);
   } finally {
     await fs.rm(root, { recursive: true, force: true });
   }

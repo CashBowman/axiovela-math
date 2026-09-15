@@ -34,3 +34,15 @@ The continuous reader reserves all page sizes but only renders nearby canvases. 
 The write-up header and preview toolbar follow Axiovela's source badge, format pills, bibliography/overflow placement and gold rendering action. Annotate remains an additional action. Secondary manuscript commands share the same three-dot control. The full-size hidden Library workspace retains its reader; its hidden chat is unmounted to preserve a single active shared-chat composer.
 
 Native zoom acceptance also guards the interaction between manual zoom and a pending fit-to-width observer: manual zoom disables fit synchronously, before React effect cleanup. This prevents a resize notification from replacing the requested scale.
+
+## Reading and concurrent writing
+
+`npm run test:reading` covers empty manuscript formats, proof/website/PDF passage annotations, multiple sources attached to one unsent message, canonical server validation, and a publication draft appearing in the editor. Unit tests keep several fixture conversations active across roles and projects while a publication request completes. This validates isolation and routing, not a paid provider's latency or mathematical quality.
+
+Publication and research conversations have independent controllers. A follow-up in the same active conversation is queued. Artifact synchronization requires two matching observations of each file instead of waiting for every conversation in the project to stop. Source merge bases and stale-save rejection preserve independent edits.
+
+New publication conversations start with project editing; existing access settings stay intact. Writing instructions require actual editable files. For an authorized writing request, an unambiguous complete matching fenced draft can be recovered from chat only if the file still matches its admission snapshot. Ambiguous chat-only replies show an unsaved-output notice. Earlier files are backed up; unrelated formats are preserved.
+
+Website imports retrieve publication metadata, Markdown structure, mathematical notation, raster figures and linked PDFs. Readability and an inert Markdown renderer replace executable page HTML. PDFs are bounded at 128 MB, article responses at 24 MB, and cached raster figures at 16 MB. All remote fetches use public-address validation and checked DNS pinning. Blocked/dynamic sites may still provide only an abstract or an unavailable-preview state with retry. Existing source upgrades preserve IDs, notes, personal read state and edited titles.
+
+During research, the assistant can save `research/connections.json` containing justified relationships between source/claim IDs or exact cited URLs. The importer accepts recognized relation types and existing endpoints, deduplicates edges, and preserves user dismissals. These edges are visibly attributed interpretations, never formal certificates. This follows the metadata-and-attachment pattern in [Zotero's import documentation](https://www.zotero.org/support/adding_items_to_zotero).

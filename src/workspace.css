@@ -96,3 +96,19 @@ body{font-family:Manrope,Arial,sans-serif;font-size:13px}pre,code,.code{font-fam
 @media(max-width:600px){.writeupEditorHead .formatToggle{margin-left:0}.sourcePill{font-size:9px}.previewButtons{justify-content:flex-start;margin-left:0}.expandedPanel .paperPreview .annotationSurface>.markdown{padding:22px;font-size:17px}}
 
 @media print{.inactiveWorkspace,.manuscriptPreview>.panelIntro{display:none!important}}
+
+/* Readable desktop defaults: keep compact structure, not miniature text. */
+body{font-size:14px}
+button,input,select,textarea{font-size:14px}
+.panelHead h2,.panelHead strong{font-size:15px}
+.panelBody,.scrollBody,.chatMessages{font-size:14px}
+.chatMessages .markdown{font-size:14px;line-height:1.7}
+.chatComposer textarea{font-size:14px;line-height:1.6}
+.chatControls,.conversationToolbar label,.accessLabel,.libraryItem button,.libraryItem button small{font-size:13px}
+.modelPickerButton,.formatSwitch button,.sourceSave,.previewToolbar button{font-size:13px}
+.hint,.eyebrow,.sourcePill,.sourceStatus,.liveActivity,.libraryList h3{font-size:11px}
+.paperPreview .annotationSurface>.markdown{font-size:16px;line-height:1.75}
+.sourceOrigin{display:flex;gap:12px;padding:6px 14px;font-size:12px;flex:none;color:var(--blue)}
+.sourceOrigin:empty{display:none}
+
+.connectionReason{display:block;margin-top:5px;color:var(--blue);font-size:12px;line-height:1.6}

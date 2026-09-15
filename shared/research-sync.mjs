@@ -1,4 +1,4 @@
-import {blankProject} from './research.mjs';
+import {legacyStarter} from './research.mjs';
 // A saved remote revision is the merge base, not permission to replace local edits.
 export function reconcileResearch(project, artifacts) {
   const patch = {}, conflicts = {};
@@ -8,7 +8,7 @@ export function reconcileResearch(project, artifacts) {
     if (!remote) continue; // Missing files never erase a working argument.
     const base = sync[kind], local = project[kind] || '';
     if (remote.hash === base?.hash) continue;
-    if (local === remote.text || (base ? local === base.text : !local || ['markdown','latex'].includes(kind)&&local===blankProject(project.id)[kind])) {
+    if (local === remote.text || (base ? local === base.text : !local || ['markdown','latex'].includes(kind)&&local===legacyStarter[kind])) {
       patch[kind] = remote.text;
       sync[kind] = remote;
     } else conflicts[kind] = remote;

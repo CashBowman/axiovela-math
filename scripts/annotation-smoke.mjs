@@ -102,11 +102,7 @@ try {
   await page.getByRole("button", { name: "Write-up", exact: true }).click();
   await page.getByRole("button", { name: "Write-up default format" }).click();
   await page.getByRole("radio", { name: "LaTeX", exact: true }).click();
-  assert.ok(
-    (await page.getByLabel("Manuscript source").inputValue()).startsWith(
-      "\\documentclass",
-    ),
-  );
+  assert.equal(await page.getByLabel("Manuscript source").inputValue(), "");
   await page
     .getByRole("button", { name: "Markdown", exact: false })
     .first()
@@ -132,7 +128,7 @@ try {
   await page.waitForFunction(() =>
     document
       .querySelector('[aria-label="Manuscript source"]')
-      .value.startsWith("\\documentclass"),
+      .value === "",
   );
   await page.getByLabel("File menu").click();
   await page
@@ -145,7 +141,7 @@ try {
   await page.waitForFunction(() =>
     document
       .querySelector('[aria-label="Manuscript source"]')
-      .value.startsWith("#"),
+      .value === "",
   );
   checks.push(
     "three-dot default format applies to new projects and preserves existing format; simple project dialog and File browsing",

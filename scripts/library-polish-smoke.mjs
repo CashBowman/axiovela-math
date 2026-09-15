@@ -168,7 +168,7 @@ try {
       }),
     );
   }, web.sourceUrl);
-  await page.getByRole("heading", { name: web.title, level: 1 }).waitFor();
+  await page.getByRole("heading", { name: web.title, level: 2 }).waitFor();
   await page.getByLabel("Filter library").selectOption("web");
   assert.equal(await page.locator(".libraryItem").count(), 1);
   await page.getByLabel("Filter library").selectOption("pdf");
@@ -261,11 +261,7 @@ try {
     await page.getByLabel("Manuscript source").inputValue(),
     /Preliminary fixture paper/,
   );
-  assert.ok(
-    (await api("/api/state")).projects[0].markdown.startsWith(
-      "# Working manuscript",
-    ),
-  );
+  assert.equal((await api("/api/state")).projects[0].markdown, "");
   await page
     .getByRole("button", { name: "Render document", exact: true })
     .click();

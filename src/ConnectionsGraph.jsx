@@ -207,7 +207,7 @@ export default function ConnectionsGraph({ items, links, selected, onSelect }) {
                 >
                   <title>
                     {items.find((x) => x.key === l.from)?.label} {l.type}{" "}
-                    {items.find((x) => x.key === l.to)?.label}
+                    {items.find((x) => x.key === l.to)?.label}{l.reason&&<small className="connectionReason">Assistant interpretation: {l.reason}</small>}
                   </title>
                 </line>
               ) : null;
@@ -303,12 +303,12 @@ export default function ConnectionsGraph({ items, links, selected, onSelect }) {
         {links.map((l) => (
           <p key={l.id} className="connectionRow">
             {items.find((x) => x.key === l.from)?.label}{" "}
-            <strong>{l.type}</strong> {items.find((x) => x.key === l.to)?.label}
+            <strong title={l.reason}>{l.type}</strong> {items.find((x) => x.key === l.to)?.label}{l.reason&&<small className="connectionReason">Assistant interpretation: {l.reason}</small>}
           </p>
         ))}
         {!links.length && (
           <p>
-            Select an item, then add a relationship in Notes & relationships.
+            Ask the Math Assistant to connect the sources as it develops the argument.
           </p>
         )}
       </details>

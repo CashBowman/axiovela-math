@@ -26,7 +26,7 @@ export function prepareManuscriptReview(project, request, role, format) {
     throw Error("Select between one and twenty distinct comments.");
   const comments = request.commentIds.map((id) => {
     const c = (project.manuscriptComments || []).find((c) => c.id === id);
-    if (!c || c.format !== format || c.sourceHash !== sourceHash || c.resolved)
+    if (!c || c.target || c.format !== format || c.sourceHash !== sourceHash || c.resolved)
       throw Error(
         "Selected feedback no longer belongs to the current draft. Refresh your comment selection.",
       );

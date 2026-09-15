@@ -7,8 +7,8 @@ import { isIP } from "node:net";
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { parseHTML } from "linkedom";
-import { Readability } from "@mozilla/readability";
+import {extractArticle,readableTitle,CONTENT_VERSION} from "./article-content.mjs";
+export {extractArticle} from "./article-content.mjs";
 import { outputDirectives } from "../shared/assistant-output.mjs";
 import { projectFile } from "./axiovela/assistant-api.mjs";
 const execute = promisify(execFile);
@@ -91,12 +91,14 @@ export async function fetchSource(input, redirects = 0) {
           );
           return;
         }
-        let size = 0;
+        let size = 0, limit=24*1024*1024;
+        if(/pdf/i.test(res.headers['content-type']||''))limit=128*1024*1024;
         const chunks = [];
         res.on("data", (chunk) => {
+          if(!size&&chunk.subarray(0,5).toString()==='%PDF-')limit=128*1024*1024;
           size += chunk.length;
-          if (size > 24 * 1024 * 1024)
-            res.destroy(Error("Source exceeds 24 MB."));
+          if (size > limit)
+            res.destroy(Error(`Source exceeds ${limit/1024/1024} MB.`));
           else chunks.push(chunk);
         });
         res.on("error", reject);
@@ -111,7 +113,7 @@ export async function fetchSource(input, redirects = 0) {
     );
     const timer = setTimeout(
       () => req.destroy(Error("The site took too long to respond.")),
-      15000,
+      45000,
     );
     req.on("close", () => clearTimeout(timer));
     req.on("error", reject);
@@ -122,9 +124,7 @@ export function bookmark(input) {
     u = new URL(url);
   return {
     id: idFor(url),
-    title: decodeURI(
-      u.pathname.split("/").filter(Boolean).at(-1) || u.hostname,
-    ).replace(/[-_]/g, " "),
+    title: 'Source from '+u.hostname,
     sourceUrl: url,
     sourceType: "web",
     notes: "",
@@ -133,43 +133,32 @@ export function bookmark(input) {
     addedAt: new Date().toISOString(),
   };
 }
-export function extractArticle(html) {
-  const { document } = parseHTML(html);
-  const article = new Readability(document).parse();
-  if (!article) return { title: document.title || "", text: "" };
-  const parsed = parseHTML(article.content).document;
-  const blocks = [...parsed.querySelectorAll("h1,h2,h3,h4,p,li,pre")].filter(
-    (n) => !n.parentElement?.closest("li,pre"),
-  );
-  const text = blocks
-    .map((n) => n.textContent.trim())
-    .filter(Boolean)
-    .join("\n\n")
-    .slice(0, 100000);
-  return {
-    title: article.title || "",
-    text,
-    authors: article.byline ? [article.byline] : [],
-  };
-}
 async function pdfTitle(file) {
   try {
     const {stdout}=await execute('pdfinfo',[file],{timeout:5000,maxBuffer:128000});
     const title=stdout.match(/^Title:\s+(.+)$/m)?.[1]?.trim();
-    if(title)return {title,titleOrigin:'PDF metadata'};
+    if(readableTitle(title))return {title,titleOrigin:'PDF metadata'};
   } catch {}
   try {
     const {stdout}=await execute('pdftotext',['-f','1','-l','1','-layout',file,'-'],{timeout:5000,maxBuffer:256000});
     const title=stdout.split('\n').map(s=>s.trim()).find(s=>s.length>12&&s.length<200&&!/^(arxiv:|https?:|\d|submitted|published|preprint)/i.test(s));
-    if(title)return {title,titleOrigin:'first-page text'};
+    if(readableTitle(title))return {title,titleOrigin:'first-page text'};
   } catch {}
   return {};
 }
 
-export async function importSource(input, data, fetcher = fetchSource) {
-  const paper = bookmark(input);
+export async function importSource(input, data, fetcher = fetchSource, sourceId) {
+  const paper = {...bookmark(input),previewError:null};
+  if(sourceId) paper.id=sourceId;
   try {
-    const response = await fetcher(paper.sourceUrl);
+    let response = await fetcher(paper.sourceUrl);
+    let extracted={};
+    if(/html/i.test(response.type)) {
+      extracted=extractArticle(response.bytes.toString('utf8'),response.url||paper.sourceUrl);
+      if(extracted.pdfUrl) {
+        try { const pdf=await fetcher(extracted.pdfUrl); if(pdf.bytes.subarray(0,5).toString()==='%PDF-') response=pdf; else extracted.attachmentError='The linked PDF did not return a PDF document.'; } catch(e) {extracted.attachmentError=e.message;} // Keep the readable abstract if the attachment is unavailable.
+      }
+    }
     if (response.bytes.subarray(0, 5).toString() === "%PDF-") {
       const file = path.join(data, "papers", paper.id + ".pdf");
       await fs.mkdir(path.dirname(file), { recursive: true });
@@ -181,14 +170,17 @@ export async function importSource(input, data, fetcher = fetchSource) {
           ...paper,
           sourceType: "pdf",
           ...await pdfTitle(file),
+          ...(extracted.title?{title:extracted.title,titleOrigin:'publication metadata'}:{}),
+          ...(extracted.authors?.length?{authors:extracted.authors}:{}),
+          contentVersion:CONTENT_VERSION, capturedAt:new Date().toISOString(),
         },
         notice: "",
       };
     }
-    const extracted = /html/i.test(response.type)
-      ? extractArticle(response.bytes.toString("utf8"))
+    extracted = /html/i.test(response.type)
+      ? extracted
       : /text\/plain/i.test(response.type)
-        ? { text: response.bytes.toString("utf8").slice(0, 100000) }
+        ? { text: response.bytes.toString("utf8").slice(0, 100000),contentVersion:CONTENT_VERSION }
         : {};
     return {
       paper: {
@@ -196,17 +188,19 @@ export async function importSource(input, data, fetcher = fetchSource) {
         ...extracted,
         title: extracted.title || paper.title,
         capturedAt: new Date().toISOString(),
+        contentVersion:CONTENT_VERSION,
+        previewError:extracted.text?null:'This site did not provide readable article text.',
       },
       notice: extracted.text
         ? ""
         : "Link saved. Open the original to read this source.",
     };
   } catch (e) {
-    return { paper, notice: `Link saved. Preview unavailable: ${e.message}` };
+    return { paper:{...paper,contentVersion:CONTENT_VERSION,capturedAt:new Date().toISOString(),previewError:e.message}, notice: `Link saved. Preview unavailable: ${e.message}` };
   }
 }
 // Index app-owned project PDFs and explicit citations, never walk outside this project.
-export async function discoverSources(root, data, project, conversations) {
+export async function discoverSources(root, data, project, conversations, fetcher=fetchSource) {
   const found = new Map(project.papers.map((p) => [p.id, p]));
   const paperDirectory = await projectFile(root, "papers", true);
   const entries = await fs
@@ -227,7 +221,7 @@ export async function discoverSources(root, data, project, conversations) {
     );
     if (existing) continue;
     const stat = await fs.stat(file);
-    if (stat.size > 24 * 1024 * 1024) continue;
+    if (stat.size > 128 * 1024 * 1024) continue;
     const bytes = await fs.readFile(file);
     if (bytes.subarray(0, 5).toString() !== "%PDF-") continue;
     const stem = entry.name.replace(/\.pdf$/i, "");
@@ -272,7 +266,41 @@ export async function discoverSources(root, data, project, conversations) {
         } catch {}
       }
     }
-  return [...found.values()].filter(
-    (p) => !project.papers.some((x) => x.id === p.id),
-  );
+  // Start bounded enrichment jobs without holding document refresh or a chat open.
+  for (const p of found.values()) if(p.sourceUrl && p.sourceType==='web' && p.contentVersion!==CONTENT_VERSION) scheduleImport(p,data,fetcher);
+  const result=[];
+  for (const p of found.values()) {
+    const ready=imports.get(data+'\0'+p.id)?.result;
+    if(ready && (p.contentVersion!==ready.contentVersion || p.capturedAt!==ready.capturedAt)) result.push({...p,...ready,id:p.id,discovered:p.discovered});
+    else if(!project.papers.some(x=>x.id===p.id)) result.push(p);
+  }
+  return result;
+}
+const imports=new Map(), waiting=[];
+let importing=0;
+function scheduleImport(p,data,fetcher) {
+  const key=data+'\0'+p.id, previous=imports.get(key);
+  if(previous && (previous.result || Date.now()-previous.at<300000))return;
+  const job={at:Date.now()};imports.set(key,job);waiting.push(async()=>{
+    const {paper}=await importSource(p.sourceUrl,data,fetcher,p.id);
+    job.result=paper;
+  });drainImports();
+}
+function drainImports(){while(importing<3&&waiting.length){importing++;waiting.shift()().catch(()=>{}).finally(()=>{importing--;drainImports();});}}
+
+const imageJobs=new Map();
+export async function sourceImage(paper,input,data,fetcher=fetchSource){
+  const url=sourceUrl(input||'');
+  if(!paper?.text?.includes(']('+url+')'))throw Error('Image is not part of this saved source.');
+  const key=idFor(url),file=path.join(data,'source-images',key);
+  function type(bytes){
+    if(bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])))return 'image/png';
+    if(bytes[0]===255&&bytes[1]===216&&bytes[2]===255)return 'image/jpeg';
+    if(/^GIF8[79]a/.test(bytes.subarray(0,6).toString()))return 'image/gif';
+    if(bytes.subarray(0,4).toString()==='RIFF'&&bytes.subarray(8,12).toString()==='WEBP')return 'image/webp';
+    throw Error('This figure is not a supported raster image.');
+  }
+  try{const bytes=await fs.readFile(file);return {bytes,type:type(bytes)};}catch(e){if(e.code!=='ENOENT')throw e;}
+  if(!imageJobs.has(file))imageJobs.set(file,(async()=>{const {bytes}=await fetcher(url);if(bytes.length>16*1024*1024)throw Error('Figure exceeds 16 MB.');const mime=type(bytes);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,bytes);return {bytes,type:mime};})().finally(()=>imageJobs.delete(file)));
+  return imageJobs.get(file);
 }

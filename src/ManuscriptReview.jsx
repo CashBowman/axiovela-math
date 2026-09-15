@@ -1,3 +1,4 @@
+import {readingDocument,webMarkdown} from '../shared/reading-annotations.mjs';
 import React, { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
@@ -16,6 +17,7 @@ export default function ManuscriptReview({
   onQueue,
   annotating = false,
   editRequest,
+  target,
 }) {
   const [draft, setDraft] = useState(null),
     [comment, setComment] = useState(""),
@@ -26,12 +28,14 @@ export default function ManuscriptReview({
   const popup = useRef(),
     input = useRef(),
     previousFocus = useRef();
-  const source = project[format],
+  const reading = target ? readingDocument(project,target) : null;
+  const source = reading ? reading.source : project[format],
+    revision = reading ? reading.revision : project.bibliography,
     comments = (project.manuscriptComments || []).filter(
-      (c) => c.format === format,
+      (c) => target ? c.target?.kind===target.kind && c.target?.id===target.id : !c.target && c.format===format,
     ),
     stale =
-      format === "latex" &&
+      !target && format === "latex" &&
       pdf &&
       (pdf.source !== source || pdf.bibliography !== project.bibliography);
   useEffect(() => {
@@ -45,7 +49,7 @@ export default function ManuscriptReview({
     crypto.subtle
       .digest(
         "SHA-256",
-        new TextEncoder().encode(source + "\0" + project.bibliography),
+        new TextEncoder().encode(source + "\0" + revision),
       )
       .then((bytes) => {
         if (!canceled)
@@ -58,7 +62,7 @@ export default function ManuscriptReview({
     return () => {
       canceled = true;
     };
-  }, [source, format, project.bibliography]);
+  }, [source, format, revision, target?.kind, target?.id]);
   useEffect(() => {
     if (draft || editingId) {
       previousFocus.current = document.activeElement;
@@ -114,6 +118,7 @@ export default function ManuscriptReview({
           {
             id,
             format,
+            ...(target?{target,title:reading.title}:{}),
             sourceHash: hash,
             anchor: draft,
             comment: comment.trim(),
@@ -192,15 +197,19 @@ export default function ManuscriptReview({
             <AnnotationSurface
               {...annotation}
               tabIndex={0}
-              aria-label="Manuscript annotation surface"
+              aria-label={target?"Reading annotation surface":"Manuscript annotation surface"}
             >
               <Preview
-                source={source}
+                source={target?.kind==='paper'?webMarkdown(source):source}
+                prose={!!target}
+                sources={project.papers}
                 bibliography={project.bibliography}
                 onSourceLine={annotating ? undefined : onLine}
                 sourceLocations
                 imageUrl={(src) =>
-                  src?.startsWith("assets/")
+                  target?.kind==='paper'&&/^https?:\/\//i.test(src||'')
+                    ? `/api/library/image?project=${project.id}&source=${target.id}&url=${encodeURIComponent(src)}`
+                    : src?.startsWith("assets/")
                     ? `/api/writeup-image?project=${project.id}&path=${encodeURIComponent(src)}`
                     : null
                 }
@@ -209,10 +218,10 @@ export default function ManuscriptReview({
           </div>
         ) : pdf ? (
           <PdfReader
-            url={`/api/rendered?project=${project.id}&id=${pdf.id}`}
-            title="Publication PDF"
+            url={target?pdf.url:`/api/rendered?project=${project.id}&id=${pdf.id}`}
+            title={target?"Read "+reading.title:"Publication PDF"}
             annotation={annotation}
-            onSource={pdfSource}
+            onSource={target?undefined:pdfSource}
           />
         ) : (
           <div className="empty largeEmpty">

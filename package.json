@@ -1,6 +1,6 @@
 {
   "name": "axiovela-math",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -30,7 +30,8 @@
     "release:sign": "node scripts/publish-update.mjs",
     "test:reader": "node scripts/reader-smoke.mjs",
     "test:annotations": "node scripts/annotation-smoke.mjs",
-    "test:library": "node scripts/library-polish-smoke.mjs"
+    "test:library": "node scripts/library-polish-smoke.mjs",
+    "test:reading": "node scripts/reading-workflow-smoke.mjs"
   },
   "dependencies": {
     "@citation-js/core": "0.7.21",
