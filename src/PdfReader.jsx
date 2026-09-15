@@ -161,7 +161,10 @@ export default function PdfReader({
     anchor = useRef(),
     frame = useRef();
   zoomRef.current = zoom;
-  function fitWidth(){fitRef.current=true;setFit(true);}
+  function fitWidth() {
+    fitRef.current = true;
+    setFit(true);
+  }
   useEffect(() => {
     let canceled = false;
     setDoc(null);
@@ -191,10 +194,17 @@ export default function PdfReader({
     };
   }, [url]);
   useEffect(() => {
-    const panel=reader.current?.closest('.panel');
-    const expand=e=>{if(e.detail)fitWidth();};
-    panel?.addEventListener('math-panel-expand',expand);
-    return()=>panel?.removeEventListener('math-panel-expand',expand);
+    const panel = reader.current?.closest(".panel");
+    const expand = (e) => {
+      const r = container.current.getBoundingClientRect();
+      remember(
+        r.left + container.current.clientWidth / 2,
+        r.top + Math.min(100, r.height / 3),
+      );
+      if (e.detail) fitWidth();
+    };
+    panel?.addEventListener("math-panel-expand", expand);
+    return () => panel?.removeEventListener("math-panel-expand", expand);
   }, []);
   function remember(clientX, clientY) {
     const el = container.current,
@@ -218,9 +228,9 @@ export default function PdfReader({
   }
   function scale(value, x, y) {
     remember(x, y);
-    fitRef.current=false;
+    fitRef.current = false;
     setFit(false);
-    zoomRef.current=clamp(value);
+    zoomRef.current = clamp(value);
     setZoom(zoomRef.current);
   }
   useLayoutEffect(() => {
@@ -240,13 +250,13 @@ export default function PdfReader({
     if (!doc || !fit) return;
     const el = container.current;
     const resize = () => {
-      if(!fitRef.current||el.clientWidth<40)return;
+      if (!fitRef.current || el.clientWidth < 40) return;
       const next = clamp(
         (el.clientWidth - 36) / Math.max(...doc.sizes.map((s) => s.width)),
       );
       if (Math.abs(next - zoomRef.current) > 0.001) {
-        remember();
-        zoomRef.current=next;
+        if (!anchor.current) remember();
+        zoomRef.current = next;
         setZoom(next);
       }
     };

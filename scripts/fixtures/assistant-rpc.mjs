@@ -45,6 +45,16 @@ for await (const line of readline.createInterface({input: process.stdin})) {
         await writeFile(path.join(folder,'certificate.json'),JSON.stringify({title:'Addition of zero',statement:'For every natural number $n$, $n+0=n$.',declarations:['fixture_add_zero'],assumptions:['Natural-number arithmetic'],obligations:['Check correspondence with the intended target.'],scopeNotes:'An elementary fixture, not a Sobolev formalization.'}));
         await writeFile(path.join(folder,'summary.md'),'## Formal argument\n\nThe saved declaration expresses the additive identity.');
       }
+      if(request.includes('FIXTURE_RESULT_OUTLINE')&&session.sandbox!=='read-only'){
+        await mkdir(path.join(process.cwd(),'research'),{recursive:true});
+        await writeFile(path.join(process.cwd(),'research/summary.md'),'The target requires a supporting lemma. The proof remains preliminary.');
+        if(!prompt.includes('result outline automatically')||!prompt.includes('kind (claim, theorem, lemma, proof)'))throw Error('Result guidance missing');
+        await mkdir(path.join(process.cwd(),'research'),{recursive:true});
+        await writeFile(path.join(process.cwd(),'research/connections.json'),JSON.stringify({nodes:[{id:'zero',kind:'theorem',title:'Main additive identity',text:'For every natural number $n$, $n+0=n$.',mainResult:true},{id:'helper',kind:'lemma',title:'Supporting identity',text:'The base case needs a formal proof.'}],links:[{from:'idea:zero',to:'idea:helper',type:'depends on',reason:'The induction route uses the base case. Its correspondence is still unreviewed.'}]}));
+        const folder=path.join(process.cwd(),'certificates');await mkdir(folder,{recursive:true});
+        await writeFile(path.join(folder,'Main.lean'),'theorem fixture_add_zero (n : Nat) : n + 0 = n := by simp\n');
+        await writeFile(path.join(folder,'certificate.json'),JSON.stringify({title:'Additive identities',results:[{ref:'idea:zero',declarations:['fixture_add_zero'],assumptions:['Natural numbers'],obligations:['Review statement correspondence.'],scopeNotes:'A fixture declaration.'}]}));
+      }
       if(request.includes('FIXTURE_PRELIMINARY')&&session.sandbox!=='read-only'){
         const format=prompt.match(/Selected manuscript format: (markdown|latex)/)?.[1];
         if(!format)throw Error('No manuscript format supplied');

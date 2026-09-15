@@ -341,6 +341,7 @@ export default function Library({
             ["evidence", "Experiments"],
             ["claim", "Claims"],
             ["theorem", "Theorems"],
+            ["lemma", "Lemmas"],
             ["proof", "Proofs"],
           ].map(([id, label]) => (
             <option key={id} value={id}>
@@ -446,7 +447,7 @@ export default function Library({
         )}
       </div>
       <div className="libraryList">
-        {["paper", "evidence", "claim", "theorem", "proof"]
+        {["paper", "evidence", "claim", "theorem", "lemma", "proof"]
           .filter((kind) => filteredItems.some((x) => x.kind === kind))
           .map((kind) => (
             <div key={kind}>
@@ -457,9 +458,11 @@ export default function Library({
                     ? "Experiments"
                     : kind === "theorem"
                       ? "Theorems"
-                      : kind === "proof"
-                        ? "Proofs"
-                        : "Claims"}
+                      : kind === "lemma"
+                        ? "Lemmas"
+                        : kind === "proof"
+                          ? "Proofs"
+                          : "Claims"}
               </h3>
               {filteredItems
                 .filter((x) => x.kind === kind)
@@ -555,7 +558,7 @@ export default function Library({
             ? item.title
             : item?.kind === "evidence"
               ? item.record.name
-              : item?.id || "Reading workspace"
+              : item?.label || "Reading workspace"
       }
       label={
         view === "web"
@@ -566,23 +569,35 @@ export default function Library({
               ? "SAVED EXPERIMENT"
               : "PAPER READER"
       }
-      className="fill"
+      className="fill libraryReaderPanel"
       action={
-        <div className="formatSwitch">
-          <button
-            className={view === "reader" ? "selected" : ""}
-            onClick={() => setView("reader")}
-          >
-            Read
-          </button>
-          <button
-            className={view === "web" ? "selected" : ""}
-            onClick={() => setView("web")}
-          >
-            <Network size={13} />
-            Connections
-          </button>
-        </div>
+        <>
+          <div className="formatSwitch">
+            <button
+              className={view === "reader" ? "selected" : ""}
+              onClick={() => setView("reader")}
+            >
+              Read
+            </button>
+            <button
+              className={view === "web" ? "selected" : ""}
+              onClick={() => setView("web")}
+            >
+              <Network size={13} />
+              Connections
+            </button>
+          </div>
+          {view === "reader" && item?.sourceUrl && (
+            <a
+              className="readerOriginal"
+              href={item.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open original
+            </a>
+          )}
+        </>
       }
     >
       {view === "web" ? (
@@ -597,7 +612,7 @@ export default function Library({
           onSelect={setSelected}
           onAsk={() =>
             libraryChat.current?.addPrompt(
-              "Update research/connections.json: examine the library sources, develop justified claim/theorem/proof nodes, and connect them to exact source statements with page numbers and hypotheses. Preserve existing notes. " +
+              "Update research/connections.json: examine the library sources, develop justified claim/theorem/lemma/proof nodes, and connect them to exact source statements with page numbers and hypotheses. Preserve existing notes. " +
                 (item
                   ? "Focus first on " + item.label + " (" + item.key + ")."
                   : ""),
@@ -648,11 +663,6 @@ export default function Library({
       ) : item?.kind === "paper" ? (
         <>
           <div className="sourceOrigin">
-            {item.sourceUrl && (
-              <a href={item.sourceUrl} target="_blank" rel="noreferrer">
-                Open original
-              </a>
-            )}
             {item.attachmentError && (
               <span title={item.attachmentError}>
                 Article snapshot · PDF unavailable{" "}
@@ -748,7 +758,7 @@ export default function Library({
           ? item.title
           : item?.kind === "evidence"
             ? item.record.name
-            : item?.id || "No source selected"
+            : item?.label || "No source selected"
       }
     />
   ) : null;

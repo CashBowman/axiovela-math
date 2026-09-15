@@ -306,7 +306,7 @@ try {
       .locator(".panel")
       .filter({
         has: page.getByRole("heading", {
-          name: "Certificate checks",
+          name: "Certificate status",
           exact: true,
         }),
       })
@@ -368,7 +368,7 @@ try {
   assert.equal(await page.locator(".graphCanvas [data-node]").count(), 5);
   assert.equal(await page.locator(".graphCanvas polygon").count(), 2);
   assert.equal(await page.locator(".graphCanvas rect").count(), 3);
-  assert.equal(await page.locator(".graphLegend>span").count(), 6);
+  assert.equal(await page.locator(".graphLegend>span").count(), 7);
   await page
     .getByRole("button", { name: "Select " + title, exact: true })
     .click();

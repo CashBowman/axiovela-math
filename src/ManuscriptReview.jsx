@@ -296,7 +296,13 @@ export default function ManuscriptReview({
                 e.stopPropagation();
                 closeNote();
               }
-              if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent.isComposing &&
+                e.keyCode !== 229 &&
+                (e.target === input.current || e.ctrlKey || e.metaKey)
+              ) {
                 e.preventDefault();
                 add(e);
               }
@@ -364,7 +370,7 @@ export default function ManuscriptReview({
                 onChange={(e) => setComment(e.target.value)}
               />
               <div className="annotationPopoverFoot">
-                <small>Held until you send</small>
+                <small>Enter adds · Shift+Enter for a new line · Unsent</small>
                 <button className="primary" disabled={!comment.trim()}>
                   Add to message
                 </button>

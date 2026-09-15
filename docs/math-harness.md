@@ -58,3 +58,9 @@ Substantive research development now asks the assistant to save a preliminary pa
 Both research panels render Markdown, including documents returned inside a whole-document Markdown fence. Paper drafts remain independent of exploratory proof notes and formal Lean source. A preliminary paper must identify conjectures and unresolved obligations; it is not a certification or publication-readiness claim.
 
 Codex's imported adapter originally replaced each completed agent message. Math now assembles messages by provider item ID, retains their order, streams text deltas and replaces only the matching item's draft with its completed text. Worker and historical-turn events remain excluded. Displayed follow-up suggestions populate an unsent composer; they do not initiate another model call.
+
+## Automatic result outline
+
+For substantial research, the assistant is instructed to save proposed claims, theorems, supporting lemmas and proof sketches to `research/connections.json` without requiring manual claim entry. Stable node IDs, explicit hypotheses, open obligations and a `mainResult` flag organize the outline. Each directed relationship needs a specific explanation; dependencies, source support and proof sketches remain interpretations. The Library, graph and certificate navigator read the same outline. This requires project-editing access and actual file writes; a chat description alone does not update the panels. Existing nodes and unrelated concurrent edits must be preserved.
+
+Formalization instructions can map these result IDs to declarations in `certificates/certificate.json`. The assistant supplies correspondence notes and obligations. App-owned check records supply only the actual project preflight/build status. The current checker does not issue complete result certificates, and successful compilation does not convert all proposed nodes into verified results.

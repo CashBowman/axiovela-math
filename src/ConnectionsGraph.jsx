@@ -6,6 +6,7 @@ import {
   forceCenter,
   forceCollide,
 } from "d3-force";
+import { Preview } from "./ui.jsx";
 const colors = {
   paper: "#4d7898",
   web: "#668878",
@@ -13,6 +14,7 @@ const colors = {
   evidence: "#8a789d",
   theorem: "#497e85",
   proof: "#95627b",
+  lemma: "#677c55",
 };
 function NodeShape({ kind, r = 12, ...props }) {
   if (kind === "claim")
@@ -21,6 +23,17 @@ function NodeShape({ kind, r = 12, ...props }) {
     return (
       <polygon
         points={`${-r},0 ${-r / 2},${-r} ${r / 2},${-r} ${r},0 ${r / 2},${r} ${-r / 2},${r}`}
+        {...props}
+      />
+    );
+  if (kind === "lemma")
+    return (
+      <rect
+        x={-r * 1.3}
+        y={-r * 0.65}
+        width={2.6 * r}
+        height={1.3 * r}
+        rx={5}
         {...props}
       />
     );
@@ -52,6 +65,7 @@ export default function ConnectionsGraph({
   const [size, setSize] = useState({ width: 600, height: 500 }),
     [view, setView] = useState({ x: 0, y: 0, k: 1 }),
     [hover, setHover] = useState(""),
+    [edgeId, setEdgeId] = useState(null),
     [local, setLocal] = useState(false),
     [moved, setMoved] = useState({});
   useEffect(() => {
@@ -66,6 +80,11 @@ export default function ConnectionsGraph({
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+  const selectedEdge = links.find((l) => l.id === edgeId);
+  const selectNode = (key) => {
+    setEdgeId(null);
+    onSelect(key);
+  };
   const nearby = new Set([
     selected,
     ...links
@@ -202,7 +221,7 @@ export default function ConnectionsGraph({
             }
           }}
           onPointerDown={(e) => {
-            if (e.target.closest("[data-node]")) return;
+            if (e.target.closest("[data-node],[data-edge]")) return;
             drag.current = { x: e.clientX, y: e.clientY, view };
             e.currentTarget.setPointerCapture(e.pointerId);
           }}
@@ -245,37 +264,70 @@ export default function ConnectionsGraph({
             {links.map((l) => {
               const a = point(l.from),
                 b = point(l.to);
+              const from = items.find((x) => x.key === l.from)?.label || l.from,
+                to = items.find((x) => x.key === l.to)?.label || l.to,
+                length =
+                  a && b ? Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)) : 1,
+                line =
+                  a && b
+                    ? {
+                        x1: a.x + ((b.x - a.x) / length) * 16,
+                        y1: a.y + ((b.y - a.y) / length) * 16,
+                        x2: b.x - ((b.x - a.x) / length) * 21,
+                        y2: b.y - ((b.y - a.y) / length) * 21,
+                      }
+                    : {};
               return a && b ? (
-                <line
+                <g
                   key={l.id}
-                  x1={a.x}
-                  y1={a.y}
-                  x2={
-                    b.x -
-                    ((b.x - a.x) /
-                      Math.max(1, Math.hypot(b.x - a.x, b.y - a.y))) *
-                      21
-                  }
-                  y2={
-                    b.y -
-                    ((b.y - a.y) /
-                      Math.max(1, Math.hypot(b.x - a.x, b.y - a.y))) *
-                      21
-                  }
-                  markerEnd="url(#connection-arrow)"
-                  strokeDasharray={l.type === "contradicts" ? "5 4" : undefined}
-                  stroke="var(--blue)"
-                  strokeWidth={l.from === focus || l.to === focus ? 2 : 1}
-                  opacity={
-                    focus && l.from !== focus && l.to !== focus ? 0.2 : 0.65
-                  }
+                  data-edge={l.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Explain connection: ${from} ${l.type} ${to}`}
+                  aria-pressed={edgeId === l.id}
+                  className="graphEdge"
+                  onClick={() => setEdgeId(l.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEdgeId(l.id);
+                    }
+                  }}
                 >
+                  <line
+                    {...line}
+                    stroke="transparent"
+                    strokeWidth={24}
+                    vectorEffect="non-scaling-stroke"
+                    className="edgeHit"
+                  />
+                  <line
+                    {...line}
+                    markerEnd="url(#connection-arrow)"
+                    strokeDasharray={
+                      l.type === "contradicts" ? "5 4" : undefined
+                    }
+                    stroke={edgeId === l.id ? "var(--ink)" : "var(--blue)"}
+                    strokeWidth={
+                      edgeId === l.id
+                        ? 3
+                        : l.from === focus || l.to === focus
+                          ? 2
+                          : 1
+                    }
+                    opacity={
+                      edgeId === l.id
+                        ? 1
+                        : focus && l.from !== focus && l.to !== focus
+                          ? 0.25
+                          : 0.65
+                    }
+                  />
                   <title>
-                    {items.find((x) => x.key === l.from)?.label} {l.type}{" "}
-                    {items.find((x) => x.key === l.to)?.label}
-                    {l.reason ? ": " + l.reason : ""}
+                    {from} {l.type} {to}
                   </title>
-                </line>
+                </g>
               ) : null;
             })}
             {visible.map((n) => {
@@ -299,11 +351,11 @@ export default function ConnectionsGraph({
                     onBlur={() => setHover("")}
                     onMouseEnter={() => setHover(n.key)}
                     onMouseLeave={() => setHover("")}
-                    onClick={() => onSelect(n.key)}
+                    onClick={() => selectNode(n.key)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault();
-                        onSelect(n.key);
+                        selectNode(n.key);
                       }
                     }}
                     onPointerDown={(e) => {
@@ -355,6 +407,7 @@ export default function ConnectionsGraph({
           ["web", "Web pages"],
           ["claim", "Claims"],
           ["theorem", "Theorems"],
+          ["lemma", "Lemmas"],
           ["proof", "Proofs"],
           ["evidence", "Experiments"],
         ].map(([k, label]) => (
@@ -371,13 +424,52 @@ export default function ConnectionsGraph({
           </span>
         ))}
       </div>
-      <details className="graphInspector" key={selected}>
-        <summary>
-          Selected item ·{" "}
-          {items.find((x) => x.key === selected)?.label || "Choose a node"}
-        </summary>
-        {context}
-      </details>
+      {selectedEdge ? (
+        <section
+          className="connectionDetail"
+          aria-label="Connection explanation"
+        >
+          <div className="connectionDetailHead">
+            <strong>Connection</strong>
+            <button
+              aria-label="Close connection explanation"
+              onClick={() => setEdgeId(null)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="connectionEndpoints">
+            <button onClick={() => selectNode(selectedEdge.from)}>
+              {items.find((x) => x.key === selectedEdge.from)?.label}
+            </button>
+            <strong>{selectedEdge.type} →</strong>
+            <button onClick={() => selectNode(selectedEdge.to)}>
+              {items.find((x) => x.key === selectedEdge.to)?.label}
+            </button>
+          </div>
+          <Preview
+            prose
+            source={
+              selectedEdge.reason ||
+              "No explanation recorded. Ask the Math Assistant to examine this relationship."
+            }
+          />
+          <p className="hint">
+            {selectedEdge.origin === "assistant"
+              ? "Assistant interpretation"
+              : "Recorded relationship"}{" "}
+            · Requires evidence and scope review; not a certificate.
+          </p>
+        </section>
+      ) : (
+        <details className="graphInspector" key={selected}>
+          <summary>
+            Selected item ·{" "}
+            {items.find((x) => x.key === selected)?.label || "Choose a node"}
+          </summary>
+          {context}
+        </details>
+      )}
       <div className="graphAssistant">
         <button onClick={onAsk}>
           Ask Math Assistant to update connections
@@ -390,12 +482,17 @@ export default function ConnectionsGraph({
           Arrows read “from → to”; the relation and justification appear below.
           Dashed arrows mean “contradicts”. Links record interpretations, not
           established proofs. Drag to pan; scroll to zoom. Select a node to
-          inspect its notes.
+          inspect its notes, or an edge to read its explanation.
         </p>
         {links.map((l) => (
           <p key={l.id} className="connectionRow">
             {items.find((x) => x.key === l.from)?.label}{" "}
-            <strong title={l.reason}>{l.type}</strong>{" "}
+            <button
+              className="relationshipSelect"
+              onClick={() => setEdgeId(l.id)}
+            >
+              {l.type}
+            </button>{" "}
             {items.find((x) => x.key === l.to)?.label}
             {l.reason && (
               <small className="connectionReason">

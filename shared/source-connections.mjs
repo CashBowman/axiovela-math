@@ -10,7 +10,7 @@ export function mergeSourceConnections(project, records) {
   )) {
     if (
       !row ||
-      !["claim", "theorem", "proof"].includes(row.kind) ||
+      !["claim", "theorem", "lemma", "proof"].includes(row.kind) ||
       typeof row.id !== "string" ||
       !/^[\w-]{1,64}$/.test(row.id) ||
       typeof row.title !== "string" ||
@@ -27,6 +27,7 @@ export function mergeSourceConnections(project, records) {
       text: row.text,
       origin: "assistant",
       status: "unverified",
+      mainResult: row.mainResult === true,
     };
     const index = graphNodes.findIndex((n) => n.id === node.id);
     if (index < 0) graphNodes.push(node);
