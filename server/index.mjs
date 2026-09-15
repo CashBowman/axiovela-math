@@ -1,3 +1,4 @@
+import {importSource,discoverSources} from './library-sources.mjs';
 import './desktop-storage.mjs';
 import {saveImage,readImage} from './writeup-assets.mjs';
 import {fetchPaper} from './arxiv.mjs';
@@ -86,6 +87,8 @@ const server=http.createServer(async(req,res)=>{try{
   if(url.pathname==='/api/state'&&req.method==='PUT'){const value=JSON.parse((await readBody(req,8*1024*1024)).toString());return json(res,200,await store.save(value,Number(req.headers['if-match'])));}
   if(url.pathname==='/api/writeup-image'&&req.method==='POST')return json(res,201,{path:await saveImage(await projects.root(projectId),await readBody(req))});
   if(url.pathname==='/api/writeup-image'&&req.method==='GET'){const image=await readImage(await projects.root(projectId),url.searchParams.get('path'));res.writeHead(200,{'Content-Type':'image/'+image.type,'X-Content-Type-Options':'nosniff'});return res.end(image.bytes);}
+  if(url.pathname==='/api/library/link'&&req.method==='POST'){const {input}=await bodyJson();return json(res,201,await importSource(input,data));}
+  if(url.pathname==='/api/library/discover'&&req.method==='GET'){const p=(await store.read()).projects.find(p=>p.id===projectId);if(!p)throw Error('Project not found.');return json(res,200,{papers:await discoverSources(await projects.root(projectId),data,p,await chats.load(projectId))});}
   if(url.pathname==='/api/papers/arxiv'&&req.method==='POST'){
     const {input}=await bodyJson();const {paper,pdf}=await fetchPaper(input);
     const id=createHash('sha256').update(paper.arxivId).digest('hex').slice(0,32);

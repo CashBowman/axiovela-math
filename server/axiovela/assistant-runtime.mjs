@@ -1,3 +1,4 @@
+import {messageStream} from './message-stream.mjs';
 import {profileId} from './research-profiles.mjs';
 import {spawn} from 'node:child_process';
 import {EventEmitter} from 'node:events';
@@ -171,6 +172,7 @@ export async function runAssistant(options) {
   rpc.on('failure', error => { if (!settled) rejectDone(error); });
   rpc.on('notice', label => onEvent({kind: 'input', label, status: 'running'}));
   let output = '';
+  const messages = messageStream();
   const pendingEvents = [];
   const handleEvent = event => {
     if (settled) return;
@@ -182,8 +184,8 @@ export async function runAssistant(options) {
       if (!turnId) { if (pendingEvents.length < 256) pendingEvents.push(event); return; }
       if ((p.turnId || p.turn?.id) !== turnId) return;
       options.onActivity?.();
-      if (event.method === 'item/completed' && item.type === 'agentMessage') { output = item.text || output; onOutput(output); }
-      if (event.method === 'item/agentMessage/delta') onEvent({kind: 'writing', label: 'Composing response', status: 'running'});
+      if (event.method === 'item/completed' && item.type === 'agentMessage') { output = messages.complete(item.id || 'current', item.text); onOutput(output); }
+      if (event.method === 'item/agentMessage/delta') { output = messages.delta(p.itemId || 'current', p.delta); onOutput(output); }
       if (['item/started', 'item/completed'].includes(event.method) && item.type !== 'agentMessage' && item.type !== 'reasoning' && item.type !== 'userMessage') {
         const labels = {commandExecution: 'Running a project command', fileChange: 'Updating project files', webSearch: 'Researching sources', mcpToolCall: 'Using a research tool'};
         onEvent({kind: 'tool', label: labels[item.type] || 'Working on the task', status: event.method === 'item/completed' ? 'complete' : 'running'});

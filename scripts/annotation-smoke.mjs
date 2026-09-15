@@ -305,7 +305,7 @@ try {
   const latex =
     "\\documentclass{article}\n\\begin{document}\nFirst sentence explains the idea. A second sentence follows it.\\par\nThis longer passage spans multiple rendered lines when it is included in a sufficiently narrow typeset column, and it needs a detailed explanation of the assumptions and their consequences.\\newpage\nSecond page has visible text without clicking.\\newpage\nThird page supports continuous scrolling.\\newpage\nFourth page is the end.\n\\end{document}";
   await page.getByLabel("Manuscript source").fill(latex);
-  await page.getByRole("button", { name: "Render PDF", exact: true }).click();
+  await page.getByRole("button", { name: "Render document", exact: true }).click();
   await page
     .locator('[data-page="1"] .textLayer span')
     .filter({ hasText: "First sentence" })
@@ -322,10 +322,10 @@ try {
   });
   await page.locator('[data-page="1"] .textLayer span').first().waitFor();
   const headerHeight = await page
-    .locator(".compactPreview>.panelHead")
+    .locator(".manuscriptPreview>.panelHead")
     .evaluate((e) => e.getBoundingClientRect().height);
   assert.ok(headerHeight < 70);
-  assert.equal(await page.locator(".previewToolbar").count(), 0);
+  assert.equal(await page.locator(".previewToolbar").count(), 1);
   const before = Number(await pdf.getAttribute("data-zoom"));
   await page.keyboard.press("Control+=");
   await until(async () => Number(await pdf.getAttribute("data-zoom")) > before);
@@ -350,6 +350,7 @@ try {
     );
   await until(async () => Number(await pdf.getAttribute("data-zoom")) > before);
   await page.getByRole("button", { name: "Fit width", exact: true }).click();
+  await page.waitForFunction(()=>Math.abs(document.querySelector('.pdfPage').getBoundingClientRect().width-(document.querySelector('.pdfCanvasScroll').clientWidth-36))<2);
   await page.locator(".pdfCanvasScroll").evaluate((el) => {
     const page = el.querySelector('[data-page="2"]');
     el.scrollTop = page.offsetTop;
@@ -408,7 +409,7 @@ try {
     1,
   );
   checks.push(
-    "continuous four-page PDF, page arrows, compact header, Ctrl +/- and pinch events, stable fit width, visible canvas before click, multiline annotation",
+    "continuous four-page PDF, page arrows, Axiovela preview header, Ctrl +/- and pinch events, stable fit width, visible canvas before click, multiline annotation",
   );
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(

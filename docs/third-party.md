@@ -13,3 +13,5 @@ The manuscript source-line drop helper (`src/writeup-insertion.mjs`) is reused u
 The integrated PDF reader uses Mozilla PDF.js (`pdfjs-dist`), Apache-2.0 licensed. Its license and notices remain in the distributed dependency. SyncTeX records are emitted by the bundled Tectonic compiler; the app parses those records with its own line-navigation code.
 
 `src/WriteupFormatMenu.jsx` adapts Axiovela's MIT-licensed three-dot default-format control. The compact project dialog follows Axiovela's layout. Annotation composer interactions were independently implemented after inspecting Lavish 0.1.62's queued-prompt UI; Lavish runtime code is not bundled.
+
+The source reader uses Mozilla Readability (Apache-2.0) and LinkeDOM (ISC); the reference graph uses D3 Force (ISC) and its dependencies. Their licenses remain in the distributed dependency packages. Axiovela's provider adapter has a Math-specific message-accumulation change; its permission, session and root-turn filtering behavior is preserved.

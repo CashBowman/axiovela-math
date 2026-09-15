@@ -45,6 +45,12 @@ for await (const line of readline.createInterface({input: process.stdin})) {
         await writeFile(path.join(folder,'certificate.json'),JSON.stringify({title:'Addition of zero',statement:'For every natural number $n$, $n+0=n$.',declarations:['fixture_add_zero'],assumptions:['Natural-number arithmetic'],obligations:['Check correspondence with the intended target.'],scopeNotes:'An elementary fixture, not a Sobolev formalization.'}));
         await writeFile(path.join(folder,'summary.md'),'## Formal argument\n\nThe saved declaration expresses the additive identity.');
       }
+      if(request.includes('FIXTURE_PRELIMINARY')&&session.sandbox!=='read-only'){
+        const format=prompt.match(/Selected manuscript format: (markdown|latex)/)?.[1];
+        if(!format)throw Error('No manuscript format supplied');
+        await mkdir(path.join(process.cwd(),'writeups'),{recursive:true});
+        await writeFile(path.join(process.cwd(),'writeups/main.'+(format==='latex'?'tex':'md')),format==='latex'?'\\documentclass{article}\n\\begin{document}\nPreliminary fixture paper. Claims remain unverified.\n\\end{document}':'# Preliminary fixture paper\n\nClaims remain unverified.');
+      }
       if (request.includes('FIXTURE_CHILD')) {
         event('turn/started', {threadId: 'child-thread', turn: {id: 'child-turn'}});
         event('item/completed', {threadId: 'child-thread', item: {type: 'agentMessage', text: 'Inspection sent to lead agent'}});
@@ -57,6 +63,15 @@ for await (const line of readline.createInterface({input: process.stdin})) {
         event('item/started', {item: {type: 'commandExecution', command: 'private raw output'}});
         event('item/completed', {item: {type: 'fileChange'}});
         if (request.includes('FIXTURE_HANG')) return;
+        if(request.includes('FIXTURE_MULTI_MESSAGE')){
+          event('item/agentMessage/delta',{itemId:'first',delta:'First retained '});
+          event('item/completed',{item:{id:'first',type:'agentMessage',text:'First retained progress.'}});
+          setTimeout(()=>{event('item/agentMessage/delta',{itemId:'second',delta:'Final accumulated '});event('item/completed',{item:{id:'second',type:'agentMessage',text:'Final accumulated answer.'}});event('turn/completed',{turn:{status:'completed'}});},1800);return;
+        }
+        if(request.includes('FIXTURE_DIRECTIVES')){
+          event('item/completed',{item:{id:'directives',type:'agentMessage',text:':codex-file-citation{path="'+request.slice(request.indexOf('FIXTURE_DIRECTIVES')+19).trim()+'" purpose="source"}\n\n- :codex-followup[Develop lemma]{prompt="Develop the next lemma."}'}});event('turn/completed',{turn:{status:'completed'}});return;
+        }
+
         if (request.includes('FIXTURE_HEARTBEAT')) {
           let count = 0;
           const timer = setInterval(() => {

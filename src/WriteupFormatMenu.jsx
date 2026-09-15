@@ -10,7 +10,7 @@ export function defaultWriteupFormat() {
   return "markdown";
 }
 
-export default function WriteupFormatMenu({ value, onChange }) {
+export default function WriteupFormatMenu({ value, onChange, children }) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState("");
   const root = useRef(null),
@@ -84,6 +84,7 @@ export default function WriteupFormatMenu({ value, onChange }) {
             For projects without a saved format choice on this device. Existing
             drafts stay unchanged.
           </p>
+          {children}
           {error && <p role="alert">{error}</p>}
         </div>
       )}

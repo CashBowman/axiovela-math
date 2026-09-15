@@ -1,3 +1,4 @@
+import {blankProject} from '../shared/research.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -42,4 +43,14 @@ test('research reads real files with content revisions and rejects oversized fil
   await fs.writeFile(path.join(root,'research/summary.md'),'x'.repeat(1024*1024+1));
   await assert.rejects(readResearchArtifacts(root),/under 1 MB/);
  }finally{await fs.rm(root,{recursive:true,force:true});}
+});
+
+test('preliminary paper replaces only the untouched starter and keeps edited drafts reviewable',()=>{
+ const p=blankProject('draft-test');
+ const remote={latex:{text:'A preliminary paper',hash:'one'}};
+ assert.equal(reconcileResearch(p,remote).patch.latex,'A preliminary paper');
+ p.latex='An actual author draft';
+ assert.equal(reconcileResearch(p,remote).patch.latex,undefined);
+ assert.equal(reconcileResearch(p,remote).conflicts.latex.text,'A preliminary paper');
+ assert.equal(reconcileResearch(p,remote).patch.markdown,undefined);
 });

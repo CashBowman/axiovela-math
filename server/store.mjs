@@ -17,6 +17,7 @@ export function validateState(s) {
       if(c.status==='human-reviewed' && (!c.reviewer?.trim()||!c.reviewNote?.trim())) throw new Error('Human review needs a reviewer and an evidence note.');
     }
     for(const paper of p.papers) if(!/^[a-zA-Z0-9-]{1,64}$/.test(paper.id)||typeof paper.title!=='string'||typeof paper.notes!=='string') throw new Error('Invalid paper metadata.');
+    for(const paper of p.papers){if(paper.sourceType&&!['pdf','web'].includes(paper.sourceType))throw Error('Unknown source type.');if(paper.sourceType==='web'){const u=new URL(paper.sourceUrl);if(!['http:','https:'].includes(u.protocol)||u.username||u.password)throw Error('Web sources require a public HTTP link.');if(paper.text&&typeof paper.text!=='string')throw Error('Invalid source snapshot.');}}
     for(const task of p.tasks) if(task.status!=='prepared'||typeof task.prompt!=='string') throw new Error('This preview only stores prepared tasks.');
   }
   if(!ids.has(s.activeProjectId)) throw new Error('Active project is missing.');

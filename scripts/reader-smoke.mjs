@@ -168,7 +168,7 @@ try {
   const rendered = page.waitForResponse(
     (r) => r.url().includes("/api/render?") && r.request().method() === "POST",
   );
-  await page.getByRole("button", { name: "Render PDF", exact: true }).click();
+  await page.getByRole("button", { name: "Render document", exact: true }).click();
   const result = await (await rendered).json();
   assert.ok(result.sourceMap.length);
   await page
@@ -258,7 +258,7 @@ try {
     );
   });
   await page
-    .getByRole("button", { name: "Pasted paper fixture Unread", exact: false })
+    .getByRole("button", { name: "Pasted paper fixture PDF · Unread", exact: false })
     .waitFor();
   assert.equal(imports, 1);
   await page

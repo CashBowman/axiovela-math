@@ -216,7 +216,7 @@ export default function ManuscriptReview({
           />
         ) : (
           <div className="empty largeEmpty">
-            Choose Render PDF to compile the manuscript.
+            Choose Render document to compile the manuscript.
           </div>
         )}
       </div>

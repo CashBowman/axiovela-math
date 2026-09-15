@@ -50,3 +50,11 @@ The review design takes source-linked notes from [Zotero's documented annotation
 ## Manuscript annotation reviews
 
 [Annotate mode](annotations.md) adds a narrowly scoped review path to the existing Publication Assistant. The server validates the user's attached notes against the current saved source and bibliography, captures their exact revision, and runs a fresh read-only provider turn. The normal conversation permissions remain unchanged. The app parses one complete proposed draft and requires an explicit comparison/acceptance action before replacing the selected format. Both the review snapshot and current editor state guard against stale acceptance. This is an application workflow built around an existing model, not an additional mathematical verifier.
+
+## Preliminary papers and readable sources
+
+Substantive research development now asks the assistant to save a preliminary paper in the user's selected Markdown or LaTeX format. Only an empty draft or the exact unchanged starter template is eligible for initial replacement. An existing draft calls for a separately saved proposal unless the user authorized revision. Greetings, brief explanations and Lean-only requests do not trigger paper creation. This is prompt guidance, not a guarantee that every provider will generate the file. The app displays actual saved artifacts and reviews conflicting edits; it never reports a paper merely because the model said it saved one.
+
+Both research panels render Markdown, including documents returned inside a whole-document Markdown fence. Paper drafts remain independent of exploratory proof notes and formal Lean source. A preliminary paper must identify conjectures and unresolved obligations; it is not a certification or publication-readiness claim.
+
+Codex's imported adapter originally replaced each completed agent message. Math now assembles messages by provider item ID, retains their order, streams text deltas and replaces only the matching item's draft with its completed text. Worker and historical-turn events remain excluded. Displayed follow-up suggestions populate an unsent composer; they do not initiate another model call.

@@ -157,15 +157,17 @@ export default function PdfReader({
   const container = useRef(),
     reader = useRef(),
     zoomRef = useRef(zoom),
+    fitRef = useRef(true),
     anchor = useRef(),
     frame = useRef();
   zoomRef.current = zoom;
+  function fitWidth(){fitRef.current=true;setFit(true);}
   useEffect(() => {
     let canceled = false;
     setDoc(null);
     setError("");
     setPage(1);
-    setFit(true);
+    fitWidth();
     container.current.scrollTop = 0;
     const task = getDocument({ url, isEvalSupported: false });
     (async () => {
@@ -188,6 +190,12 @@ export default function PdfReader({
       void task.destroy();
     };
   }, [url]);
+  useEffect(() => {
+    const panel=reader.current?.closest('.panel');
+    const expand=e=>{if(e.detail)fitWidth();};
+    panel?.addEventListener('math-panel-expand',expand);
+    return()=>panel?.removeEventListener('math-panel-expand',expand);
+  }, []);
   function remember(clientX, clientY) {
     const el = container.current,
       r = el.getBoundingClientRect(),
@@ -210,8 +218,10 @@ export default function PdfReader({
   }
   function scale(value, x, y) {
     remember(x, y);
+    fitRef.current=false;
     setFit(false);
-    setZoom(clamp(value));
+    zoomRef.current=clamp(value);
+    setZoom(zoomRef.current);
   }
   useLayoutEffect(() => {
     const a = anchor.current,
@@ -230,11 +240,13 @@ export default function PdfReader({
     if (!doc || !fit) return;
     const el = container.current;
     const resize = () => {
+      if(!fitRef.current||el.clientWidth<40)return;
       const next = clamp(
         (el.clientWidth - 36) / Math.max(...doc.sizes.map((s) => s.width)),
       );
       if (Math.abs(next - zoomRef.current) > 0.001) {
         remember();
+        zoomRef.current=next;
         setZoom(next);
       }
     };
@@ -280,7 +292,7 @@ export default function PdfReader({
         return;
       e.preventDefault();
       e.stopPropagation();
-      if (e.key === "0") setFit(true);
+      if (e.key === "0") fitWidth();
       else scale(zoomRef.current * (e.key === "-" ? 1 / 1.15 : 1.15));
     };
     const native = (e) => {
@@ -291,7 +303,7 @@ export default function PdfReader({
       )
         return;
       e.preventDefault();
-      if (e.detail === "reset") setFit(true);
+      if (e.detail === "reset") fitWidth();
       else scale(zoomRef.current * (e.detail === "out" ? 1 / 1.15 : 1.15));
     };
     el.addEventListener("wheel", wheel, { passive: false });
@@ -365,7 +377,7 @@ export default function PdfReader({
         >
           −
         </button>
-        <button aria-pressed={fit} onClick={() => setFit(true)}>
+        <button aria-pressed={fit} onClick={fitWidth}>
           Fit width
         </button>
         <button

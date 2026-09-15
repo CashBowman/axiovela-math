@@ -4,9 +4,9 @@ import {projectFile} from './axiovela/assistant-api.mjs';
 
 export async function readResearchArtifacts(root) {
   const result = {};
-  for (const kind of ['summary', 'proof']) {
+  for (const kind of ['summary', 'proof', 'markdown', 'latex']) {
     try {
-      const file = await projectFile(root, `research/${kind}.md`, true);
+      const file = await projectFile(root, ({markdown:'writeups/main.md',latex:'writeups/main.tex'}[kind]||`research/${kind}.md`), true);
       const handle = await fs.open(file, 'r');
       try {
         const info = await handle.stat();

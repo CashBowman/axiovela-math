@@ -1,6 +1,6 @@
 {
   "name": "axiovela-math",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -29,15 +29,19 @@
     "test:updates:ui": "node scripts/updates-smoke.mjs",
     "release:sign": "node scripts/publish-update.mjs",
     "test:reader": "node scripts/reader-smoke.mjs",
-    "test:annotations": "node scripts/annotation-smoke.mjs"
+    "test:annotations": "node scripts/annotation-smoke.mjs",
+    "test:library": "node scripts/library-polish-smoke.mjs"
   },
   "dependencies": {
     "@citation-js/core": "0.7.21",
     "@citation-js/plugin-bibtex": "0.7.21",
     "@fontsource/dm-mono": "5.3.0",
     "@fontsource/manrope": "5.3.0",
+    "@mozilla/readability": "0.6.0",
     "busboy": "1.6.0",
+    "d3-force": "3.0.0",
     "katex": "0.18.5",
+    "linkedom": "0.18.13",
     "lucide-react": "0.468.0",
     "pdfjs-dist": "6.3.289",
     "react": "19.2.8",
