@@ -11,3 +11,5 @@ Lean, Elan and mathlib are downloaded from their upstream projects during user-t
 The manuscript source-line drop helper (`src/writeup-insertion.mjs`) is reused unchanged from Axiovela under MIT. Its SHA-256 is `82e33fd1f8bec2629e06995d2b7a7e9363011a8b9b1d018613d57be0f1cb1d87`. The Math icon is a generated variation of the Axiovela compass with an integral symbol.
 
 The integrated PDF reader uses Mozilla PDF.js (`pdfjs-dist`), Apache-2.0 licensed. Its license and notices remain in the distributed dependency. SyncTeX records are emitted by the bundled Tectonic compiler; the app parses those records with its own line-navigation code.
+
+`src/WriteupFormatMenu.jsx` adapts Axiovela's MIT-licensed three-dot default-format control. The compact project dialog follows Axiovela's layout. Annotation composer interactions were independently implemented after inspecting Lavish 0.1.62's queued-prompt UI; Lavish runtime code is not bundled.

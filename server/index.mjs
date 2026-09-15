@@ -35,6 +35,7 @@ const server=http.createServer(async(req,res)=>{try{
   const url=new URL(req.url,`http://${host}:${port}`);
   const bodyJson=async()=>JSON.parse((await readBody(req,8*1024*1024)).toString());
   if(url.pathname==='/api/activity'&&req.method==='GET')return json(res,200,{running:chats.controllers.size+leanWorkspace.active.size});
+  if(url.pathname==='/api/projects/open'&&req.method==='POST')return json(res,200,await projects.openOrCreate(await bodyJson()));
   if(url.pathname==='/api/projects'&&req.method==='POST')return json(res,201,await projects.create(await bodyJson()));
   const projectId=url.searchParams.get('project');
   if(url.pathname==='/api/bridge/sources'&&req.method==='GET')return json(res,200,{sources:await bridge.discover()});

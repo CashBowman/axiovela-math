@@ -23,7 +23,11 @@ export function textProjection(root) {
         "p,li,h1,h2,h3,h4,pre,blockquote,.textLayer > span,figure,td,.katex-display",
       ) || root;
     if (previousBlock && previousBlock !== block && !/\s$/.test(text))
-      text += root.classList.contains("textLayer") ? "\n" : "\n\n";
+      text +=
+        root.classList.contains("textLayer") ||
+        !!root.querySelector(".textLayer")
+          ? "\n"
+          : "\n\n";
     entries.push({
       node,
       start: text.length,

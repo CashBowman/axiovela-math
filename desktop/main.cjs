@@ -41,9 +41,9 @@ async function shutdown(){
 async function openFolder(folder){const error=await shell.openPath(folder);if(error)dialog.showErrorBox('Could not open folder',error);}
 function nativeMenu(){
  Menu.setApplicationMenu(Menu.buildFromTemplate([
-  {label:'File',submenu:[{label:'Open app data folder',click:()=>openFolder(userDir)},{type:'separator'},{label:'Quit',accelerator:'CmdOrCtrl+Q',click:()=>win?.close()}]},
+  {label:'File',submenu:[{label:'New project…',accelerator:'CmdOrCtrl+N',click:()=>win?.webContents.send('math:command','new-project')},{label:'Open project…',accelerator:'CmdOrCtrl+O',click:()=>win?.webContents.send('math:command','open-project')},{type:'separator'},{label:'Export workspace JSON',click:()=>win?.webContents.send('math:command','export-workspace')},{label:'Export recovery draft',click:()=>win?.webContents.send('math:command','export-recovery')},{label:'Research version history',click:()=>win?.webContents.send('math:command','history')},{type:'separator'},{label:'Open app data folder',click:()=>openFolder(userDir)},{type:'separator'},{label:'Quit',accelerator:'CmdOrCtrl+Q',click:()=>win?.close()}]},
   {role:'editMenu'},
-  {label:'View',submenu:[{role:'resetZoom'},{role:'zoomIn'},{role:'zoomOut'},{type:'separator'},{role:'togglefullscreen'}]},
+  {label:'View',submenu:[{label:'Actual size / fit PDF',accelerator:'CmdOrCtrl+0',click:()=>win?.webContents.send('math:zoom','reset')},{label:'Zoom in',accelerator:'CmdOrCtrl+=',click:()=>win?.webContents.send('math:zoom','in')},{label:'Zoom out',accelerator:'CmdOrCtrl+-',click:()=>win?.webContents.send('math:zoom','out')},{type:'separator'},{role:'togglefullscreen'}]},
   {label:'Help',submenu:[{label:'Check for updates…',click:()=>{win?.webContents.send('math:update-open');void updates?.check();}},{label:'GitHub repository',click:()=>shell.openExternal('https://github.com/CashBowman/axiovela-math')},{label:'Downloads and release notes',click:()=>shell.openExternal(releaseRoot)},{label:'About Axiovela Math',click:()=>dialog.showMessageBox(win,{type:'info',title:'Axiovela Math',message:'Axiovela Math '+app.getVersion(),detail:'Linux development build\n\nResearch, evidence, Lean checks and publication writing.\n\nUse Help → Check for updates for signed downloads and guided installation. Your projects and app data stay in their own folders.'})}]},
  ]));
 }
@@ -81,6 +81,7 @@ else app.whenReady().then(async()=>{
  updates=new Updates({profile:userDir,currentVersion:app.getVersion()});
  await updates.initialize().catch(()=>updates.set({status:'error',error:'Update storage is unavailable. Your workspace can still be used.'}));
  updates.on('change',state=>{if(win&&!win.isDestroyed())win.webContents.send('math:update-state',state);});
+ ipcMain.handle('math:zoom-app',(e,direction)=>{trusted(e);if(!['in','out','reset'].includes(direction))throw Error('Unknown zoom action.');const wc=win.webContents;wc.setZoomFactor(direction==='reset'?1:Math.max(.5,Math.min(3,wc.getZoomFactor()*(direction==='in'?1.15:1/1.15))));});
  ipcMain.handle('math:update',async(e,action,value)=>{
   trusted(e);
   switch(action){
@@ -124,6 +125,7 @@ else app.whenReady().then(async()=>{
   const startup=setTimeout(()=>void updates.check(),30000),periodic=setInterval(()=>void updates.check(),6*60*60*1000);
   app.once('will-quit',()=>{clearTimeout(startup);clearInterval(periodic);updates.cancel();});
  }
+ win.webContents.on('before-input-event',(event,input)=>{if(input.type!=='keyDown'||!(input.control||input.meta)||input.alt)return;const direction=['+','=','Add'].includes(input.key)?'in':['-','Subtract'].includes(input.key)?'out':input.key==='0'?'reset':null;if(direction){event.preventDefault();win.webContents.send('math:zoom',direction);}});
  nativeMenu();if(savedWindow.maximized)win.maximize();await win.loadURL(origin+'/');
  if(process.env.AXIOVELA_MATH_DESKTOP_SMOKE==='1'){
   // Wait for the React workspace, then verify storage across two real launches.

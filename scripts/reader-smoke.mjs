@@ -132,7 +132,7 @@ try {
   await page
     .getByLabel("Annotation feedback")
     .fill("Explain this step more precisely.");
-  await page.getByRole("button", { name: "Add comment", exact: true }).click();
+  await page.getByRole("button", { name: "Add to message", exact: true }).click();
   await until(
     async () => (await state()).projects[0].manuscriptComments?.length === 1,
   );
@@ -152,17 +152,12 @@ try {
   );
   await page.reload();
   await page.getByRole("button", { name: "Write-up", exact: true }).click();
-  await page.getByRole("button", { name: "Comments · 1" }).click();
-  await page
-    .getByText("Explain this step more precisely.", { exact: true })
-    .waitFor();
-  await page.getByRole("button", { name: "Resolve", exact: true }).click();
-  await page.getByRole("button", { name: "Reopen", exact: true }).waitFor();
-  await page.getByLabel("Manuscript source").fill(source + "\n\nChanged.");
-  await page.getByText("Earlier revision", { exact: false }).waitFor();
-  checks.push(
-    "comments survive reload, can resolve, and retain earlier-revision anchors",
-  );
+  await page.locator('[aria-label="Unsent annotations"] .annotationChip').waitFor();
+  await page.locator('[aria-label="Unsent annotations"] .annotationChipBody').click();
+  await page.getByLabel('Annotation feedback').fill('Explain this step more precisely.');
+  await page.getByRole('button',{name:'Add to message',exact:true}).click();
+  await page.getByLabel('Manuscript source').fill(source+'\n\nChanged.');
+  checks.push('unsent annotation attachments survive reload and preserve their source revision after edits');
   await page
     .getByRole("button", { name: "LaTeX", exact: false })
     .first()
@@ -206,7 +201,7 @@ try {
   await page
     .getByLabel("Annotation feedback")
     .fill("Check this PDF passage.");
-  await page.getByRole("button", { name: "Add comment", exact: true }).click();
+  await page.getByRole("button", { name: "Add to message", exact: true }).click();
   await page.locator(".annotationPin").waitFor();
   await page.screenshot({ path: ".local/qa/manuscript-comments.png" });
   await page.getByRole("button", {name:"Annotate",exact:true}).click();

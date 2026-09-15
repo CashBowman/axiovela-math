@@ -31,6 +31,13 @@ export default function AnnotationSurface({
     const element = root.current,
       target = textRef?.current || element;
     if (!element || !target) return;
+    if (
+      !annotations.some((item) => !page || item.anchor.page === page) &&
+      (!draft || (page && draft.page !== page))
+    ) {
+      setMarks((old) => (old.length ? [] : old));
+      return;
+    }
     let frame;
     const update = () => {
       cancelAnimationFrame(frame);

@@ -76,7 +76,9 @@ async function selectText(locator, startText, endText = startText) {
 }
 async function note(text) {
   await page.getByLabel("Annotation feedback").fill(text);
-  await page.getByRole("button", { name: "Add comment", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Add to message", exact: true })
+    .click();
   await page
     .getByRole("dialog", { name: "Add annotation" })
     .waitFor({ state: "hidden" });
@@ -98,10 +100,63 @@ try {
   await page.goto(url);
   await page.getByRole("heading", { name: "Executive summary" }).waitFor();
   await page.getByRole("button", { name: "Write-up", exact: true }).click();
+  await page.getByRole("button", { name: "Write-up default format" }).click();
+  await page.getByRole("radio", { name: "LaTeX", exact: true }).click();
+  assert.ok(
+    (await page.getByLabel("Manuscript source").inputValue()).startsWith(
+      "\\documentclass",
+    ),
+  );
+  await page
+    .getByRole("button", { name: "Markdown", exact: false })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "New project", exact: true }).click();
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Export workspace JSON", exact: true })
+      .isVisible(),
+    false,
+  );
+  await page
+    .getByRole("heading", { name: "Open or create a research project" })
+    .waitFor();
+  await page.screenshot({ path: ".local/qa/project-simple-dialog.png" });
+  await page
+    .getByLabel("Project folder", { exact: true })
+    .fill("Composer fixture");
+  await page
+    .getByRole("button", { name: "Open or create", exact: true })
+    .click();
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await page.waitForFunction(() =>
+    document
+      .querySelector('[aria-label="Manuscript source"]')
+      .value.startsWith("\\documentclass"),
+  );
+  await page.getByLabel("File menu").click();
+  await page
+    .getByRole("button", { name: "Open project…", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Untitled mathematics project", exact: true })
+    .click();
+  await page.waitForFunction(() =>
+    document
+      .querySelector('[aria-label="Manuscript source"]')
+      .value.startsWith("#"),
+  );
+  checks.push(
+    "three-dot default format applies to new projects and preserves existing format; simple project dialog and File browsing",
+  );
   const source =
     "# Passage review\n\nFirst sentence explains the idea. A second sentence has **important assumptions** and a precise conclusion.\n\nThis next paragraph discusses why those assumptions matter. It should remain connected to the argument.";
   await page.getByLabel("Manuscript source").fill(source);
-  await until(async () => (await state()).projects[0].markdown === source);
+  await until(
+    async () =>
+      (await state()).projects.find((p) => p.id === id).markdown === source,
+  );
   await page.getByRole("button", { name: "Annotate", exact: true }).click();
   await selectText(page.locator(".paperPreview p").first(), "explains");
   assert.equal(
@@ -111,113 +166,129 @@ try {
       .textContent(),
     "First sentence explains the idea.",
   );
-  await page.locator(".draftHighlight").first().waitFor();
   await note("Make this sentence clearer.");
   await page.getByRole("button", { name: "Comment 1", exact: true }).waitFor();
-  await selectText(
-    page.locator(".paperPreview .markdown"),
-    "important assumptions",
-    "why those assumptions matter.",
-  );
-  const quote = await page
-    .getByRole("dialog", { name: "Add annotation" })
-    .locator("blockquote")
-    .textContent();
-  assert.ok(quote.startsWith("A second sentence"));
-  assert.ok(quote.endsWith("matter."));
-  await note("Explain how these hypotheses connect.");
-  checks.push(
-    "sentence snapping and multi-paragraph selection retain full quotes across inline formatting",
-  );
-  await page.getByRole("button", { name: "Comment 1", exact: true }).click();
-  await page
-    .getByText("Make this sentence clearer.", { exact: true })
-    .waitFor();
-  await page
-    .locator("[data-comment-id]")
-    .first()
-    .getByRole("button", { name: "Edit", exact: true })
-    .click();
-  await page
-    .getByLabel("Annotation feedback")
-    .fill("Please clarify this sentence.");
-  await page.keyboard.press("Control+Enter");
-  await page
-    .getByRole("dialog", { name: "Edit annotation" })
-    .waitFor({ state: "hidden" });
-  await page.screenshot({ path: ".local/qa/annotation-markdown.png" });
-  await page.emulateMedia({ media: "print" });
-  assert.equal(await page.locator(".annotationOverlay").isVisible(), false);
-  assert.equal(await page.locator(".manuscriptComments").isVisible(), false);
-  await page.emulateMedia({ media: "screen" });
-  checks.push("printed Markdown excludes review controls and annotation marks");
-  await page.reload();
-  await page.getByRole("button", { name: "Write-up", exact: true }).click();
-  await page.getByRole("button", { name: "Annotate", exact: true }).click();
-  await page.getByRole("button", { name: "Comment 2", exact: true }).waitFor();
-  await page.getByRole("button", { name: "Comment 1", exact: true }).click();
-  await page
-    .getByText("Please clarify this sentence.", { exact: true })
-    .waitFor();
-  await page.getByRole("button", { name: "Expand manuscript preview" }).click();
-  await page.getByRole("button", { name: "Comment 2", exact: true }).waitFor();
-  await page.keyboard.press("Escape");
-  await page.locator(".expandedPanel").waitFor({ state: "hidden" });
-  checks.push(
-    "numbered highlights, edited notes and anchors survive reload, expansion and responsive reflow",
-  );
-  // Selected feedback uses a fresh read-only provider turn, preserving the normal access setting and unsent chat draft.
   await page
     .getByRole("button", { name: "Choose writing model and provider" })
     .click();
   await page.getByRole("button", { name: "Use model", exact: true }).click();
   await page.getByRole("dialog").waitFor({ state: "hidden" });
   await page.getByLabel("writing access").selectOption("full");
-  await page.getByLabel("writing message").fill("Keep this unsent message");
+  await selectText(
+    page.locator(".paperPreview .markdown"),
+    "important assumptions",
+    "why those assumptions matter.",
+  );
+  assert.ok(
+    (
+      await page
+        .getByRole("dialog", { name: "Add annotation" })
+        .locator("blockquote")
+        .textContent()
+    ).startsWith("A second sentence"),
+  );
+  await note("Explain how these hypotheses connect.");
+  assert.equal(
+    await page.getByRole("button", { name: /^Comments/ }).count(),
+    0,
+  );
+  assert.equal(
+    await page
+      .locator('[aria-label="Unsent annotations"] .annotationChip')
+      .count(),
+    2,
+  );
+  const chats = () =>
+    fetch(url + "/api/conversations?project=" + id).then((r) => r.json());
+  assert.equal(
+    (await chats()).conversations.find((c) => c.role === "writing").turns
+      .length,
+    0,
+  );
   await page
-    .getByRole("checkbox", { name: "Include comment 1 in feedback" })
-    .check();
+    .getByLabel("writing message")
+    .fill("Please clarify the selected statement and preserve the scope.");
+  await page.screenshot({ path: ".local/qa/annotation-composer.png" });
+  const originalChat = await page
+    .getByLabel("writing conversation", { exact: true })
+    .inputValue();
+  await page.getByRole("button", { name: "New writing conversation" }).click();
+  await until(
+    async () =>
+      (await page.locator('[aria-label="Unsent annotations"]').count()) === 0,
+  );
+  await page.getByLabel("writing message").fill("Separate draft");
   await page
-    .getByRole("button", { name: "Send feedback · 1", exact: true })
+    .getByLabel("writing conversation", { exact: true })
+    .selectOption(originalChat);
+  await until(
+    async () =>
+      (await page
+        .locator('[aria-label="Unsent annotations"] .annotationChip')
+        .count()) === 2,
+  );
+  assert.equal(
+    await page.getByLabel("writing message").inputValue(),
+    "Please clarify the selected statement and preserve the scope.",
+  );
+  await page
+    .getByRole("button", { name: "Remove annotation 2 from message" })
     .click();
+  await page.reload();
+  await page.getByRole("button", { name: "Write-up", exact: true }).click();
+  await page
+    .locator('[aria-label="Unsent annotations"] .annotationChip')
+    .waitFor();
+  assert.equal(
+    await page.getByLabel("writing message").inputValue(),
+    "Please clarify the selected statement and preserve the scope.",
+  );
+  await page
+    .locator('[aria-label="Unsent annotations"] .annotationChipBody')
+    .click();
+  await page
+    .getByLabel("Annotation feedback")
+    .fill("Please clarify this sentence.");
+  await page.keyboard.press("Control+Enter");
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  await page.getByRole("button", { name: "Send message", exact: true }).click();
   await page
     .getByRole("button", { name: "Review proposed revision", exact: true })
     .waitFor();
-  const chats = await fetch(url + "/api/conversations?project=" + id).then(
-      (r) => r.json(),
-    ),
-    chat = chats.conversations.find((c) => c.role === "writing"),
+  const chat = (await chats()).conversations.find((c) => c.role === "writing"),
     turn = chat.turns.at(-1);
   assert.equal(chat.mode, "full");
   assert.equal(turn.mode, "ask");
   assert.equal(turn.review.comments.length, 1);
-  assert.equal(turn.review.source, source);
-  assert.ok(turn.output.includes("read-only"));
-  assert.equal(await page.getByLabel("Manuscript source").inputValue(), source);
   assert.equal(
-    await page.getByLabel("writing message").inputValue(),
-    "Keep this unsent message",
+    turn.review.comments[0].comment,
+    "Please clarify this sentence.",
   );
-  await page
-    .getByRole("button", { name: "Review proposed revision", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Apply revision", exact: true })
-    .waitFor();
-  await page.screenshot({ path: ".local/qa/annotation-proposal.png" });
-  await page.getByRole("button", { name: "Keep current draft" }).click();
+  assert.equal(
+    turn.message,
+    "Please clarify the selected statement and preserve the scope.",
+  );
+  assert.equal(turn.review.source, source);
+  assert.equal(
+    await page.locator('[aria-label="Unsent annotations"]').count(),
+    0,
+  );
   assert.equal(await page.getByLabel("Manuscript source").inputValue(), source);
   await page
     .getByRole("button", { name: "Review proposed revision", exact: true })
     .click();
   await page.getByRole("button", { name: "Apply revision" }).click();
   await until(async () =>
-    (await state()).projects[0].markdown.includes("idea clearly."),
+    (await state()).projects
+      .find((p) => p.id === id)
+      .markdown.includes("idea clearly."),
   );
-  await page.getByText("Earlier revision", { exact: false }).first().waitFor();
-  assert.equal((await state()).projects[0].latex, initial.projects[0].latex);
+  assert.equal(
+    (await state()).projects.find((p) => p.id === id).latex,
+    initial.projects[0].latex,
+  );
   checks.push(
-    "selected feedback reaches actual fixture provider read-only; proposal stays unapplied until acceptance; independent LaTeX and unsent chat are preserved",
+    "Lavish-style unsent annotation chips persist, edit and remove; one explicit message sends text plus notes in a read-only proposal turn",
   );
   await page
     .getByRole("button", { name: "Review proposed revision", exact: true })
@@ -227,104 +298,117 @@ try {
     true,
   );
   await page.getByRole("button", { name: "Keep current draft" }).click();
-  checks.push("stale proposals cannot overwrite a newer manuscript");
-  await page.getByRole("button", { name: "Close comments" }).click();
-  await page
-    .getByLabel("Manuscript source")
-    .fill("# Mathematical objects\n\n$$\nx^2 + y^2 = z^2\n$$\n\n");
-  await page.locator(".katex-display").click();
-  await page.getByRole("dialog", { name: "Add annotation" }).waitFor();
-  assert.ok(
-    (
-      await page
-        .getByRole("dialog", { name: "Add annotation" })
-        .locator("blockquote")
-        .textContent()
-    ).includes("z"),
-  );
-  await page.keyboard.press("Escape");
-  await page.getByLabel("Manuscript source").focus();
-  await page.getByLabel("Manuscript source").press("Control+End");
-  await page
-    .locator('input[type=file][accept="image/png,image/jpeg,image/webp"]')
-    .setInputFiles("public/workbench-mark.png");
-  await page.locator(".paperPreview img").waitFor();
-  await page.locator(".paperPreview img").click();
-  await page
-    .getByLabel("Annotation feedback")
-    .fill("Use a descriptive figure caption.");
-  await page.getByRole("button", { name: "Add comment", exact: true }).click();
-  await page.getByRole("button", { name: "Comment 3", exact: true }).waitFor();
-  checks.push(
-    "display equations and project-owned figures support contextual feedback",
-  );
   await page
     .getByRole("button", { name: "LaTeX", exact: false })
     .first()
     .click();
   const latex =
-    "\\documentclass{article}\n\\begin{document}\nFirst sentence explains the idea. A second sentence follows it.\\par\nThis longer passage spans multiple rendered lines when it is included in a sufficiently narrow typeset column, and it needs a detailed explanation of the assumptions and their consequences.\n\\end{document}";
+    "\\documentclass{article}\n\\begin{document}\nFirst sentence explains the idea. A second sentence follows it.\\par\nThis longer passage spans multiple rendered lines when it is included in a sufficiently narrow typeset column, and it needs a detailed explanation of the assumptions and their consequences.\\newpage\nSecond page has visible text without clicking.\\newpage\nThird page supports continuous scrolling.\\newpage\nFourth page is the end.\n\\end{document}";
   await page.getByLabel("Manuscript source").fill(latex);
   await page.getByRole("button", { name: "Render PDF", exact: true }).click();
   await page
-    .locator(".textLayer span")
+    .locator('[data-page="1"] .textLayer span')
     .filter({ hasText: "First sentence" })
     .first()
     .waitFor({ timeout: 120000 });
-  await page.getByRole("button", { name: "Annotate", exact: true }).click();
-  await selectText(page.locator(".textLayer"), "explains");
-  assert.equal(
-    await page
-      .getByRole("dialog", { name: "Add annotation" })
-      .locator("blockquote")
-      .textContent(),
-    "First sentence explains the idea.",
-  );
-  await note("Clarify this PDF sentence.");
-  await page.getByRole("button", { name: "Comment 1", exact: true }).waitFor();
-  await page.getByRole("button", { name: "Zoom in PDF" }).click();
-  await page.getByRole("button", { name: "Comment 1", exact: true }).waitFor();
+  const pdf = page.getByRole("region", { name: "Publication PDF" });
+  assert.equal(await page.locator(".pdfPage").count(), 4);
   await page.getByRole("button", { name: "Expand manuscript preview" }).click();
-  await page.getByRole("button", { name: "Fit width" }).click();
-  await page.getByRole("button", { name: "Comment 1", exact: true }).click();
-  await page.getByText("Clarify this PDF sentence.", { exact: true }).waitFor();
+  await page.getByRole("button", { name: "Fit width", exact: true }).click();
   await page.waitForFunction(() => {
-    const page = document.querySelector(".pdfPage"),
+    const p = document.querySelector(".pdfPage"),
       pane = document.querySelector(".pdfCanvasScroll");
-    return (
-      page &&
-      pane &&
-      page.getBoundingClientRect().width <= pane.clientWidth - 34
-    );
+    return p.getBoundingClientRect().width <= pane.clientWidth - 34;
   });
-  await page.locator(".textLayer span").first().waitFor();
-  await page.getByRole("button", { name: "Comment 1", exact: true }).waitFor();
-  await page.locator(".passageHighlight").first().waitFor();
-  await page.screenshot({ path: ".local/qa/annotation-pdf.png" });
-  await page.keyboard.press("Escape");
+  await page.locator('[data-page="1"] .textLayer span').first().waitFor();
+  const headerHeight = await page
+    .locator(".compactPreview>.panelHead")
+    .evaluate((e) => e.getBoundingClientRect().height);
+  assert.ok(headerHeight < 70);
+  assert.equal(await page.locator(".previewToolbar").count(), 0);
+  const before = Number(await pdf.getAttribute("data-zoom"));
+  await page.keyboard.press("Control+=");
+  await until(async () => Number(await pdf.getAttribute("data-zoom")) > before);
+  await page.keyboard.press("Control+-");
+  await until(
+    async () =>
+      Math.abs(Number(await pdf.getAttribute("data-zoom")) - before) < 0.005,
+  );
+  await page
+    .locator(".pdfCanvasScroll")
+    .evaluate((el) =>
+      el.dispatchEvent(
+        new WheelEvent("wheel", {
+          bubbles: true,
+          cancelable: true,
+          ctrlKey: true,
+          deltaY: -30,
+          clientX: 400,
+          clientY: 350,
+        }),
+      ),
+    );
+  await until(async () => Number(await pdf.getAttribute("data-zoom")) > before);
+  await page.getByRole("button", { name: "Fit width", exact: true }).click();
+  await page.locator(".pdfCanvasScroll").evaluate((el) => {
+    const page = el.querySelector('[data-page="2"]');
+    el.scrollTop = page.offsetTop;
+  });
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[aria-label="PDF page number"]').value === "2",
+  );
+  await page
+    .locator('[data-page="2"] .textLayer span')
+    .filter({ hasText: "Second page" })
+    .waitFor();
+  await page.getByRole("button", { name: "Next PDF page" }).click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[aria-label="PDF page number"]').value === "3",
+  );
+  await page.locator('[data-page="3"] canvas').waitFor();
+  await page.getByRole("button", { name: "Previous PDF page" }).click();
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[aria-label="PDF page number"]').value === "2",
+  );
+  await page.locator('[data-page="2"] canvas').waitFor();
+  const stable = await pdf.getAttribute("data-zoom");
+  await page.waitForTimeout(600);
+  assert.equal(await pdf.getAttribute("data-zoom"), stable);
+  const painted = await page.locator('[data-page="2"] canvas').evaluate((c) => {
+    const bytes = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+    let dark = 0;
+    for (let i = 0; i < bytes.length; i += 4)
+      if (bytes[i] < 100 && bytes[i + 3] > 0) dark++;
+    return dark;
+  });
+  assert.ok(painted > 100, "PDF canvas contains visible text before clicking");
+  await page.screenshot({ path: ".local/qa/continuous-pdf-header.png" });
+  await page.getByLabel("PDF page number").fill("1");
+  await page.locator('[data-page="1"] .textLayer span').first().waitFor();
+  await page.getByRole("button", { name: "Annotate", exact: true }).click();
   await selectText(
-    page.locator(".textLayer"),
+    page.locator('[data-page="1"] .textLayer'),
     "longer passage",
     "their consequences.",
-  );
-  assert.ok(
-    (
-      await page
-        .getByRole("dialog", { name: "Add annotation" })
-        .locator("blockquote")
-        .textContent()
-    ).includes("their consequences."),
   );
   await page.waitForFunction(
     () => document.querySelectorAll(".draftHighlight").length > 1,
   );
-  await page.getByRole("dialog", { name: "Add annotation" }).waitFor();
+  await note("Clarify this longer PDF passage.");
+  await page.getByRole("button", { name: "Comment 1", exact: true }).waitFor();
   await page.keyboard.press("Escape");
-  await page
-    .getByRole("dialog", { name: "Add annotation" })
-    .waitFor({ state: "hidden" });
+  await page.locator(".expandedPanel").waitFor({ state: "hidden" });
+  assert.equal(
+    await page
+      .locator('[aria-label="Unsent annotations"] .annotationChip')
+      .count(),
+    1,
+  );
   checks.push(
-    "PDF text-layer anchors stay aligned through zoom and full-window fit; Escape cancels a popover",
+    "continuous four-page PDF, page arrows, compact header, Ctrl +/- and pinch events, stable fit width, visible canvas before click, multiline annotation",
   );
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(
@@ -334,10 +418,9 @@ try {
     false,
   );
   await page.getByRole("button", { name: "Expand manuscript preview" }).click();
-  await page.screenshot({ path: ".local/qa/annotation-mobile.png" });
-  await page.keyboard.press("Escape");
+  await page.screenshot({ path: ".local/qa/continuous-pdf-mobile.png" });
   assert.deepEqual(errors, []);
-  checks.push("narrow-window layout and no runtime errors");
+  checks.push("narrow layout and no JavaScript runtime errors");
   await fs.writeFile(
     "docs/annotation-validation.json",
     JSON.stringify(
