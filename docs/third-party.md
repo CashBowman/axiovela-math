@@ -17,3 +17,5 @@ The integrated PDF reader uses Mozilla PDF.js (`pdfjs-dist`), Apache-2.0 license
 The source reader uses Mozilla Readability (Apache-2.0) and LinkeDOM (ISC); the reference graph uses D3 Force (ISC) and its dependencies. Their licenses remain in the distributed dependency packages. Axiovela's provider adapter has a Math-specific message-accumulation change; its permission, session and root-turn filtering behavior is preserved.
 
 The Windows/macOS packaging workflow independently adapts Axiovela’s MIT-licensed platform tool pins, clean staging approach and ad-hoc Mac signing settings. `desktop/entitlements.mac.plist` uses its minimal JIT entitlement. Windows ICO and Mac ICNS containers preserve the approved Math mark.
+
+The README installation buttons adapt Axiovela’s MIT-licensed SVG download cards, with Math-specific platform labels and destinations.

@@ -24,3 +24,10 @@ docs/*
 *.key
 
 !docs/desktop-platforms.md
+
+# README installation buttons.
+!docs/assets/
+docs/assets/*
+!docs/assets/downloads/
+docs/assets/downloads/*
+!docs/assets/downloads/*.svg
