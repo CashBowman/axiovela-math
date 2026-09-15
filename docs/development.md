@@ -8,7 +8,7 @@ The shared assistant and formalization contract are in `server/chat.mjs`, `share
 
 - `npm test`: contract, provider-protocol, bridge, persistence, Lean setup and update integrity tests. No paid model calls.
 - `npm run build`: frontend build.
-- `npx playwright install chromium`, then `npm run test:ui`, `npm run test:feedback`, `npm run test:reader`, `npm run test:lean`, `npm run test:bridge`: isolated browser workflows.
+- `npx playwright install chromium`, then `npm run test:ui`, `npm run test:feedback`, `npm run test:reader`, `npm run test:annotations`, `npm run test:lean`, `npm run test:bridge`: isolated browser workflows.
 - `npm run test:updates:ui`: native IPC, signed fixture download, cancellation/retry and active-work preservation.
 - `npm run desktop:package:linux`: Linux x64 build, AppImage, archive and SHA-256 manifest.
 - `npm run test:desktop:acceptance`, `npm run test:desktop:packaged`, `npm run test:desktop:appimage`, `node scripts/updates-smoke.mjs --packaged`: built-app acceptance.
@@ -20,3 +20,5 @@ GitHub CI runs the unit/integration suite and frontend build. Passing CI does no
 Keep credentials, research projects, private reports and release signing keys outside tracked source. Use isolated profiles for validation. Before a release, validate the packaged app, preserve earlier binaries, scan the exact tracked snapshot and distributables, then sign the exact artifacts. [Release/update procedure](updates.md).
 
 `test:reader` covers actual Tectonic/SyncTeX navigation, revision-bound comments, pasted arXiv import, reader expansion and autosave conflicts. It uses temporary project data and no paid model calls. The arXiv import interaction is fixture-backed; live availability depends on arXiv.
+
+`test:annotations` covers whole-sentence and multi-paragraph selection, Markdown equations/figures, PDF zoom/reflow, print cleanliness, persistence, keyboard dismissal, selected feedback through a read-only fixture provider, and explicit/stale proposal acceptance. The packaged desktop acceptance also exercises sentence annotation and margin pins. [Annotation architecture and limits](annotations.md).

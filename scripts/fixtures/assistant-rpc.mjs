@@ -19,6 +19,8 @@ for await (const line of readline.createInterface({input: process.stdin})) {
       session = method === 'thread/resume' ? JSON.parse(await readFile(store(p.threadId), 'utf8')) : {id: randomUUID(), turns: 0};
       if (session.archived) throw new Error(`session ${session.id} is archived. Run codex unarchive first.`);
       Object.assign(session, {model: p.model, effort: p.config?.model_reasoning_effort, sandbox: p.sandbox, approvalPolicy: p.approvalPolicy, approvalsReviewer: p.approvalsReviewer});
+      // A started session must survive cancellation before its first turn.
+      await writeFile(store(session.id), JSON.stringify(session));
       result = {thread: {id: session.id}, model: session.model, reasoningEffort: session.effort, modelProvider: 'openai'};
     }
     if (method === 'thread/unarchive') {
@@ -68,7 +70,8 @@ for await (const line of readline.createInterface({input: process.stdin})) {
           return;
         }
         if (request.includes('FIXTURE_FAIL')) { event('turn/completed', {turn: {status: 'failed', error: {message: 'Fixture provider rejected this request'}}}); return; }
-        const text = request.includes('FIXTURE_LEAN_DRAFT') ? '```lean\ntheorem retained_draft : True := by trivial\n```' : request.includes('FIXTURE_CHILD') ? 'Root completed and verified both demos' : request.includes('FIXTURE_LONG_CHAT') ? Array.from({length: 12}, (_, i) => `### Diagnostic ${i + 1}\n\nThis is a long conversation layout fixture, not a scientific finding. We inspect the recorded baseline and keep uncertainty separate from observations.\n\n- Sample size: **100**\n- Equation: \\(y = \\beta x + \\epsilon\\)\n- [Baseline diagnostic](artifacts/figures/nested/baseline.svg)\n\n\`\`\`python\nprint({"diagnostic": ${i + 1}, "status": "complete"})\n\`\`\``).join('\n\n') : request.includes('FIXTURE_PROMPT') ? JSON.stringify({prompt, ...session}) : request.includes('FIXTURE_CODE') ? '```powershell\nGet-Location\nGet-ChildItem\n```' : request.includes('FIXTURE_STATE') ? JSON.stringify({...session, turnEffort: p.effort}) : 'Created the project scaffold and recorded the requested research plan.';
+        const reviewMatch=prompt.match(/^REVIEW_SNAPSHOT_JSON: (.*)$/m);const review=reviewMatch?JSON.parse(reviewMatch[1]):null;
+        const text = review ? 'Annotation proposal ('+session.sandbox+').\n\n```'+review.format+'\n'+review.source.replace('First sentence explains the idea.', 'First sentence explains the idea clearly.')+'\n```' : request.includes('FIXTURE_LEAN_DRAFT') ? '```lean\ntheorem retained_draft : True := by trivial\n```' : request.includes('FIXTURE_CHILD') ? 'Root completed and verified both demos' : request.includes('FIXTURE_LONG_CHAT') ? Array.from({length: 12}, (_, i) => `### Diagnostic ${i + 1}\n\nThis is a long conversation layout fixture, not a scientific finding. We inspect the recorded baseline and keep uncertainty separate from observations.\n\n- Sample size: **100**\n- Equation: \\(y = \\beta x + \\epsilon\\)\n- [Baseline diagnostic](artifacts/figures/nested/baseline.svg)\n\n\`\`\`python\nprint({"diagnostic": ${i + 1}, "status": "complete"})\n\`\`\``).join('\n\n') : request.includes('FIXTURE_PROMPT') ? JSON.stringify({prompt, ...session}) : request.includes('FIXTURE_CODE') ? '```powershell\nGet-Location\nGet-ChildItem\n```' : request.includes('FIXTURE_STATE') ? JSON.stringify({...session, turnEffort: p.effort}) : 'Created the project scaffold and recorded the requested research plan.';
         event('item/completed', {item: {type: 'agentMessage', text}});
         event('turn/completed', {turn: {status: 'completed'}});
       }, 140);

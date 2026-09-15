@@ -19,5 +19,6 @@ docs/*
 !docs/updates.md
 !docs/third-party.md
 !docs/math-harness.md
+!docs/annotations.md
 *.pem
 *.key

@@ -50,7 +50,7 @@ const server=http.createServer(async(req,res)=>{try{
   if(url.pathname==='/api/conversations'&&req.method==='GET')return json(res,200,{conversations:await chats.load(projectId)});
   if(url.pathname==='/api/conversations'&&req.method==='POST'){const body=await bodyJson();return json(res,201,await chats.newConversation(projectId,body.role));}
   if(url.pathname==='/api/conversation'&&req.method==='PUT'){const body=await bodyJson();return json(res,200,await chats.patch(projectId,body.id,body));}
-  if(url.pathname==='/api/messages'&&req.method==='POST'){const body=await bodyJson();return json(res,202,await chats.send(projectId,body.id,body.message,{context:body.context,format:body.format,workspace:body.workspace}));}
+  if(url.pathname==='/api/messages'&&req.method==='POST'){const body=await bodyJson();return json(res,202,await chats.send(projectId,body.id,body.message,{context:body.context,format:body.format,workspace:body.workspace,review:body.review}));}
   if(url.pathname==='/api/cancel'&&req.method==='POST'){const body=await bodyJson();return json(res,200,await chats.cancel(projectId,body.id));}
   if(url.pathname==='/api/queue'&&req.method==='PUT'){const body=await bodyJson();return json(res,200,await chats.queueAction(projectId,body.id,body));}
   if(url.pathname==='/api/project-root'&&req.method==='GET')return json(res,200,{folder:await projects.root(projectId)});

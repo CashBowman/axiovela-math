@@ -1,9 +1,18 @@
+import AnnotationSurface from "./AnnotationSurface.jsx";
 import React, { useEffect, useRef, useState } from "react";
 import { getDocument, GlobalWorkerOptions, TextLayer } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import "pdfjs-dist/web/pdf_viewer.css";
 GlobalWorkerOptions.workerSrc = workerUrl;
-function PdfPage({ pdf, number, zoom, onPosition, onSource, markers = [] }) {
+function PdfPage({
+  pdf,
+  number,
+  zoom,
+  onPosition,
+  onSource,
+  markers = [],
+  annotation = {},
+}) {
   const root = useRef(),
     canvas = useRef(),
     layer = useRef();
@@ -60,12 +69,15 @@ function PdfPage({ pdf, number, zoom, onPosition, onSource, markers = [] }) {
     };
   }
   return (
-    <div
-      ref={root}
+    <AnnotationSurface
+      {...annotation}
+      rootRef={root}
+      textRef={layer}
+      page={number}
+      pageScale={zoom}
       className="pdfPage"
       data-page={number}
-      onMouseUp={(e) => onPosition?.(position(e))}
-      onDoubleClick={(e) => {
+      onReadDoubleClick={(e) => {
         e.preventDefault();
         onSource?.(position(e));
       }}
@@ -88,7 +100,7 @@ function PdfPage({ pdf, number, zoom, onPosition, onSource, markers = [] }) {
             ))}
         </>
       )}
-    </div>
+    </AnnotationSurface>
   );
 }
 export default function PdfReader({
@@ -98,6 +110,7 @@ export default function PdfReader({
   onSource,
   location,
   markers = [],
+  annotation,
 }) {
   const [pdf, setPdf] = useState(null),
     [error, setError] = useState(""),
@@ -136,13 +149,27 @@ export default function PdfReader({
     const resize = async () => {
       try {
         const current = await pdf.getPage(page);
-        if (!canceled) setZoom(Math.max(0.2, Math.min(3,
-          (container.current.clientWidth - 36) / current.getViewport({scale: 1}).width)));
-      } catch (e) { if (!canceled) setError(e.message); }
+        if (!canceled)
+          setZoom(
+            Math.max(
+              0.2,
+              Math.min(
+                3,
+                (container.current.clientWidth - 36) /
+                  current.getViewport({ scale: 1 }).width,
+              ),
+            ),
+          );
+      } catch (e) {
+        if (!canceled) setError(e.message);
+      }
     };
     const observer = new ResizeObserver(resize);
     observer.observe(container.current);
-    return () => { canceled = true; observer.disconnect(); };
+    return () => {
+      canceled = true;
+      observer.disconnect();
+    };
   }, [pdf, page, fitWidth]);
   return (
     <div className="pdfReader" role="region" aria-label={title}>
@@ -181,14 +208,22 @@ export default function PdfReader({
           ›
         </button>
         <button
-          onClick={() => {setFitWidth(false); setZoom((z) => Math.max(0.2, z - 0.15));}}
+          onClick={() => {
+            setFitWidth(false);
+            setZoom((z) => Math.max(0.2, z - 0.15));
+          }}
           aria-label="Zoom out PDF"
         >
           −
         </button>
-        <button aria-pressed={fitWidth} onClick={() => setFitWidth(true)}>Fit width</button>
+        <button aria-pressed={fitWidth} onClick={() => setFitWidth(true)}>
+          Fit width
+        </button>
         <button
-          onClick={() => {setFitWidth(false); setZoom((z) => Math.min(3, z + 0.15));}}
+          onClick={() => {
+            setFitWidth(false);
+            setZoom((z) => Math.min(3, z + 0.15));
+          }}
           aria-label="Zoom in PDF"
         >
           +
@@ -206,6 +241,7 @@ export default function PdfReader({
             number={page}
             zoom={zoom}
             markers={markers}
+            annotation={annotation}
             onPosition={onPosition}
             onSource={onSource}
           />

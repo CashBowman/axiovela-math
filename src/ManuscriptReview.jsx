@@ -1,21 +1,38 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Highlighter, MessageSquare, X, Send, Download } from "lucide-react";
 import { Preview, download } from "./ui.jsx";
 import PdfReader from "./PdfReader.jsx";
+import AnnotationSurface from "./AnnotationSurface.jsx";
 import { sourceAt } from "../shared/synctex.mjs";
+import "./annotations.css";
+
 export default function ManuscriptReview({
   project,
   format,
   pdf,
   update,
   onLine,
+  onRequestReview,
+  reviewBusy = false,
 }) {
-  const [open, setOpen] = useState(false),
-    [anchor, setAnchor] = useState(null),
+  const [annotating, setAnnotating] = useState(false),
+    [open, setOpen] = useState(false),
+    [draft, setDraft] = useState(null),
     [comment, setComment] = useState(""),
     [hash, setHash] = useState(""),
     [notice, setNotice] = useState(""),
     [editingId, setEditingId] = useState(null),
-    [location, setLocation] = useState(null);
+    [active, setActive] = useState(null),
+    [location, setLocation] = useState(null),
+    [position, setPosition] = useState(null),
+    [selected, setSelected] = useState([]),
+    [sending, setSending] = useState(false);
+  const popup = useRef(),
+    input = useRef(),
+    surface = useRef(),
+    toggle = useRef(),
+    previousFocus = useRef();
   const source = project[format],
     comments = (project.manuscriptComments || []).filter(
       (c) => c.format === format,
@@ -24,10 +41,16 @@ export default function ManuscriptReview({
       format === "latex" &&
       pdf &&
       (pdf.source !== source || pdf.bibliography !== project.bibliography);
+  const current = comments.filter((c) => c.sourceHash === hash && !c.resolved),
+    chosen = current.filter((c) => selected.includes(c.id));
   useEffect(() => {
     let canceled = false;
     setHash("");
-    setAnchor(null);
+    setDraft(null);
+    setEditingId(null);
+    setPosition(null);
+    setComment("");
+    setSelected([]);
     crypto.subtle
       .digest(
         "SHA-256",
@@ -45,54 +68,32 @@ export default function ManuscriptReview({
       canceled = true;
     };
   }, [source, format, project.bibliography]);
-  function pdfSource(position) {
-    if (stale) {
-      setNotice("Render the current draft before jumping to its source.");
-      return;
+  useEffect(() => {
+    if (draft || editingId) {
+      previousFocus.current = document.activeElement;
+      input.current?.focus();
     }
-    const hit = sourceAt(
-      pdf?.sourceMap || [],
-      position.page,
-      position.x,
-      position.y,
-    );
-    if (hit) {
-      onLine(hit.line);
-      setNotice("Source line " + hit.line + " (SyncTeX).");
-    } else setNotice("This PDF location has no manuscript source mapping.");
-  }
-  function markdownPosition(e) {
-    const block = e.target.closest("[data-source-line]");
-    if (block)
-      setAnchor({
-        line: Number(block.dataset.sourceLine),
-        quote:
-          window.getSelection()?.toString().trim() ||
-          block.textContent.slice(0, 350),
-      });
-  }
-  function add(e) {
-    e.preventDefault();
-    if (editingId) {
-      change(editingId, { comment: comment.trim() });
-      setEditingId(null);
-      setComment("");
-      return;
-    }
-    if (!anchor || !hash || stale) return;
-    const item = {
-      id: crypto.randomUUID(),
-      format,
-      sourceHash: hash,
-      anchor,
-      comment: comment.trim(),
-      createdAt: new Date().toISOString(),
-      resolved: false,
-    };
-    update((p) => ({
-      manuscriptComments: [...(p.manuscriptComments || []), item],
-    }));
+  }, [!!draft, editingId]);
+  function closeNote() {
+    setDraft(null);
+    setEditingId(null);
     setComment("");
+    setPosition(null);
+    previousFocus.current?.isConnected
+      ? previousFocus.current.focus()
+      : toggle.current?.focus();
+  }
+  function capture(anchor) {
+    if (stale || !hash) return;
+    if ((draft || editingId) && comment.trim()) {
+      setNotice("Save or cancel this note before selecting another passage.");
+      return;
+    }
+    setNotice("");
+    setDraft(anchor);
+    setEditingId(null);
+    setPosition(null);
+    window.getSelection()?.removeAllRanges();
   }
   function change(id, patch) {
     update((p) => ({
@@ -101,66 +102,189 @@ export default function ManuscriptReview({
       ),
     }));
   }
+  function add(e) {
+    e.preventDefault();
+    if (!comment.trim()) return;
+    if (editingId) change(editingId, { comment: comment.trim() });
+    else if (draft && hash && !stale) {
+      const id = crypto.randomUUID();
+      update((p) => ({
+        manuscriptComments: [
+          ...(p.manuscriptComments || []),
+          {
+            id,
+            format,
+            sourceHash: hash,
+            anchor: draft,
+            comment: comment.trim(),
+            createdAt: new Date().toISOString(),
+            resolved: false,
+          },
+        ],
+      }));
+      setSelected((ids) => [...ids, id]);
+      setActive(id);
+    } else return;
+    closeNote();
+  }
+  function selectComment(id) {
+    setOpen(true);
+    setActive(id);
+    requestAnimationFrame(() => {
+      const item = surface.current?.querySelector(
+        '[data-comment-id="' + id + '"]',
+      );
+      const pane = item?.closest(".manuscriptComments");
+      if (pane)
+        pane.scrollTop +=
+          item.getBoundingClientRect().top -
+          pane.getBoundingClientRect().top -
+          50;
+      item?.focus({ preventScroll: true });
+    });
+  }
+  function pdfSource(p) {
+    if (stale) {
+      setNotice("Render the current draft before jumping to its source.");
+      return;
+    }
+    const hit = sourceAt(pdf?.sourceMap || [], p.page, p.x, p.y);
+    if (hit) {
+      onLine(hit.line);
+      setNotice("Source line " + hit.line + " (SyncTeX).");
+    } else setNotice("This PDF location has no manuscript source mapping.");
+  }
+  async function send() {
+    setSending(true);
+    setNotice("");
+    try {
+      await onRequestReview({
+        format,
+        sourceHash: hash,
+        commentIds: chosen.map((c) => c.id),
+      });
+      setNotice(
+        "Feedback sent. Review the proposed draft in the Publication Assistant.",
+      );
+    } catch (e) {
+      setNotice(e.message);
+    } finally {
+      setSending(false);
+    }
+  }
+  const annotations =
+    (annotating || open) && !stale
+      ? current
+          .filter(
+            (c) =>
+              Number.isInteger(c.anchor.start) || c.anchor.kind === "figure",
+          )
+          .map((c) => ({
+            ...c,
+            number: comments.findIndex((x) => x.id === c.id) + 1,
+            active: c.id === active,
+          }))
+      : [];
+  const annotation = {
+    annotating: annotating && !stale,
+    annotations,
+    draft,
+    onCapture: capture,
+    onSelect: selectComment,
+    onDraftRect: (r) =>
+      setPosition((old) =>
+        old && Math.abs(old.left - r.left) < 1 && Math.abs(old.top - r.top) < 1
+          ? old
+          : r,
+      ),
+  };
+  const shownComment = editingId
+    ? comments.find((c) => c.id === editingId)
+    : null;
+  const noteOpen = !!(draft || editingId),
+    popoverStyle = position
+      ? {
+          left: Math.max(12, Math.min(innerWidth - 332, position.left)),
+          top: Math.max(
+            12,
+            Math.min(innerHeight - 300, position.top + position.height + 10),
+          ),
+        }
+      : { right: 20, bottom: 20 };
   return (
-    <div className="manuscriptReview">
+    <div ref={surface} className="manuscriptReview">
       <div className="reviewToolbar">
+        <button
+          ref={toggle}
+          className={"annotateToggle " + (annotating ? "selected" : "")}
+          aria-pressed={annotating}
+          onClick={() => {
+            setAnnotating((x) => !x);
+            if (annotating) closeNote();
+          }}
+          disabled={!!stale}
+        >
+          <Highlighter size={14} />
+          Annotate
+        </button>
         <button aria-expanded={open} onClick={() => setOpen((x) => !x)}>
+          <MessageSquare size={14} />
           Comments{comments.length ? " · " + comments.length : ""}
         </button>
-        {comments.length > 0 && (
-          <button
-            onClick={() =>
-              download(
-                "manuscript-comments.md",
-                comments
-                  .map(
-                    (c) =>
-                      `## ${c.resolved ? "Resolved" : "Open"} · ${c.format} · ${c.anchor.line ? "line " + c.anchor.line : "page " + c.anchor.page}\n\n> ${(c.anchor.quote || "Selected location").replaceAll("\n", "\n> ")}\n\n${c.comment}\n\nSource revision: ${c.sourceHash}`,
-                  )
-                  .join("\n\n"),
-              )
-            }
-          >
-            Export comments
-          </button>
+        {annotating && (
+          <span className="annotationHint">
+            Click a sentence or drag across a passage. Alt+M adds a selected
+            passage.
+          </span>
         )}
-        <span className="hint">
-          Double-click the preview to find its source.
-        </span>
       </div>
       {notice && (
-        <p className="reviewNotice" role="status">
+        <div className="reviewNotice" role="status">
           {notice}
-        </p>
+          <button
+            aria-label="Dismiss annotation message"
+            className="icon"
+            onClick={() => setNotice("")}
+          >
+            <X size={12} />
+          </button>
+        </div>
       )}
       <div className={"reviewContent " + (open ? "withComments" : "")}>
-        <div
-          className="reviewDocument"
-          onMouseUp={format === "markdown" ? markdownPosition : undefined}
-        >
+        <div className="reviewDocument">
           {format === "markdown" ? (
             <div className="scrollBody paperPreview">
-              <Preview
-                source={source}
-                bibliography={project.bibliography}
-                onSourceLine={onLine}
-                sourceLocations
-                imageUrl={(src) =>
-                  src?.startsWith("assets/")
-                    ? `/api/writeup-image?project=${project.id}&path=${encodeURIComponent(src)}`
-                    : null
-                }
-              />
+              <AnnotationSurface
+                {...annotation}
+                tabIndex={0}
+                aria-label="Manuscript annotation surface"
+              >
+                <Preview
+                  source={source}
+                  bibliography={project.bibliography}
+                  onSourceLine={annotating ? undefined : onLine}
+                  sourceLocations
+                  imageUrl={(src) =>
+                    src?.startsWith("assets/")
+                      ? `/api/writeup-image?project=${project.id}&path=${encodeURIComponent(src)}`
+                      : null
+                  }
+                />
+              </AnnotationSurface>
             </div>
           ) : pdf ? (
             <PdfReader
               url={`/api/rendered?project=${project.id}&id=${pdf.id}`}
               title="Publication PDF"
               location={location}
-              markers={comments
-                .filter((c) => c.sourceHash === hash && !c.resolved)
-                .map((c) => c.anchor)}
-              onPosition={(p) => setAnchor({ ...p, renderId: pdf.id })}
+              annotation={annotation}
+              markers={
+                !stale && (open || annotating)
+                  ? current
+                      .filter((c) => !Number.isInteger(c.anchor.start))
+                      .map((c) => c.anchor)
+                  : []
+              }
               onSource={pdfSource}
             />
           ) : (
@@ -174,70 +298,130 @@ export default function ManuscriptReview({
             className="manuscriptComments"
             aria-label="Manuscript comments"
           >
-            <form onSubmit={add}>
-              <p className="hint">
-                {stale
-                  ? "Render the current draft to add comments."
-                  : anchor
-                    ? (anchor.line
-                        ? "Line " + anchor.line
-                        : "Page " + anchor.page) + " selected."
-                    : "Select text or click a passage in the preview."}
-              </p>
-              {anchor?.quote && (
-                <blockquote>{anchor.quote.slice(0, 350)}</blockquote>
-              )}
-              <label>
-                Comment
-                <textarea
-                  aria-label="New manuscript comment"
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                />
-              </label>
+            <div className="annotationListHead">
+              <strong>Feedback</strong>
               <button
-                disabled={
-                  !comment.trim() || (!editingId && (!anchor || !hash || stale))
-                }
+                className="icon"
+                aria-label="Close comments"
+                onClick={() => setOpen(false)}
               >
-                {editingId ? "Save comment" : "Add comment"}
+                <X size={15} />
               </button>
-            </form>
-            {comments.map((c) => (
+            </div>
+            {!comments.length && (
+              <p className="hint">
+                Turn on Annotate, then select a sentence or passage to leave
+                feedback.
+              </p>
+            )}
+            {comments.length > 0 && (
+              <div className="annotationBatch">
+                <label>
+                  <input
+                    type="checkbox"
+                    aria-label="Select all current comments"
+                    checked={
+                      current.length > 0 && chosen.length === current.length
+                    }
+                    disabled={!current.length}
+                    onChange={(e) =>
+                      setSelected(
+                        e.target.checked ? current.map((c) => c.id) : [],
+                      )
+                    }
+                  />
+                  Select current notes
+                </label>
+                <button
+                  className="icon"
+                  title="Export comments"
+                  aria-label="Export comments"
+                  onClick={() =>
+                    download(
+                      "manuscript-comments.md",
+                      comments
+                        .map(
+                          (c, i) =>
+                            `## ${i + 1}. ${c.resolved ? "Resolved" : "Open"} · ${c.anchor.line ? "line " + c.anchor.line : "page " + c.anchor.page}\n\n> ${(c.anchor.quote || "Selected location").replaceAll("\n", "\n> ")}\n\n${c.comment}\n\nSource revision: ${c.sourceHash}`,
+                        )
+                        .join("\n\n"),
+                    )
+                  }
+                >
+                  <Download size={14} />
+                </button>
+              </div>
+            )}
+            {comments.map((c, i) => (
               <article
-                className={
-                  "manuscriptComment " + (c.resolved ? "resolved" : "")
-                }
+                tabIndex={-1}
+                data-comment-id={c.id}
                 key={c.id}
+                className={
+                  "manuscriptComment " +
+                  (c.resolved ? "resolved " : "") +
+                  (active === c.id ? "activeComment" : "")
+                }
               >
-                <p className="hint">
-                  {c.anchor.line
-                    ? "Line " + c.anchor.line
-                    : "Page " + c.anchor.page}{" "}
-                  ·{" "}
-                  {c.sourceHash === hash
-                    ? "Current revision"
-                    : "Earlier revision"}
-                </p>
-                {c.anchor.quote && (
-                  <blockquote>{c.anchor.quote.slice(0, 350)}</blockquote>
-                )}
+                <div className="annotationMeta">
+                  <label>
+                    <input
+                      type="checkbox"
+                      aria-label={"Include comment " + (i + 1) + " in feedback"}
+                      checked={chosen.some((x) => x.id === c.id)}
+                      disabled={c.resolved || c.sourceHash !== hash}
+                      onChange={(e) =>
+                        setSelected((ids) =>
+                          e.target.checked
+                            ? [...ids, c.id]
+                            : ids.filter((id) => id !== c.id),
+                        )
+                      }
+                    />
+                    <span className="commentNumber">{i + 1}</span>
+                  </label>
+                  <span>
+                    {c.anchor.line
+                      ? "Line " + c.anchor.line
+                      : "Page " + c.anchor.page}{" "}
+                    ·{" "}
+                    {c.sourceHash === hash
+                      ? c.resolved
+                        ? "Resolved"
+                        : "Current revision"
+                      : "Earlier revision"}
+                  </span>
+                </div>
+                {c.anchor.quote && <blockquote>{c.anchor.quote}</blockquote>}
                 <p>{c.comment}</p>
                 <div className="row">
-                  {c.anchor.line && c.sourceHash === hash && (
-                    <button onClick={() => onLine(c.anchor.line)}>
-                      Go to source
-                    </button>
-                  )}
-                  {c.anchor.page && c.sourceHash === hash && (
-                    <button onClick={() => setLocation({ ...c.anchor })}>
-                      Show on page
+                  {c.sourceHash === hash && (
+                    <button
+                      onClick={() => {
+                        setActive(c.id);
+                        if (c.anchor.page) setLocation({ ...c.anchor });
+                        else {
+                          const pin = surface.current?.querySelector(
+                            '[aria-label="Comment ' + (i + 1) + '"]',
+                          );
+                          const pane = pin?.closest(".paperPreview");
+                          if (pane)
+                            pane.scrollTop +=
+                              pin.getBoundingClientRect().top -
+                              pane.getBoundingClientRect().top -
+                              pane.clientHeight / 3;
+                          pin?.focus({ preventScroll: true });
+                        }
+                      }}
+                    >
+                      Show passage
                     </button>
                   )}
                   <button
                     onClick={() => {
                       setEditingId(c.id);
                       setComment(c.comment);
+                      setPosition(null);
                     }}
                   >
                     Edit
@@ -250,9 +434,103 @@ export default function ManuscriptReview({
                 </div>
               </article>
             ))}
+            {!!comments.length && (
+              <div className="annotationSend">
+                <button
+                  className="primary"
+                  disabled={
+                    !chosen.length || sending || reviewBusy || !onRequestReview
+                  }
+                  onClick={send}
+                >
+                  <Send size={14} />
+                  {sending
+                    ? "Sending…"
+                    : "Send feedback" +
+                      (chosen.length ? " · " + chosen.length : "")}
+                </button>
+                <p className="hint">
+                  The assistant proposes a revision for you to review.
+                </p>
+              </div>
+            )}
           </aside>
         )}
       </div>
+      {noteOpen &&
+        createPortal(
+          <section
+            ref={popup}
+            className="annotationPopover"
+            data-annotation-ui="true"
+            role="dialog"
+            aria-label={editingId ? "Edit annotation" : "Add annotation"}
+            style={popoverStyle}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                e.stopPropagation();
+                closeNote();
+              }
+              if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+                e.preventDefault();
+                add(e);
+              }
+              if (e.key === "Tab") {
+                e.stopPropagation();
+                const nodes = [
+                  ...popup.current.querySelectorAll("textarea,button"),
+                ].filter((x) => !x.disabled);
+                if (e.shiftKey && document.activeElement === nodes[0]) {
+                  e.preventDefault();
+                  nodes.at(-1)?.focus();
+                } else if (
+                  !e.shiftKey &&
+                  document.activeElement === nodes.at(-1)
+                ) {
+                  e.preventDefault();
+                  nodes[0]?.focus();
+                }
+              }
+            }}
+          >
+            <form onSubmit={add}>
+              <div className="annotationListHead">
+                <strong>
+                  {editingId ? "Edit feedback" : "Leave feedback"}
+                </strong>
+                <button
+                  type="button"
+                  className="icon"
+                  aria-label="Cancel annotation"
+                  onClick={closeNote}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <blockquote>
+                {draft?.quote ||
+                  shownComment?.anchor.quote ||
+                  "Selected location"}
+              </blockquote>
+              <textarea
+                ref={input}
+                aria-label="Annotation feedback"
+                placeholder="What should change here?"
+                value={comment}
+                maxLength={4000}
+                onChange={(e) => setComment(e.target.value)}
+              />
+              <div className="annotationPopoverFoot">
+                <small>Ctrl+Enter to save</small>
+                <button className="primary" disabled={!comment.trim()}>
+                  {editingId ? "Save comment" : "Add comment"}
+                </button>
+              </div>
+            </form>
+          </section>,
+          document.body,
+        )}
     </div>
   );
 }

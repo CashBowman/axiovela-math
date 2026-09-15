@@ -1,0 +1,338 @@
+.annotationSurface {
+  position: relative;
+  min-width: 0;
+}
+.annotationSurface:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -3px;
+}
+.annotationSurface.isAnnotating {
+  cursor: text;
+}
+.annotationOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.passageHighlight {
+  position: absolute;
+  background: #caa76040;
+  border-bottom: 1px solid #a7823470;
+  border-radius: 2px;
+  pointer-events: none;
+}
+.draftHighlight {
+  background: #4d78983d;
+  border-bottom-color: var(--blue);
+}
+.activeHighlight {
+  background: #caa76070;
+}
+.annotationPin {
+  position: absolute;
+  pointer-events: auto;
+  min-width: 20px !important;
+  width: 20px;
+  height: 20px;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 10px !important;
+  line-height: 1;
+  background: #f6f0e3;
+  border: 1px solid #9c7938;
+  color: #634c21;
+  z-index: 4;
+  cursor: pointer;
+}
+.annotationPin.activePin {
+  background: var(--gold);
+}
+.annotationPin:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+.annotateToggle[aria-pressed="true"] {
+  background: #4d78981c;
+  border-color: var(--blue);
+  color: var(--ink);
+}
+.annotationHint {
+  font-size: 10px;
+  color: var(--blue);
+  flex: 1;
+  min-width: 100px;
+}
+.annotationPopover {
+  position: fixed;
+  z-index: 180;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  border: 1px solid #9baebc;
+  background: #f5f8fa;
+  box-shadow: 0 8px 30px #152d4130;
+  border-radius: 14px;
+  padding: 14px;
+  color: var(--ink);
+}
+.annotationPopover form {
+  margin: 0;
+}
+.annotationPopover textarea {
+  width: 100%;
+  min-height: 85px;
+  max-height: 160px;
+  font-size: 12px;
+  margin: 8px 0;
+  border-radius: 9px;
+}
+.annotationPopover blockquote {
+  margin: 9px 0 0;
+  padding: 0 0 0 10px;
+  border-left: 2px solid var(--blue);
+  font-size: 11px;
+  max-height: 75px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.annotationListHead,
+.annotationPopoverFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.annotationListHead strong {
+  font-size: 12px;
+}
+.annotationPopoverFoot small {
+  font-size: 10px;
+  color: var(--blue);
+}
+.annotationPopoverFoot button {
+  font-size: 11px;
+  padding: 7px 12px;
+}
+.annotationPopover .icon,
+.annotationListHead .icon {
+  min-width: 26px;
+  min-height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 3px;
+}
+.annotationBatch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin: 8px 0;
+}
+.annotationBatch label,
+.annotationMeta label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 11px;
+}
+.annotationBatch input,
+.annotationMeta input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--blue);
+}
+.annotationMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--blue);
+}
+.commentNumber {
+  font-size: 11px;
+  font-weight: 700;
+}
+.activeComment {
+  background: #caa7600f;
+}
+.manuscriptComment {
+  padding: 12px 6px;
+}
+.manuscriptComment p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.manuscriptComments blockquote {
+  max-height: 100px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+.annotationSend {
+  position: sticky;
+  bottom: -14px;
+  padding: 10px 0 0;
+  background: #f4f7fa;
+  border-top: 1px solid var(--line);
+}
+.annotationSend > button {
+  width: 100%;
+  justify-content: center;
+  font-size: 11px;
+}
+.annotationSend .hint {
+  font-size: 10px;
+  text-align: center;
+  margin: 6px 0;
+}
+.reviewNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.reviewNotice .icon {
+  flex: none;
+}
+.proposalComparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.proposalComparison section {
+  min-width: 0;
+}
+.proposalComparison pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  max-height: 55vh;
+  overflow: auto;
+  background: #f4f6f8;
+  border: 1px solid var(--line);
+  padding: 14px;
+  border-radius: 10px;
+}
+.proposalComparison section:first-child pre {
+  border-top: 3px solid #b17968;
+}
+.proposalComparison section:last-child pre {
+  border-top: 3px solid #4d7898;
+}
+.proposalDialog {
+  width: 1100px;
+  max-width: 95vw;
+}
+.proposalDialog .row {
+  justify-content: flex-end;
+}
+.reviewRequestHint {
+  font-size: 11px;
+  color: var(--blue);
+}
+@media (max-width: 640px) {
+  .proposalComparison {
+    grid-template-columns: 1fr;
+  }
+  .annotationPopover {
+    width: calc(100vw - 24px);
+  }
+  .annotationHint {
+    flex-basis: 100%;
+  }
+}
+
+.manuscriptReview,
+.reviewContent,
+.reviewDocument {
+  min-width: 0;
+}
+.expandedPanel {
+  overflow: clip;
+}
+.paperPreview .annotationSurface > .markdown {
+  padding: 30px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.annotationPopover {
+  font-size: 12px;
+}
+.annotationPin {
+  width: 24px !important;
+  height: 24px;
+  min-width: 24px !important;
+}
+.proposalDialog {
+  background: #f0f5f8;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 16px 60px #142b4140;
+  max-height: 90dvh;
+  overflow: auto;
+}
+.proposalDialog::backdrop {
+  background: #182d4560;
+}
+.proposalDialog .dialogHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.proposalDialog h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.proposalDialog h3 {
+  font-size: 13px;
+}
+.proposalDialog p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.proposalDialog .dialogHead button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+.proposalDialog .hint {
+  color: var(--blue);
+  font-size: 11px;
+}
+
+@media print {
+  .reviewToolbar,
+  .reviewNotice,
+  .manuscriptComments,
+  .annotationOverlay,
+  .annotationPopover,
+  .proposalDialog {
+    display: none !important;
+  }
+  .manuscriptReview,
+  .reviewContent,
+  .reviewDocument {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .expandedPanel {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+  }
+  .paperPreview .annotationSurface > .markdown {
+    padding: 0 !important;
+    font: 11pt/1.6 serif !important;
+  }
+}

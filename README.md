@@ -9,7 +9,7 @@ A Linux-first workspace for mathematical research, experimental evidence, Lean c
 - **Research:** executive summary, rendered mathematical arguments and a research assistant.
 - **Library:** paste an arXiv link or ID to import its paper and citation, expand the reader, and track reading with source checkboxes. Bring selected experiments from [Axiovela](https://github.com/CashBowman/axiovela) into immutable evidence snapshots.
 - **Lean Certificates:** formalization notes and actual checker results, with one-click Lean/mathlib setup. Research, Library and Lean share the same conversation.
-- **Write-up:** independent Markdown/LaTeX drafts, PDF rendering, comments attached to passages, and a separate publication assistant. Double-click a preview to find its source line.
+- **Write-up:** independent Markdown/LaTeX drafts, PDF rendering and a separate publication assistant. [Annotate sentences and passages](docs/annotations.md), send selected feedback, and review a proposed revision before applying it. Double-click a preview in reading mode to find its source line.
 
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Projects, conversations and writing stay on your computer. Connect Codex, Claude Code, Gemini CLI, OpenCode or Pi through CLI authentication, or use OpenAI, Anthropic, Gemini and compatible APIs. Account access and usage costs belong to the chosen provider.
 
