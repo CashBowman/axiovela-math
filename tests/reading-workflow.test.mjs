@@ -18,6 +18,7 @@ import {readResearchArtifacts} from '../server/research-artifacts.mjs';
 import {finishManuscript,manuscriptSnapshot,saveManuscript} from '../server/manuscript-artifacts.mjs';
 
 test('website snapshots retain headings, code, MathJax and publication titles over filename titles',()=>{
+ assert.equal(extractArticle('<html><head><title>A blog note</title></head><body><article><p>A plain article without a PDF attachment.</p></article></body></html>','https://example.org/note').pdfUrl,'');
  const html='<html><head><title>feng25s.html</title><meta name="citation_title" content="Geometry of Sampling"><meta name="citation_pdf_url" content="/paper.pdf"></head><body><article><h1>Geometry</h1><p>A mathematical result with \\(x^2\\).</p><h2>Argument</h2><p><script type="math/tex; mode=display">x+y=z</script></p><pre>print(x)</pre><p><a href="/details">Details</a></p><script>evil()</script></article></body></html>';
  const doc=extractArticle(html,'https://example.org/article');
  assert.equal(doc.title,'Geometry of Sampling');assert.equal(doc.pdfUrl,'https://example.org/paper.pdf');

@@ -146,6 +146,7 @@ try {
     title: "Geometric intuition for a research argument",
     sourceUrl: "https://example.org/blog/geometry",
     sourceType: "web",
+    contentVersion: 3,
     text: "An example blog source.\n\nIts claims still need to be checked against the original article.",
     citationKey: "geometryBlog",
     notes: "",

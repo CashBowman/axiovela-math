@@ -1,12 +1,13 @@
 import {parseHTML} from 'linkedom';
 import {Readability} from '@mozilla/readability';
 
-export const CONTENT_VERSION = 2;
+export const CONTENT_VERSION = 3;
 export function readableTitle(value) {
   const title = String(value || '').replace(/\s+/g, ' ').trim();
   return title.length >= 4 && title.length <= 400 && !/\.(?:html?|pdf)(?:$|\s)/i.test(title) && !/[a-f0-9]{24}/i.test(title) && !/^(?:untitled|document|download|abstract|home|access denied|just a moment)[.!… ]*$/i.test(title) ? title : '';
 }
 function safeLink(value, base) {
+  if(typeof value!=='string'||!value.trim())return '';
   try { const url = new URL(value, base); return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : ''; } catch { return ''; }
 }
 // Retain mathematics before Readability removes scripts or duplicated rendered math.
