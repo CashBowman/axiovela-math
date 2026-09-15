@@ -305,7 +305,7 @@ export default function LeanWorkspace({
                     : data.setup.message ||
                       "Install the compiler and project libraries, then test setup. Requires internet and several GB for mathlib."}
                 </p>
-                {data.setup.state !== "ready" && (
+                {data.setup.state !== "ready" && data.setup.automaticSetup !== false && (
                   <button disabled={busy} onClick={setup}>
                     {data.setup.busy
                       ? "Setup in progress…"
@@ -317,7 +317,8 @@ export default function LeanWorkspace({
                   </button>
                 )}
                 {setupMessage && <p role="status">{setupMessage}</p>}
-                <details>
+                {data.setup.automaticSetup === false && <a href="https://lean-lang.org/install/" target="_blank" rel="noreferrer">Lean installation guide</a>}
+                {data.setup.command && <details>
                   <summary>Setup details and terminal command</summary>
                   <p>
                     Existing formal source and dependency versions are
@@ -330,7 +331,7 @@ export default function LeanWorkspace({
                   {data.setup.log && (
                     <pre className="setupLog">{data.setup.log}</pre>
                   )}
-                </details>
+                </details>}
               </div>
             </div>
           )}

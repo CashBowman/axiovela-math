@@ -4,7 +4,7 @@
 
 A Linux-first workspace for mathematical research, experimental evidence, Lean checks and publication writing.
 
-[Download for Linux](https://github.com/CashBowman/axiovela-math/releases/latest) · [Getting started](docs/getting-started.md) · [Report an issue](https://github.com/CashBowman/axiovela-math/issues)
+**Private development** · [Local desktop builds](docs/desktop-platforms.md) · [Getting started](docs/getting-started.md) · [Report an issue](https://github.com/CashBowman/axiovela-math/issues)
 
 - **Research:** rendered Markdown summaries and arguments, the Math Assistant, and preliminary papers in your chosen format.
 - **Library:** paste arXiv IDs, PDF links or web pages; filter sources, retain your reading position and explore an interactive reference graph. Assistant citations retrieve publication titles and readable PDFs or article snapshots automatically. Bring selected experiments from [Axiovela](https://github.com/CashBowman/axiovela) into immutable evidence snapshots.
@@ -15,9 +15,9 @@ Proof write-ups, web articles and paper PDFs also support passage annotations. F
 
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Projects, conversations and writing stay on your computer. Connect Codex, Claude Code, Gemini CLI, OpenCode or Pi through CLI authentication, or use OpenAI, Anthropic, Gemini and compatible APIs. Account access and usage costs belong to the chosen provider.
 
-This is an early Linux x64 release. Tectonic is bundled for LaTeX rendering; first use may download TeX resources. Lean and mathematical libraries download through **Lean Certificates → Set up Lean**, which runs a real installation test. First setup needs internet and several GB of storage. A successful compiler run is not a complete mathematical certificate or a novelty check.
+Linux x64 is the validated platform. Private Windows x64 and macOS (Apple silicon/Intel) packaging is in development; native acceptance on those systems is still pending. Tectonic is bundled for LaTeX rendering; first use may download TeX resources. Lean and mathematical libraries download through **Lean Certificates → Set up Lean**, which runs a real installation test. First setup needs internet and several GB of storage. A successful compiler run is not a complete mathematical certificate or a novelty check.
 
-The native **Help → Check for updates** menu offers signed, verified downloads with progress, cancellation and retry. Installation is guided; the app does not replace itself or interrupt your research automatically. [Update details](docs/updates.md).
+The native **Help → Check for updates** menu explains private distribution. Public update checks are disabled during development; the app does not replace itself or interrupt your research automatically. [Update details](docs/updates.md).
 
 ## How the math assistant works
 

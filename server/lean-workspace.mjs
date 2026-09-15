@@ -137,12 +137,12 @@ export async function lakeLocation() {
         ...new Set([
           path.join(
             process.env.ELAN_HOME || path.join(os.homedir(), ".elan"),
-            "bin/lake",
+            "bin", process.platform === "win32" ? "lake.exe" : "lake",
           ),
           ...(process.env.PATH || "")
             .split(path.delimiter)
             .filter(Boolean)
-            .map((dir) => path.join(dir, "lake")),
+            .map((dir) => path.join(dir, process.platform === "win32" ? "lake.exe" : "lake")),
         ]),
       ];
   for (const executable of candidates)

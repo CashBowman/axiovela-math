@@ -78,10 +78,10 @@ async function jsonRequest(url, options) {
 }
 
 class Updates extends EventEmitter {
-  constructor({profile, currentVersion, platform = process.platform, arch = process.arch, keys = config.publicKeys, fetcher = fetch}) {
+  constructor({profile, currentVersion, platform = process.platform, arch = process.arch, keys = config.publicKeys, fetcher = fetch, privateDistribution = false}) {
     super(); version(currentVersion);
-    Object.assign(this, {profile, currentVersion, platform, arch, keys, fetcher});
-    this.state = {status: 'idle', channel: 'stable', currentVersion, formats: formats(platform), format: formats(platform)[0], release: null, error: null, progress: 0};
+    Object.assign(this, {profile, currentVersion, platform, arch, keys, fetcher, privateDistribution});
+    this.state = {privateDistribution, status: privateDistribution ? 'private' : 'idle', channel: 'stable', currentVersion, formats: formats(platform), format: formats(platform)[0], release: null, error: null, progress: 0};
   }
   snapshot() { return structuredClone(this.state); }
   set(change) { Object.assign(this.state, change); this.emit('change', this.snapshot()); }
@@ -103,6 +103,7 @@ class Updates extends EventEmitter {
     } finally { this.busy = false; }
   }
   async check() {
+    if (this.privateDistribution) { this.set({status: 'private', release: null, error: null}); return this.snapshot(); }
     if (this.busy || this.state.status === 'ready') return this.snapshot();
     this.busy = true; this.manifest = null; this.downloaded = null;
     this.set({status: 'checking', error: null, release: null});

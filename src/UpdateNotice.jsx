@@ -26,18 +26,18 @@ export default function UpdateNotice() {
     {!open && notice && <button className="update-badge" onClick={() => setOpen(true)}>Update available · {state.release.version}</button>}
     {open && <section className="update-panel" aria-label="Update details">
       <div className="update-heading"><strong>{state.release ? `Update available · ${state.release.version}` : 'Application updates'}</strong><button aria-label="Close update details" onClick={() => { setOpen(false); setDismissed(state.release?.version); }}>×</button></div>
-      <small>Installed {state.currentVersion} · Guided installation</small>
-      <label>Release channel <select aria-label="Release channel" disabled={busy} value={state.channel} onChange={e => { setDismissed(null); void act('channel', e.target.value); }}><option value="stable">Stable</option><option value="beta">Beta (opt in)</option></select></label>
+      <small>Installed {state.currentVersion} · {state.privateDistribution ? 'Private development build' : 'Guided installation'}</small>
+      {!state.privateDistribution && <label>Release channel <select aria-label="Release channel" disabled={busy} value={state.channel} onChange={e => { setDismissed(null); void act('channel', e.target.value); }}><option value="stable">Stable</option><option value="beta">Beta (opt in)</option></select></label>}
       {state.channel === 'beta' && <small>Includes prereleases. Switching to stable never downgrades your app.</small>}
       {state.release && <p className="update-notes">{state.release.notes || 'See the release page for details.'}</p>}
-      <div role="status" aria-live="polite">{state.status === 'checking' ? 'Checking for updates…' : state.status === 'current' ? 'No newer release found in this channel.' : state.status === 'ready' ? 'Download verified. Install when your work is finished.' : ''}</div>
+      <div role="status" aria-live="polite">{state.privateDistribution ? 'Updates are distributed privately during development. Request a new installer from the project owner.' : state.status === 'checking' ? 'Checking for updates…' : state.status === 'current' ? 'No newer release found in this channel.' : state.status === 'ready' ? 'Download verified. Install when your work is finished.' : ''}</div>
       {(error || state.error) && <p role="status">{error || state.error}</p>}
       {state.release && state.status !== 'ready' && <label>Installation format <select aria-label="Installation format" value={selected} disabled={busy} onChange={e => setFormat(e.target.value)}>{state.formats.map(f => <option key={f} value={f}>{f === 'AppImage' ? 'AppImage (single file)' : f === 'tar.gz' ? 'Portable archive' : f}</option>)}</select></label>}
       {state.release && !state.release.verified && <p>{guidance[selected]}</p>}
       {state.status === 'downloading' && <><progress aria-label="Update download" value={state.progress} max="100"/><small>{state.progress}% downloaded · You can keep working</small></>}
       {state.status === 'ready' && <><p>{guidance[state.format]}</p><p>Your projects and saved workspace stay in their current locations.</p></>}
       <div className="update-actions">
-        {state.status === 'downloading' ? <button onClick={() => void act('cancel')}>Cancel download</button> : state.status !== 'ready' && <button disabled={busy} onClick={() => void act('check')}>{state.status === 'checking' ? 'Checking…' : 'Check for updates'}</button>}
+        {state.status === 'downloading' ? <button onClick={() => void act('cancel')}>Cancel download</button> : !state.privateDistribution && state.status !== 'ready' && <button disabled={busy} onClick={() => void act('check')}>{state.status === 'checking' ? 'Checking…' : 'Check for updates'}</button>}
         {state.release?.verified && !busy && state.status !== 'ready' && <button onClick={() => void act('download', selected)}>{state.error ? 'Retry download' : 'Download update'}</button>}
         {state.status === 'ready' && <button onClick={() => void act('reveal')}>Show downloaded update</button>}
         <button onClick={() => void act('releases')}>Release page</button><button onClick={() => void act('repository')}>GitHub</button>

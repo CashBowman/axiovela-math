@@ -1,8 +1,12 @@
 # Development and validation
 
-The app uses React/Vite, a loopback Node service and an Electron desktop shell. The production desktop includes its Node runtime, UI assets, provider adapters and Linux x64 Tectonic. Lean is installed on demand. `scripts/package-linux.mjs` stages an explicit set of runtime directories and production dependencies; development workspaces and reports do not enter the packages.
+The app uses React/Vite, a loopback Node service and an Electron desktop shell. The production desktop includes its Node runtime, UI assets, provider adapters and target-specific Tectonic. Lean is installed on demand. `scripts/package-linux.mjs` stages an explicit set of runtime directories and production dependencies; development workspaces and reports do not enter the packages.
 
 The shared assistant and formalization contract are in `server/chat.mjs`, `shared/harness.mjs` and `server/lean-workspace.mjs`. Verifier records are app-owned and separate from model-authored project notes. Claims, evidence and certificate contracts live in `shared/`. Provider adapters imported from Axiovela live in `server/axiovela/`.
+
+## Local platform builds
+
+The repository remains private until explicitly approved for public release. GitHub Actions must not be run during this phase. [Windows and macOS packaging instructions and acceptance requirements](desktop-platforms.md) describe local builds and the distinction between unsigned cross-builds and native validation.
 
 ## Checks
 

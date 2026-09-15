@@ -1,7 +1,7 @@
 name: verify
 on:
-  push:
-  pull_request:
+  # Local builds only during private development. Do not dispatch without approval.
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:

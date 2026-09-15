@@ -41,10 +41,11 @@ async function shutdown(){
 async function openFolder(folder){const error=await shell.openPath(folder);if(error)dialog.showErrorBox('Could not open folder',error);}
 function nativeMenu(){
  Menu.setApplicationMenu(Menu.buildFromTemplate([
+  ...(process.platform==='darwin'?[{role:'appMenu'}]:[]),
   {label:'File',submenu:[{label:'New project…',accelerator:'CmdOrCtrl+N',click:()=>win?.webContents.send('math:command','new-project')},{label:'Open project…',accelerator:'CmdOrCtrl+O',click:()=>win?.webContents.send('math:command','open-project')},{type:'separator'},{label:'Export workspace JSON',click:()=>win?.webContents.send('math:command','export-workspace')},{label:'Export recovery draft',click:()=>win?.webContents.send('math:command','export-recovery')},{label:'Research version history',click:()=>win?.webContents.send('math:command','history')},{type:'separator'},{label:'Open app data folder',click:()=>openFolder(userDir)},{type:'separator'},{label:'Quit',accelerator:'CmdOrCtrl+Q',click:()=>win?.close()}]},
   {role:'editMenu'},
   {label:'View',submenu:[{label:'Actual size / fit PDF',accelerator:'CmdOrCtrl+0',click:()=>win?.webContents.send('math:zoom','reset')},{label:'Zoom in',accelerator:'CmdOrCtrl+=',click:()=>win?.webContents.send('math:zoom','in')},{label:'Zoom out',accelerator:'CmdOrCtrl+-',click:()=>win?.webContents.send('math:zoom','out')},{type:'separator'},{role:'togglefullscreen'}]},
-  {label:'Help',submenu:[{label:'Check for updates…',click:()=>{win?.webContents.send('math:update-open');void updates?.check();}},{label:'GitHub repository',click:()=>shell.openExternal('https://github.com/CashBowman/axiovela-math')},{label:'Downloads and release notes',click:()=>shell.openExternal(releaseRoot)},{label:'About Axiovela Math',click:()=>dialog.showMessageBox(win,{type:'info',title:'Axiovela Math',message:'Axiovela Math '+app.getVersion(),detail:'Linux development build\n\nResearch, evidence, Lean checks and publication writing.\n\nUse Help → Check for updates for signed downloads and guided installation. Your projects and app data stay in their own folders.'})}]},
+  {label:'Help',submenu:[{label:'Check for updates…',click:()=>{win?.webContents.send('math:update-open');void updates?.check();}},{label:'GitHub repository',click:()=>shell.openExternal('https://github.com/CashBowman/axiovela-math')},{label:'Downloads and release notes',click:()=>shell.openExternal(releaseRoot)},{label:'About Axiovela Math',click:()=>dialog.showMessageBox(win,{type:'info',title:'Axiovela Math',message:'Axiovela Math '+app.getVersion(),detail:'Private development build\n\nResearch, evidence, Lean checks and publication writing.\n\nInstallers are distributed privately during development. Your projects and app data stay in their own folders.'})}]},
  ]));
 }
 app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.show();win.focus();}});
@@ -55,7 +56,7 @@ else app.whenReady().then(async()=>{
  const port=await localPort();origin=`http://127.0.0.1:${port}`;
  const toolEnv=Object.fromEntries(Object.entries(configured).filter(([id,value])=>tools.has(id)&&typeof value==='string').map(([id,value])=>[`WORKBENCH_${id}_PATH`,value]));
  // GUI launchers may omit the standard per-user executable locations.
- const userPath=[path.join(app.getPath('home'),'.local/bin'),path.join(app.getPath('home'),'.cargo/bin'),path.join(app.getPath('home'),'.elan/bin'),process.env.PATH||'/usr/local/bin:/usr/bin:/bin'].join(path.delimiter);
+ const userPath=[path.join(app.getPath('home'),'.local/bin'),path.join(app.getPath('home'),'.cargo/bin'),path.join(app.getPath('home'),'.elan/bin'),...(process.platform==='darwin'?['/opt/homebrew/bin','/usr/local/bin']:process.platform==='win32'&&process.env.APPDATA?[path.join(process.env.APPDATA,'npm')]:[]),process.env.PATH||''].join(path.delimiter);
  backend=spawn(process.execPath,[path.join(__dirname,'../server/index.mjs')],{env:{...process.env,...toolEnv,PATH:userPath,ELECTRON_RUN_AS_NODE:'1',PORT:String(port),AXIOVELA_MATH_DATA:path.join(userDir,'workspace'),AXIOVELA_MATH_SECURE_STORAGE:'1'},stdio:['ignore','pipe','pipe','ipc']});
  let startupError='',backendLog='';backend.on('error',e=>{startupError=e.message;});
  for(const stream of [backend.stdout,backend.stderr])stream.on('data',chunk=>{backendLog=(backendLog+chunk).slice(-8000);});
@@ -63,7 +64,7 @@ else app.whenReady().then(async()=>{
  backend.on('message',async m=>{
   if(m?.type!=='provider-storage')return;
   try{
-   if(!safeStorage.isEncryptionAvailable()||(process.platform==='linux'&&safeStorage.getSelectedStorageBackend?.()==='basic_text'))throw Error('OS credential encryption is unavailable. Use CLI sign-in or configure your Linux keyring.');
+   if(!safeStorage.isEncryptionAvailable()||(process.platform==='linux'&&safeStorage.getSelectedStorageBackend?.()==='basic_text'))throw Error('OS credential encryption is unavailable. Use CLI sign-in or configure your operating system credential store.');
    const file=path.join(userDir,'providers.enc');let value;
    if(m.action==='read'){try{value=JSON.parse(safeStorage.decryptString(await fs.readFile(file)));}catch(e){if(e.code==='ENOENT')value={};else throw e;}}
    else if(m.action==='write'){await fs.writeFile(file+'.tmp',safeStorage.encryptString(JSON.stringify(m.value)),{mode:0o600});await fs.rename(file+'.tmp',file);value={};}
@@ -78,7 +79,7 @@ else app.whenReady().then(async()=>{
   await new Promise(r=>setTimeout(r,100));
  }
  if(!ready)throw Error('The local research service did not start. '+(startupError||backendLog.slice(-1500)));
- updates=new Updates({profile:userDir,currentVersion:app.getVersion()});
+ updates=new Updates({profile:userDir,currentVersion:app.getVersion(),privateDistribution:true});
  await updates.initialize().catch(()=>updates.set({status:'error',error:'Update storage is unavailable. Your workspace can still be used.'}));
  updates.on('change',state=>{if(win&&!win.isDestroyed())win.webContents.send('math:update-state',state);});
  ipcMain.handle('math:zoom-app',(e,direction)=>{trusted(e);if(!['in','out','reset'].includes(direction))throw Error('Unknown zoom action.');const wc=win.webContents;wc.setZoomFactor(direction==='reset'?1:Math.max(.5,Math.min(3,wc.getZoomFactor()*(direction==='in'?1.15:1/1.15))));});
@@ -100,7 +101,7 @@ else app.whenReady().then(async()=>{
  ipcMain.handle('math:choose-folder',async e=>{trusted(e);const r=await dialog.showOpenDialog(win,{properties:['openDirectory','createDirectory']});return r.canceled?null:r.filePaths[0];});
  ipcMain.handle('math:choose-tool',async(e,id)=>{trusted(e);if(!tools.has(id))throw Error('Unknown tool.');const r=await dialog.showOpenDialog(win,{title:`Locate ${id}`,properties:['openFile']});if(r.canceled)return null;const data=await readJson(toolFile);data[id]=r.filePaths[0];await writeJson(toolFile,data);return r.filePaths[0];});
  ipcMain.handle('math:setup',async(e,id,action)=>{trusted(e);return launchSetup(id,action);});
- ipcMain.handle('math:detect',async e=>{trusted(e);return (await Promise.all(['codex','claude','gemini','opencode','pi','lake'].map(id=>new Promise(resolve=>{execFile('which',[id],{env:{...process.env,PATH:userPath},timeout:3000},(err,stdout)=>resolve(`${id}: ${err?'not found':stdout.trim()}`));})))).join('\n');});
+ ipcMain.handle('math:detect',async e=>{trusted(e);return (await Promise.all(['codex','claude','gemini','opencode','pi','lake'].map(id=>new Promise(resolve=>{execFile(process.platform==='win32'?'where.exe':'which',[id],{env:{...process.env,PATH:userPath},timeout:3000},(err,stdout)=>resolve(`${id}: ${err?'not found':stdout.trim()}`));})))).join('\n');});
  const savedWindow=await readJson(path.join(userDir,'window.json'));
  win=new BrowserWindow({width:Math.max(880,Math.min(2400,Number(savedWindow.width)||1560)),height:Math.max(620,Math.min(1600,Number(savedWindow.height)||1000)),minWidth:880,minHeight:620,title:'Axiovela Math',icon:path.join(__dirname,'../public/workbench-mark.png'),webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
  win.webContents.session.setPermissionRequestHandler((contents,permission,callback,details)=>callback(permission==='clipboard-sanitized-write'&&contents===win.webContents&&details.requestingUrl===origin+'/'));

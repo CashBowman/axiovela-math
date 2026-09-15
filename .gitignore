@@ -22,3 +22,5 @@ docs/*
 !docs/annotations.md
 *.pem
 *.key
+
+!docs/desktop-platforms.md
