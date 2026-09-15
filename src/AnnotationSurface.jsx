@@ -22,6 +22,8 @@ export default function AnnotationSurface({
   pageScale = 1,
   ...props
 }) {
+  const captureTimer = useRef();
+  useEffect(() => () => clearTimeout(captureTimer.current), []);
   const own = useRef(),
     root = rootRef || own,
     callbacks = useRef();
@@ -101,7 +103,13 @@ export default function AnnotationSurface({
     };
   }, [annotations, draft, page, textRef, pageScale]);
   function capture(event, exact = false) {
-    if (!annotating || event.target.closest("[data-annotation-ui]")) return;
+    if (
+      !annotating ||
+      event.target.closest(
+        "[data-annotation-ui],button,a,input,textarea,select,summary",
+      )
+    )
+      return;
     const target = textRef?.current || root.current,
       figure = event.target.closest("img");
     if (figure && target.contains(figure)) {
@@ -149,15 +157,23 @@ export default function AnnotationSurface({
       className={
         "annotationSurface " + className + (annotating ? " isAnnotating" : "")
       }
-      onClickCapture={(e) => {
-        if (annotating && e.target.closest("a")) e.preventDefault();
+      onMouseUp={(e) => {
+        clearTimeout(captureTimer.current);
+        if (e.detail > 1) return;
+        if (!window.getSelection()?.isCollapsed) capture(e);
+        else {
+          const event = {
+            target: e.target,
+            clientX: e.clientX,
+            clientY: e.clientY,
+          };
+          captureTimer.current = setTimeout(() => capture(event), 260);
+        }
       }}
-      onMouseUp={capture}
       onDoubleClickCapture={(e) => {
-        if (annotating) {
-          e.preventDefault();
-          e.stopPropagation();
-        } else onReadDoubleClick?.(e);
+        clearTimeout(captureTimer.current);
+        window.dispatchEvent(new Event("math-dismiss-feedback"));
+        onReadDoubleClick?.(e);
       }}
       onKeyDown={(e) => {
         if (annotating && e.altKey && e.key.toLowerCase() === "m") {

@@ -124,7 +124,7 @@ try {
   assert.equal(await fs.readFile(path.join(root.folder, 'writeups/main.md'), 'utf8'), source);
   await page.unroute('**/api/artifact?*');
   checks.push('edits during a slow source save drain to the newest text without another user action');
-  await page.getByRole("button", { name: "Annotate", exact: true }).click();
+
   await page
     .locator(".paperPreview p")
     .filter({ hasText: "Second paragraph" })
@@ -136,7 +136,7 @@ try {
   await until(
     async () => (await state()).projects[0].manuscriptComments?.length === 1,
   );
-  await page.getByRole("button", {name:"Annotate",exact:true}).click();
+
   await page
     .locator(".paperPreview p")
     .filter({ hasText: "Second paragraph" })
@@ -192,7 +192,7 @@ try {
   checks.push(
     "actual Tectonic PDF uses SyncTeX to navigate to the correct source line",
   );
-  await page.getByRole("button", { name: "Annotate", exact: true }).click();
+
   await page
     .locator(".textLayer span")
     .filter({ hasText: "This unique sentence" })
@@ -204,7 +204,7 @@ try {
   await page.getByRole("button", { name: "Add to message", exact: true }).click();
   await page.locator(".annotationPin").waitFor();
   await page.screenshot({ path: ".local/qa/manuscript-comments.png" });
-  await page.getByRole("button", {name:"Annotate",exact:true}).click();
+
   await page.getByLabel("Manuscript source").fill(latex + "\n% changed");
   await page
     .locator(".textLayer span")

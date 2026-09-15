@@ -40,6 +40,12 @@ export function sourceForReference(reference, sources = []) {
   const name = reference.path.replaceAll("\\", "/").split("/").at(-1);
   return sources.find(
     (p) =>
+      (p.aliases || []).some(
+        (a) =>
+          a === reference.path ||
+          name === a + ".pdf" ||
+          a.split("/").at(-1) === name,
+      ) ||
       p.localPath === reference.path ||
       p.sourceUrl === reference.path ||
       name === `${p.id}.pdf` ||

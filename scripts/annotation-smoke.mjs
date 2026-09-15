@@ -153,7 +153,7 @@ try {
     async () =>
       (await state()).projects.find((p) => p.id === id).markdown === source,
   );
-  await page.getByRole("button", { name: "Annotate", exact: true }).click();
+
   await selectText(page.locator(".paperPreview p").first(), "explains");
   assert.equal(
     await page
@@ -321,7 +321,7 @@ try {
     .locator(".manuscriptPreview>.panelHead")
     .evaluate((e) => e.getBoundingClientRect().height);
   assert.ok(headerHeight < 70);
-  assert.equal(await page.locator(".previewToolbar").count(), 1);
+  assert.equal(await page.locator(".previewToolbar").count(), 0);
   const before = Number(await pdf.getAttribute("data-zoom"));
   await page.keyboard.press("Control+=");
   await until(async () => Number(await pdf.getAttribute("data-zoom")) > before);
@@ -385,7 +385,7 @@ try {
   await page.screenshot({ path: ".local/qa/continuous-pdf-header.png" });
   await page.getByLabel("PDF page number").fill("1");
   await page.locator('[data-page="1"] .textLayer span').first().waitFor();
-  await page.getByRole("button", { name: "Annotate", exact: true }).click();
+
   await selectText(
     page.locator('[data-page="1"] .textLayer'),
     "longer passage",

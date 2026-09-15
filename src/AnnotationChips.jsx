@@ -16,10 +16,19 @@ export default function AnnotationChips({
         <div className="annotationChip" key={note.id}>
           <button
             className="annotationChipBody"
-            onClick={() => onEdit?.(note)}
+            onClick={() =>
+              note.target?.kind === "panel"
+                ? window.dispatchEvent(
+                    new CustomEvent("math-edit-panel-note", { detail: note }),
+                  )
+                : onEdit?.(note)
+            }
             disabled={sent}
             title={
-              (note.title?note.title+"\n":"")+(note.anchor.quote || "Selected passage") + "\n\n" + note.comment
+              (note.title ? note.title + "\n" : "") +
+              (note.anchor.quote || "Selected passage") +
+              "\n\n" +
+              note.comment
             }
           >
             <span className="chipNumber">{i + 1}</span>
@@ -36,7 +45,10 @@ export default function AnnotationChips({
           )}
           {sent && (
             <details>
-              <summary>{note.title||"Passage"}{note.anchor.page?" · page "+note.anchor.page:""}</summary>
+              <summary>
+                {note.title || "Passage"}
+                {note.anchor.page ? " · page " + note.anchor.page : ""}
+              </summary>
               <blockquote>{note.anchor.quote}</blockquote>
             </details>
           )}

@@ -1,58 +1,749 @@
-import {defaultWriteupFormat} from './WriteupFormatMenu.jsx';
-import AnnotationChips from './AnnotationChips.jsx';
-import React,{useEffect,useRef,useState,useImperativeHandle} from 'react';
-import {Send,Square,Plus,Copy,RefreshCw,ArrowDown} from 'lucide-react';
-import ModelPicker from './ModelPicker.jsx';
-import {Panel,Preview,request} from './ui.jsx';
-const capabilityCache=new Map();
-const names={research:'Math Assistant',writing:'Publication Assistant',lean:'Formalization Assistant'};
-export default function ChatPanel({project,role,beforeSend,onArtifact,onActivity,context,contextLabel,writingFormat,workspace='research',reviewRef,onReviewProposal,onReviewBusy,onEditAnnotation}){
- const key=`axiovela-math-chat:${project.id}:${role}`;
- const initialSelected=localStorage.getItem(key)||'';
- const [list,setList]=useState([]),[selected,setSelected]=useState(()=>localStorage.getItem(key)||''),[draft,setDraft]=useState(()=>localStorage.getItem(key+':draft:'+initialSelected)||localStorage.getItem(`axiovela-math-chat:${project.id}:lean:draft:${initialSelected}`)||''),[caps,setCaps]=useState(()=>capabilityCache.get(project.id)||{connections:[]}),[loading,setLoading]=useState(false),[error,setError]=useState(''),[sending,setSending]=useState(false),[queueEdit,setQueueEdit]=useState(null),[clock,setClock]=useState(Date.now()),[atBottom,setAtBottom]=useState(true);
- const selectedRef=useRef(selected);selectedRef.current=selected;
- const messages=useRef(),end=useRef(),text=useRef(),alive=useRef(true),follow=useRef(true),lastComplete=useRef('');
- const api=(p,options)=>request(p+(p.includes('?')?'&':'?')+`project=${encodeURIComponent(project.id)}`,options);
- const chat=list.find(c=>c.id===selected)||list.find(c=>c.role===role);const current=chat?.turns.at(-1);const running=!!current&&['running','canceling'].includes(current.status);
- async function refresh(){const value=await api('/api/conversations');if(!alive.current)return;setList(value.conversations);if(!selectedRef.current){const existing=value.conversations.find(c=>c.role===role);if(existing){setSelected(existing.id);setDraft(d=>d||localStorage.getItem(key+':draft:'+existing.id)||localStorage.getItem(`axiovela-math-chat:${project.id}:lean:draft:${existing.id}`)||'');}}onActivity?.(value.conversations.flatMap(c=>c.turns).filter(t=>['running','canceling'].includes(t.status)).length);}
- useEffect(()=>{alive.current=true;setList([]);setSelected(localStorage.getItem(key)||'');setDraft(localStorage.getItem(key+':draft:'+initialSelected)||localStorage.getItem(`axiovela-math-chat:${project.id}:lean:draft:${initialSelected}`)||'');setError('');let canceled=false;async function poll(){try{await refresh();}catch(e){if(!canceled)setError(e.message);}if(!canceled)timer=setTimeout(poll,1300);}let timer;poll();(capabilityCache.has(project.id)?Promise.resolve(capabilityCache.get(project.id)):api('/api/capabilities')).then(x=>{if(!canceled){capabilityCache.set(project.id,x);setCaps(x);}}).catch(e=>!canceled&&setError(e.message));return()=>{canceled=true;alive.current=false;clearTimeout(timer);};},[project.id,role]);
- useEffect(()=>{const t=setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(t);},[]);
- useEffect(()=>{try{localStorage.setItem(key+':draft:'+selected,draft);}catch{}if(text.current){text.current.style.height='auto';text.current.style.height=Math.min(300,text.current.scrollHeight)+'px';}},[draft,key,selected]);
- useEffect(()=>{if(chat){localStorage.setItem(key,chat.id);if(follow.current)end.current?.scrollIntoView({block:'end'});}},[chat?.id,chat?.turns.at(-1)?.output,chat?.turns.length]);
- useEffect(()=>{if(current?.status==='complete'&&current.id!==lastComplete.current){lastComplete.current=current.id;}},[current?.status]);
- useEffect(()=>{const frame=requestAnimationFrame(()=>{const el=messages.current;if(el)setAtBottom(el.scrollHeight-el.scrollTop-el.clientHeight<90);});return()=>cancelAnimationFrame(frame);},[chat?.id,current?.output,current?.status]);
- const selection=chat?.selection||{adapterId:'codex',modelId:'',effort:'',profileId:'general'};
- async function ensure(){if(chat)return chat;const c=await api('/api/conversations',{method:'POST',body:JSON.stringify({role})});if(attachments.length){localStorage.setItem(key+':annotations:'+c.id,JSON.stringify(attachments));localStorage.removeItem(attachmentKey);}return c;}
- async function newChat(){try{const c=await api('/api/conversations',{method:'POST',body:JSON.stringify({role})});setSelected(c.id);setDraft('');await refresh();}catch(e){setError(e.message);}}
- async function discover(id=selection.adapterId){setLoading(true);setError('');try{const found=await api('/api/capabilities?connection='+encodeURIComponent(id)+'&refresh=1');setCaps(c=>{const next={...c,connections:c.connections.map(x=>x.id===found.id?found:x)};capabilityCache.set(project.id,next);return next;});}catch(e){setError(e.message);}finally{setLoading(false);}}
- async function patch(body){const c=await ensure();await api('/api/conversation',{method:'PUT',body:JSON.stringify({id:c.id,...body})});setSelected(c.id);await refresh();}
- const attachmentKey=key+':annotations:'+selected;
- const [attachments,setAttachments]=useState(()=>{try{return JSON.parse(localStorage.getItem(key+':annotations:'+initialSelected)||'[]');}catch{return [];}});
- const attachmentScope=useRef(attachmentKey);
- useEffect(()=>{if(attachmentScope.current!==attachmentKey){attachmentScope.current=attachmentKey;try{setAttachments(JSON.parse(localStorage.getItem(attachmentKey)||'[]'));}catch{setAttachments([]);}return;}localStorage.setItem(attachmentKey,JSON.stringify(attachments));},[attachmentKey,attachments]);
- const notes=attachments.map(id=>(project.manuscriptComments||[]).find(c=>c.id===id)).filter(Boolean);
- function queueAnnotation(id){setAttachments(ids=>ids.includes(id)?ids:[...ids,id]);}
- async function send(){if((!draft.trim()&&!notes.length)||sending)return;setSending(true);setError('');try{
-  if(notes.length&&running)throw Error('Finish the current reply before sending annotations.');
-  if(role==='writing'&&notes.some(n=>n.format!==notes[0].format||n.sourceHash!==notes[0].sourceHash))throw Error('These annotations refer to different drafts. Remove earlier notes or send one draft at a time.');
-  await beforeSend();const c=await ensure();const review=role==='writing'&&notes.length?{format:notes[0].format,sourceHash:notes[0].sourceHash,commentIds:notes.map(n=>n.id)}:undefined;
-  await api('/api/messages',{method:'POST',body:JSON.stringify({id:c.id,message:draft.trim()||(role==='writing'?'Revise the manuscript using these annotations. Return a proposed draft for review.':'Address the attached passage feedback and save any requested proof revisions.'),context,format:review?.format||writingFormat||localStorage.getItem('axiovela-math-format:'+project.id)||defaultWriteupFormat(),workspace,review,annotations:role==='research'?notes.map(n=>n.id):undefined})});
-  localStorage.removeItem(attachmentKey);localStorage.removeItem(key+':annotations:'+c.id);setAttachments([]);setSelected(c.id);setDraft('');follow.current=true;await refresh();
- }catch(e){setError(e.message);}finally{setSending(false);}}
- useImperativeHandle(reviewRef,()=>({queueAnnotation}));
- useEffect(()=>onReviewBusy?.(running||sending),[running,sending]);
- async function action(endpoint,body){try{await api(endpoint,{method:endpoint==='/api/queue'?'PUT':'POST',body:JSON.stringify({id:chat.id,...body})});await refresh();}catch(e){setError(e.message);}}
- const active=caps.connections.find(c=>c.id===selection.adapterId);
- return <Panel title={names[role]} label={selection.adapterId.toUpperCase()} className="chatPanel" action={<button aria-label={`New ${role} conversation`} onClick={newChat}><Plus size={13}/>New chat</button>}>
- <div className="conversationToolbar"><label>Conversation<select aria-label={`${role} conversation`} value={chat?.id||''} onChange={e=>{setSelected(e.target.value);setDraft(localStorage.getItem(key+':draft:'+e.target.value)||localStorage.getItem(`axiovela-math-chat:${project.id}:lean:draft:${e.target.value}`)||'');setError('');}}><option value="" disabled>New conversation</option>{list.filter(c=>c.role===role).map(c=><option key={c.id} value={c.id}>{c.previousRole==='lean'?'Earlier Lean chat · ':''}{c.title}{c.turns.at(-1)?.status==='running'?' · working':''}</option>)}</select></label></div>
- {contextLabel&&<div className="libraryChatContext"><p className="hint">Shared research conversation · {contextLabel}</p></div>}
- <div ref={messages} className="chatMessages" onScroll={e=>{const el=e.currentTarget;follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<90;setAtBottom(follow.current);}}>{!chat?.turns.length&&<div className="chatWelcome"><p>{role==='writing'?'Prepare the final paper: sharpen exposition, check attribution, and revise the complete manuscript.':workspace==='lean'?'Describe the result to formalize. I will work on the Lean project and explain progress, assumptions and remaining obligations without showing code.':'Explore a question, test an idea, or develop an argument. Proof write-ups stay separate from the final publication manuscript.'}</p><p className="hint">Choose a connection below. CLI sign-in and API keys use their own account access.</p></div>}{chat?.turns.map(t=><article className="chatTurn" key={t.id}><div className="userMessage"><details open={t.message.length<280}><summary>{t.message.length<280?'You':t.message.slice(0,90)+'…'}</summary><p>{t.message}</p></details><button className="icon" aria-label="Copy message" onClick={()=>navigator.clipboard.writeText(t.message).catch(()=>setError('Clipboard unavailable. Select the text to copy.'))}><Copy size={12}/></button></div>{t.review&&<AnnotationChips notes={t.review.comments} sent/>}{t.annotations&&<AnnotationChips notes={t.annotations} sent/>}{t.output&&<><Preview sources={project.papers} onFollowup={prompt=>{setDraft(d=>d?d+"\n\n"+prompt:prompt);text.current?.focus();}} source={t.output} lean={workspace==='lean'} hideLean={role==='research'}/><div className="replyActions"><button onClick={()=>navigator.clipboard.writeText(t.output).catch(()=>setError('Clipboard unavailable.'))}><Copy size={12}/>Copy</button>{t.status==='complete'&&role==='research'&&/```(?:lean|lean4)\s*\n/i.test(t.output)&&<button disabled={running} onClick={async()=>{try{await api('/api/lean/draft',{method:'POST',body:JSON.stringify({id:chat.id,turnId:t.id})});setError('');}catch(e){setError(e.message);}}}>Save Lean draft</button>}{t.status==='complete'&&role!=='lean'&&workspace!=='lean'&&<button onClick={()=>t.review?onReviewProposal?.(t):onArtifact?.(t.output,role)}>{t.review?'Review proposed revision':role==='writing'?'Use in manuscript':'Use as working proof'}</button>}</div></>}{t.review&&<p className="reviewRequestHint">Annotation feedback · proposed changes await your review</p>}{t.artifactError&&<p className="inlineError" role="alert">{t.artifactError}</p>}{t.error&&<p className="inlineError" role="alert">{t.error}</p>}{['running','canceling'].includes(t.status)&&<div className="liveActivity" role="status">{t.status==='canceling'?'Stopping provider…':(t.events.at(-1)?.status==='running'?t.events.at(-1).label:t.events.length?'Assistant is working…':'Connecting to provider…')} · {Math.max(0,Math.floor((clock-Date.parse(t.startedAt))/1000))}s</div>}{['failed','canceled','interrupted'].includes(t.status)&&<span className="badge">{t.status}</span>}</article>)}<div ref={end}/></div>
- {!atBottom&&<button className="jumpLatest" onClick={()=>{follow.current=true;end.current?.scrollIntoView({block:'end'});setAtBottom(true);}}><ArrowDown size={13}/>Jump to latest</button>}
- {chat?.queue.length>0&&<div className="promptQueue"><div className="row"><strong>Follow-ups · {chat.queue.length}</strong>{chat.queuePaused&&<button onClick={()=>action('/api/queue',{resume:true})} disabled={running}>Resume queue</button>}</div>{chat.queue.map(q=><div className="queueItem" key={q.id}>{queueEdit?.id===q.id?<><textarea aria-label="Edit queued message" value={queueEdit.message} onChange={e=>setQueueEdit({...queueEdit,message:e.target.value})}/><button onClick={()=>{action('/api/queue',{edit:q.id,message:queueEdit.message});setQueueEdit(null);}}>Save edit</button></>:<p>{q.message}</p>}<button onClick={()=>setQueueEdit({...q})}>Edit</button><button onClick={()=>action('/api/queue',{remove:q.id})}>Remove</button></div>)}</div>}
- {error&&<p className="inlineError" role="alert">{error}</p>}
- {(chat?.mode||'auto')==='ask'&&<div className="chatAccessNotice"><span>Read-only: the assistant cannot save project documents.</span><button disabled={running} onClick={()=>patch({mode:'auto'}).catch(e=>setError(e.message))}>Enable project editing</button></div>}
- {<AnnotationChips notes={notes} onEdit={onEditAnnotation} onRemove={id=>setAttachments(ids=>ids.filter(x=>x!==id))}/>}
- <div className="chatComposer"><textarea maxLength={32000} ref={text} aria-label={`${role} message`} placeholder={role==='writing'?'Ask for a revision, citation, or final manuscript…':workspace==='lean'?'Ask about a theorem, obligation, or check…':'Ask a question or continue the proof…'} value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send();}}}/><button className="sendButton" aria-label={running?'Queue follow-up':'Send message'} onClick={send} disabled={sending||(!draft.trim()&&!notes.length)||(running&&notes.length>0)}><Send size={18}/></button>{running&&<button className="icon" aria-label="Stop conversation" onClick={()=>action('/api/cancel',{})}><Square size={15}/></button>}</div>
- <div className="chatControls"><ModelPicker role={role} selection={selection} capabilities={caps} busy={running} loading={loading} error="" onRefresh={discover} onSave={selection=>patch({selection})} onSaveProfile={()=>{}} onSaveConnection={async(id,body)=>{await request('/api/providers',{method:'PUT',body:JSON.stringify({id,...body})});await discover(id);}} onNewSession={newChat}/><label className="accessLabel">Access<select aria-label={`${role} access`} value={chat?.mode||'auto'} disabled={running} onChange={e=>patch({mode:e.target.value}).catch(e=>setError(e.message))}>{[['ask','Read-only'],['auto','Project editing'],['full','Full access']].map(([id,label])=><option key={id} value={id} disabled={active?.modes&&!active.modes.includes(id)}>{label}</option>)}</select></label></div>
- </Panel>;
+import { defaultWriteupFormat } from "./WriteupFormatMenu.jsx";
+import AnnotationChips from "./AnnotationChips.jsx";
+import React, { useEffect, useRef, useState, useImperativeHandle } from "react";
+import { Send, Square, Plus, Copy, RefreshCw, ArrowDown } from "lucide-react";
+import ModelPicker from "./ModelPicker.jsx";
+import { Panel, Preview, request } from "./ui.jsx";
+const capabilityCache = new Map();
+const names = {
+  research: "Math Assistant",
+  writing: "Publication Assistant",
+  lean: "Formalization Assistant",
+};
+export default function ChatPanel({
+  project,
+  role,
+  beforeSend,
+  onArtifact,
+  onActivity,
+  context,
+  contextLabel,
+  writingFormat,
+  workspace = "research",
+  reviewRef,
+  onReviewProposal,
+  onReviewBusy,
+  onEditAnnotation,
+}) {
+  const key = `axiovela-math-chat:${project.id}:${role}`;
+  const initialSelected = localStorage.getItem(key) || "";
+  const [list, setList] = useState([]),
+    [selected, setSelected] = useState(() => localStorage.getItem(key) || ""),
+    [draft, setDraft] = useState(
+      () =>
+        localStorage.getItem(key + ":draft:" + initialSelected) ||
+        localStorage.getItem(
+          `axiovela-math-chat:${project.id}:lean:draft:${initialSelected}`,
+        ) ||
+        "",
+    ),
+    [caps, setCaps] = useState(
+      () => capabilityCache.get(project.id) || { connections: [] },
+    ),
+    [loading, setLoading] = useState(false),
+    [error, setError] = useState(""),
+    [sending, setSending] = useState(false),
+    [queueEdit, setQueueEdit] = useState(null),
+    [clock, setClock] = useState(Date.now()),
+    [atBottom, setAtBottom] = useState(true);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  const messages = useRef(),
+    end = useRef(),
+    text = useRef(),
+    alive = useRef(true),
+    follow = useRef(true),
+    lastComplete = useRef("");
+  const api = (p, options) =>
+    request(
+      p +
+        (p.includes("?") ? "&" : "?") +
+        `project=${encodeURIComponent(project.id)}`,
+      options,
+    );
+  const chat =
+    list.find((c) => c.id === selected) || list.find((c) => c.role === role);
+  const current = chat?.turns.at(-1);
+  const running =
+    !!current && ["running", "canceling"].includes(current.status);
+  async function refresh() {
+    const value = await api("/api/conversations");
+    if (!alive.current) return;
+    setList(value.conversations);
+    if (!selectedRef.current) {
+      const existing = value.conversations.find((c) => c.role === role);
+      if (existing) {
+        setSelected(existing.id);
+        setDraft(
+          (d) =>
+            d ||
+            localStorage.getItem(key + ":draft:" + existing.id) ||
+            localStorage.getItem(
+              `axiovela-math-chat:${project.id}:lean:draft:${existing.id}`,
+            ) ||
+            "",
+        );
+      }
+    }
+    onActivity?.(
+      value.conversations
+        .flatMap((c) => c.turns)
+        .filter((t) => ["running", "canceling"].includes(t.status)).length,
+    );
+  }
+  useEffect(() => {
+    alive.current = true;
+    setList([]);
+    setSelected(localStorage.getItem(key) || "");
+    setDraft(
+      localStorage.getItem(key + ":draft:" + initialSelected) ||
+        localStorage.getItem(
+          `axiovela-math-chat:${project.id}:lean:draft:${initialSelected}`,
+        ) ||
+        "",
+    );
+    setError("");
+    let canceled = false;
+    async function poll() {
+      try {
+        await refresh();
+      } catch (e) {
+        if (!canceled) setError(e.message);
+      }
+      if (!canceled) timer = setTimeout(poll, 1300);
+    }
+    let timer;
+    poll();
+    (capabilityCache.has(project.id)
+      ? Promise.resolve(capabilityCache.get(project.id))
+      : api("/api/capabilities")
+    )
+      .then((x) => {
+        if (!canceled) {
+          capabilityCache.set(project.id, x);
+          setCaps(x);
+        }
+      })
+      .catch((e) => !canceled && setError(e.message));
+    return () => {
+      canceled = true;
+      alive.current = false;
+      clearTimeout(timer);
+    };
+  }, [project.id, role]);
+  useEffect(() => {
+    const t = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(key + ":draft:" + selected, draft);
+    } catch {}
+    if (text.current) {
+      text.current.style.height = "auto";
+      text.current.style.height =
+        Math.min(300, text.current.scrollHeight) + "px";
+    }
+  }, [draft, key, selected]);
+  useEffect(() => {
+    if (chat) {
+      localStorage.setItem(key, chat.id);
+      if (follow.current) end.current?.scrollIntoView({ block: "end" });
+    }
+  }, [chat?.id, chat?.turns.at(-1)?.output, chat?.turns.length]);
+  useEffect(() => {
+    if (current?.status === "complete" && current.id !== lastComplete.current) {
+      lastComplete.current = current.id;
+    }
+  }, [current?.status]);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const el = messages.current;
+      if (el)
+        setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 90);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [chat?.id, current?.output, current?.status]);
+  const selection = chat?.selection || {
+    adapterId: "codex",
+    modelId: "",
+    effort: "",
+    profileId: "general",
+  };
+  async function ensure() {
+    if (chat) return chat;
+    const c = await api("/api/conversations", {
+      method: "POST",
+      body: JSON.stringify({ role }),
+    });
+    if (attachments.length) {
+      localStorage.setItem(
+        key + ":annotations:" + c.id,
+        JSON.stringify(attachments),
+      );
+      localStorage.removeItem(attachmentKey);
+    }
+    return c;
+  }
+  async function newChat() {
+    try {
+      const c = await api("/api/conversations", {
+        method: "POST",
+        body: JSON.stringify({ role }),
+      });
+      setSelected(c.id);
+      setDraft("");
+      await refresh();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+  async function discover(id = selection.adapterId) {
+    setLoading(true);
+    setError("");
+    try {
+      const found = await api(
+        "/api/capabilities?connection=" + encodeURIComponent(id) + "&refresh=1",
+      );
+      setCaps((c) => {
+        const next = {
+          ...c,
+          connections: c.connections.map((x) =>
+            x.id === found.id ? found : x,
+          ),
+        };
+        capabilityCache.set(project.id, next);
+        return next;
+      });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+  async function patch(body) {
+    const c = await ensure();
+    await api("/api/conversation", {
+      method: "PUT",
+      body: JSON.stringify({ id: c.id, ...body }),
+    });
+    setSelected(c.id);
+    await refresh();
+  }
+  const attachmentKey = key + ":annotations:" + selected;
+  const [attachments, setAttachments] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem(key + ":annotations:" + initialSelected) || "[]",
+      );
+    } catch {
+      return [];
+    }
+  });
+  const attachmentScope = useRef(attachmentKey);
+  useEffect(() => {
+    if (attachmentScope.current !== attachmentKey) {
+      attachmentScope.current = attachmentKey;
+      try {
+        setAttachments(JSON.parse(localStorage.getItem(attachmentKey) || "[]"));
+      } catch {
+        setAttachments([]);
+      }
+      return;
+    }
+    localStorage.setItem(attachmentKey, JSON.stringify(attachments));
+  }, [attachmentKey, attachments]);
+  const notes = attachments
+    .map((id) => (project.manuscriptComments || []).find((c) => c.id === id))
+    .filter(Boolean);
+  function queueAnnotation(id) {
+    setAttachments((ids) => (ids.includes(id) ? ids : [...ids, id]));
+  }
+  useEffect(() => {
+    const queue = (e) => {
+      if (e.detail.projectId === project.id && e.detail.role === role)
+        queueAnnotation(e.detail.id);
+    };
+    window.addEventListener("math-queue-feedback", queue);
+    return () => window.removeEventListener("math-queue-feedback", queue);
+  }, [project.id, role]);
+  async function send() {
+    if ((!draft.trim() && !notes.length) || sending) return;
+    setSending(true);
+    setError("");
+    try {
+      if (notes.length && running)
+        throw Error("Finish the current reply before sending annotations.");
+      const manuscriptNotes = notes.filter((n) => !n.target);
+      if (
+        role === "writing" &&
+        manuscriptNotes.some(
+          (n) =>
+            n.format !== manuscriptNotes[0].format ||
+            n.sourceHash !== manuscriptNotes[0].sourceHash,
+        )
+      )
+        throw Error(
+          "These annotations refer to different drafts. Remove earlier notes or send one draft at a time.",
+        );
+      await beforeSend();
+      const c = await ensure();
+      const review =
+        role === "writing" && manuscriptNotes.length
+          ? {
+              format: manuscriptNotes[0].format,
+              sourceHash: manuscriptNotes[0].sourceHash,
+              commentIds: manuscriptNotes.map((n) => n.id),
+            }
+          : undefined;
+      await api("/api/messages", {
+        method: "POST",
+        body: JSON.stringify({
+          id: c.id,
+          message:
+            draft.trim() ||
+            (role === "writing"
+              ? "Revise the manuscript using these annotations. Return a proposed draft for review."
+              : "Address the attached passage feedback and save any requested proof revisions."),
+          context,
+          format:
+            review?.format ||
+            writingFormat ||
+            localStorage.getItem("axiovela-math-format:" + project.id) ||
+            defaultWriteupFormat(),
+          workspace,
+          review,
+          annotations: notes.filter((n) => n.target).map((n) => n.id),
+        }),
+      });
+      localStorage.removeItem(attachmentKey);
+      localStorage.removeItem(key + ":annotations:" + c.id);
+      setAttachments([]);
+      setSelected(c.id);
+      setDraft("");
+      follow.current = true;
+      await refresh();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSending(false);
+    }
+  }
+  useImperativeHandle(reviewRef, () => ({
+    queueAnnotation,
+    addPrompt: (prompt) => {
+      setDraft((d) => (d ? d + "\n\n" + prompt : prompt));
+      text.current?.focus();
+    },
+  }));
+  useEffect(() => onReviewBusy?.(running || sending), [running, sending]);
+  async function action(endpoint, body) {
+    try {
+      await api(endpoint, {
+        method: endpoint === "/api/queue" ? "PUT" : "POST",
+        body: JSON.stringify({ id: chat.id, ...body }),
+      });
+      await refresh();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+  const active = caps.connections.find((c) => c.id === selection.adapterId);
+  return (
+    <Panel
+      title={names[role]}
+      label={selection.adapterId.toUpperCase()}
+      className="chatPanel"
+      action={
+        <button aria-label={`New ${role} conversation`} onClick={newChat}>
+          <Plus size={13} />
+          New chat
+        </button>
+      }
+    >
+      <div className="conversationToolbar">
+        <label>
+          Conversation
+          <select
+            aria-label={`${role} conversation`}
+            value={chat?.id || ""}
+            onChange={(e) => {
+              setSelected(e.target.value);
+              setDraft(
+                localStorage.getItem(key + ":draft:" + e.target.value) ||
+                  localStorage.getItem(
+                    `axiovela-math-chat:${project.id}:lean:draft:${e.target.value}`,
+                  ) ||
+                  "",
+              );
+              setError("");
+            }}
+          >
+            <option value="" disabled>
+              New conversation
+            </option>
+            {list
+              .filter((c) => c.role === role)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.previousRole === "lean" ? "Earlier Lean chat · " : ""}
+                  {c.title}
+                  {c.turns.at(-1)?.status === "running" ? " · working" : ""}
+                </option>
+              ))}
+          </select>
+        </label>
+      </div>
+      {contextLabel && (
+        <div className="libraryChatContext">
+          <p className="hint">Shared research conversation · {contextLabel}</p>
+        </div>
+      )}
+      <div
+        ref={messages}
+        className="chatMessages"
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          follow.current =
+            el.scrollHeight - el.scrollTop - el.clientHeight < 90;
+          setAtBottom(follow.current);
+        }}
+      >
+        {!chat?.turns.length && (
+          <div className="chatWelcome">
+            <p>
+              {role === "writing"
+                ? "Prepare the final paper: sharpen exposition, check attribution, and revise the complete manuscript."
+                : workspace === "lean"
+                  ? "Describe the result to formalize. I will work on the Lean project and explain progress, assumptions and remaining obligations without showing code."
+                  : "Explore a question, test an idea, or develop an argument. Proof write-ups stay separate from the final publication manuscript."}
+            </p>
+            <p className="hint">
+              Choose a connection below. CLI sign-in and API keys use their own
+              account access.
+            </p>
+          </div>
+        )}
+        {chat?.turns.map((t) => (
+          <article className="chatTurn" key={t.id}>
+            <div className="userMessage">
+              <details open={t.message.length < 280}>
+                <summary>
+                  {t.message.length < 280
+                    ? "You"
+                    : t.message.slice(0, 90) + "…"}
+                </summary>
+                <p>{t.message}</p>
+              </details>
+              <button
+                className="icon"
+                aria-label="Copy message"
+                onClick={() =>
+                  navigator.clipboard
+                    .writeText(t.message)
+                    .catch(() =>
+                      setError(
+                        "Clipboard unavailable. Select the text to copy.",
+                      ),
+                    )
+                }
+              >
+                <Copy size={12} />
+              </button>
+            </div>
+            {t.review && <AnnotationChips notes={t.review.comments} sent />}
+            {t.annotations && <AnnotationChips notes={t.annotations} sent />}
+            {t.output && (
+              <>
+                <Preview
+                  sources={project.papers}
+                  onFollowup={(prompt) => {
+                    setDraft((d) => (d ? d + "\n\n" + prompt : prompt));
+                    text.current?.focus();
+                  }}
+                  source={t.output}
+                  lean={workspace === "lean"}
+                  hideLean={role === "research"}
+                />
+                <div className="replyActions">
+                  <button
+                    onClick={() =>
+                      navigator.clipboard
+                        .writeText(t.output)
+                        .catch(() => setError("Clipboard unavailable."))
+                    }
+                  >
+                    <Copy size={12} />
+                    Copy
+                  </button>
+                  {t.status === "complete" &&
+                    role === "research" &&
+                    /```(?:lean|lean4)\s*\n/i.test(t.output) && (
+                      <button
+                        disabled={running}
+                        onClick={async () => {
+                          try {
+                            await api("/api/lean/draft", {
+                              method: "POST",
+                              body: JSON.stringify({
+                                id: chat.id,
+                                turnId: t.id,
+                              }),
+                            });
+                            setError("");
+                          } catch (e) {
+                            setError(e.message);
+                          }
+                        }}
+                      >
+                        Save Lean draft
+                      </button>
+                    )}
+                  {t.status === "complete" &&
+                    role !== "lean" &&
+                    workspace !== "lean" && (
+                      <button
+                        onClick={() =>
+                          t.review
+                            ? onReviewProposal?.(t)
+                            : onArtifact?.(t.output, role)
+                        }
+                      >
+                        {t.review
+                          ? "Review proposed revision"
+                          : role === "writing"
+                            ? "Use in manuscript"
+                            : "Use as working proof"}
+                      </button>
+                    )}
+                </div>
+              </>
+            )}
+            {t.review && (
+              <p className="reviewRequestHint">
+                Annotation feedback · proposed changes await your review
+              </p>
+            )}
+            {t.artifactError && (
+              <p className="inlineError" role="alert">
+                {t.artifactError}
+              </p>
+            )}
+            {t.error && (
+              <p className="inlineError" role="alert">
+                {t.error}
+              </p>
+            )}
+            {["running", "canceling"].includes(t.status) && (
+              <div className="liveActivity" role="status">
+                {t.status === "canceling"
+                  ? "Stopping provider…"
+                  : t.events.at(-1)?.status === "running"
+                    ? t.events.at(-1).label
+                    : t.events.length
+                      ? "Assistant is working…"
+                      : "Connecting to provider…"}{" "}
+                ·{" "}
+                {Math.max(
+                  0,
+                  Math.floor((clock - Date.parse(t.startedAt)) / 1000),
+                )}
+                s
+              </div>
+            )}
+            {["failed", "canceled", "interrupted"].includes(t.status) && (
+              <span className="badge">{t.status}</span>
+            )}
+          </article>
+        ))}
+        <div ref={end} />
+      </div>
+      {!atBottom && (
+        <button
+          className="jumpLatest"
+          onClick={() => {
+            follow.current = true;
+            end.current?.scrollIntoView({ block: "end" });
+            setAtBottom(true);
+          }}
+        >
+          <ArrowDown size={13} />
+          Jump to latest
+        </button>
+      )}
+      {chat?.queue.length > 0 && (
+        <div className="promptQueue">
+          <div className="row">
+            <strong>Follow-ups · {chat.queue.length}</strong>
+            {chat.queuePaused && (
+              <button
+                onClick={() => action("/api/queue", { resume: true })}
+                disabled={running}
+              >
+                Resume queue
+              </button>
+            )}
+          </div>
+          {chat.queue.map((q) => (
+            <div className="queueItem" key={q.id}>
+              {queueEdit?.id === q.id ? (
+                <>
+                  <textarea
+                    aria-label="Edit queued message"
+                    value={queueEdit.message}
+                    onChange={(e) =>
+                      setQueueEdit({ ...queueEdit, message: e.target.value })
+                    }
+                  />
+                  <button
+                    onClick={() => {
+                      action("/api/queue", {
+                        edit: q.id,
+                        message: queueEdit.message,
+                      });
+                      setQueueEdit(null);
+                    }}
+                  >
+                    Save edit
+                  </button>
+                </>
+              ) : (
+                <p>{q.message}</p>
+              )}
+              <button onClick={() => setQueueEdit({ ...q })}>Edit</button>
+              <button onClick={() => action("/api/queue", { remove: q.id })}>
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {error && (
+        <p className="inlineError" role="alert">
+          {error}
+        </p>
+      )}
+      {(chat?.mode || "auto") === "ask" && (
+        <div className="chatAccessNotice">
+          <span>Read-only: the assistant cannot save project documents.</span>
+          <button
+            disabled={running}
+            onClick={() =>
+              patch({ mode: "auto" }).catch((e) => setError(e.message))
+            }
+          >
+            Enable project editing
+          </button>
+        </div>
+      )}
+      {
+        <AnnotationChips
+          notes={notes}
+          onEdit={(note) =>
+            onEditAnnotation
+              ? onEditAnnotation(note)
+              : window.dispatchEvent(
+                  new CustomEvent("math-edit-reading-note", { detail: note }),
+                )
+          }
+          onRemove={(id) =>
+            setAttachments((ids) => ids.filter((x) => x !== id))
+          }
+        />
+      }
+      <div className="chatComposer">
+        <textarea
+          maxLength={32000}
+          ref={text}
+          aria-label={`${role} message`}
+          placeholder={
+            role === "writing"
+              ? "Ask for a revision, citation, or final manuscript…"
+              : workspace === "lean"
+                ? "Ask about a theorem, obligation, or check…"
+                : "Ask a question or continue the proof…"
+          }
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (
+              e.key === "Enter" &&
+              !e.shiftKey &&
+              !e.nativeEvent.isComposing
+            ) {
+              e.preventDefault();
+              send();
+            }
+          }}
+        />
+        <button
+          className="sendButton"
+          aria-label={running ? "Queue follow-up" : "Send message"}
+          onClick={send}
+          disabled={
+            sending ||
+            (!draft.trim() && !notes.length) ||
+            (running && notes.length > 0)
+          }
+        >
+          <Send size={18} />
+        </button>
+        {running && (
+          <button
+            className="icon"
+            aria-label="Stop conversation"
+            onClick={() => action("/api/cancel", {})}
+          >
+            <Square size={15} />
+          </button>
+        )}
+      </div>
+      <div className="chatControls">
+        <ModelPicker
+          role={role}
+          selection={selection}
+          capabilities={caps}
+          busy={running}
+          loading={loading}
+          error=""
+          onRefresh={discover}
+          onSave={(selection) => patch({ selection })}
+          onSaveProfile={() => {}}
+          onSaveConnection={async (id, body) => {
+            await request("/api/providers", {
+              method: "PUT",
+              body: JSON.stringify({ id, ...body }),
+            });
+            await discover(id);
+          }}
+          onNewSession={newChat}
+        />
+        <label className="accessLabel">
+          Access
+          <select
+            aria-label={`${role} access`}
+            value={chat?.mode || "auto"}
+            disabled={running}
+            onChange={(e) =>
+              patch({ mode: e.target.value }).catch((e) => setError(e.message))
+            }
+          >
+            {[
+              ["ask", "Read-only"],
+              ["auto", "Project editing"],
+              ["full", "Full access"],
+            ].map(([id, label]) => (
+              <option
+                key={id}
+                value={id}
+                disabled={active?.modes && !active.modes.includes(id)}
+              >
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </Panel>
+  );
 }

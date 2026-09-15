@@ -112,3 +112,21 @@ button,input,select,textarea{font-size:14px}
 .sourceOrigin:empty{display:none}
 
 .connectionReason{display:block;margin-top:5px;color:var(--blue);font-size:12px;line-height:1.6}
+
+/* Keep document controls in one compact, wrapping title bar. */
+.manuscriptPreview>.panelHead{padding:12px 16px;gap:10px;flex-wrap:wrap}
+.manuscriptPreview>.panelHead>.panelActions{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.manuscriptPreview>.panelHead button{padding:7px 10px;min-height:34px;font-size:12px}
+.libraryFilter{display:block;width:100%;margin-top:10px}
+.libraryItem button>span:first-of-type{flex:1;min-width:0}
+.libraryItem .sourceAiBadge{flex:none;width:27px;height:27px;display:grid;place-items:center;border-radius:50%;border:1px solid #caa65b;background:#f7eacb;color:#75551e;font-size:10px;font-weight:800;letter-spacing:.02em;margin-left:8px}
+.graphLegend{flex-wrap:wrap;gap:8px 14px}
+.graphLegend>span{display:inline-flex;align-items:center;gap:5px}
+.graphLegend svg{flex:none}
+.graphInspector,.graphAssistant{padding:10px 16px;border-top:1px solid var(--line)}
+.graphInspector{max-height:34%;overflow:auto}
+.graphInspector summary{cursor:pointer;font-weight:600;overflow-wrap:anywhere}
+.graphInspector .markdown{padding:8px 0}
+.graphAssistant{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.graphAssistant small{color:var(--muted)}
+.workspaceFeedback{display:contents}

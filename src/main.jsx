@@ -1,162 +1,1556 @@
-import {mergeSourceConnections} from '../shared/source-connections.mjs';
-import {addLibrarySources} from '../shared/library.mjs';
-import WriteupFormatMenu,{defaultWriteupFormat,defaultFormatKey} from './WriteupFormatMenu.jsx';
-import RevisionReview from './RevisionReview.jsx';
-import {reviewDraft} from '../shared/annotations.mjs';
-import {dropLineOffset,insertBlock} from './writeup-insertion.mjs';
-import ManuscriptReview from './ManuscriptReview.jsx';
-import UpdateNotice from './UpdateNotice.jsx';
-import React,{useEffect,useRef,useState} from 'react';
-import {createRoot} from 'react-dom/client';
-import {Plus,Save,Download,RefreshCw,FolderOpen,BookOpen,Edit3,X,FileText,Highlighter} from 'lucide-react';
-import {Cite} from '@citation-js/core';
-import '@citation-js/plugin-bibtex';
-import '@fontsource/manrope/400.css';
-import '@fontsource/manrope/600.css';
-import '@fontsource/manrope/700.css';
-import '@fontsource/dm-mono/400.css';
-import 'katex/dist/katex.min.css';
-import {stages,reviewIssues} from '../shared/research.mjs';
-import {Panel,Preview,download,request} from './ui.jsx';
-import Resizable from './Resizable.jsx';
-import ChatPanel from './ChatPanel.jsx';
-import Library from './Library.jsx';
-import LeanWorkspace from './LeanWorkspace.jsx';
-import {reconcileResearch,resolveResearch} from '../shared/research-sync.mjs';
-import './style.css';
-import './workspace.css';
-function App(){
- const [state,setState]=useState(null),[tab,setTab]=useState('Research'),[dirty,setDirty]=useState(false),[status,setStatus]=useState('Loading workspace…'),[error,setError]=useState(''),[busy,setBusy]=useState(false),[format,setFormat]=useState(defaultWriteupFormat),[resetKeys,setResetKeys]=useState({}),[modal,setModal]=useState(''),[name,setName]=useState(''),[parent,setParent]=useState(''),[bibStatus,setBibStatus]=useState(''),[pdf,setPdf]=useState({}),[rendering,setRendering]=useState({}),[editProof,setEditProof]=useState(false),[folder,setFolder]=useState('');
- const [closedProjects,setClosedProjects]=useState(()=>{try{return JSON.parse(localStorage.getItem('axiovela-math-closed-projects'))||[];}catch{return [];}});
- useEffect(()=>{localStorage.setItem('axiovela-math-closed-projects',JSON.stringify(closedProjects));},[closedProjects]);
- async function closeProject(id){await save();setClosedProjects(ids=>[...ids,id]);const next=latest.current.projects.find(p=>p.id!==id&&!closedProjects.includes(p.id));if(next&&latest.current.activeProjectId===id){setState(s=>({...s,activeProjectId:next.id}));setDirty(true);}}
- function openProject(id){setClosedProjects(ids=>ids.filter(x=>x!==id));setState(s=>({...s,activeProjectId:id}));setDirty(true);setModal('');}
- const [initialFormat,setInitialFormat]=useState(defaultWriteupFormat),[annotating,setAnnotating]=useState(false),[editAnnotation,setEditAnnotation]=useState(null);
- const researchChat=useRef();const [proofAnnotating,setProofAnnotating]=useState(false),[proofEdit,setProofEdit]=useState(null);
- useEffect(()=>{const open=e=>{setTab('Research');setProofAnnotating(true);setProofEdit({id:e.detail,at:Date.now()});};window.addEventListener('math-edit-proof-note',open);return()=>window.removeEventListener('math-edit-proof-note',open);},[]);
- const publicationChat=useRef();const [reviewBusy,setReviewBusy]=useState(false),[proposal,setProposal]=useState(null);
- function reviewProposal(turn){try{setProposal({...turn.review,projectId:project.id,proposed:reviewDraft(turn.output,turn.review.format)});}catch(e){setError(e.message);}}
- function applyProposal(){if(proposal.projectId!==project.id||project[proposal.format]!==proposal.source||project.bibliography!==proposal.bibliography){setError('The draft changed. Request a new review before applying it.');return;}update(p=>({[proposal.format]:proposal.proposed,sourceHistory:[...(p.sourceHistory||[]),{kind:proposal.format,text:p[proposal.format],savedAt:new Date().toISOString(),reason:'Before accepting annotation feedback'}]}));setProposal(null);}
- const [sourceRequest,setSourceRequest]=useState(null);const [libraryVisited,setLibraryVisited]=useState(false);
- useEffect(()=>{if(tab==='Library')setLibraryVisited(true);},[tab]);
- useEffect(()=>{const open=e=>{setSourceRequest({id:e.detail,at:Date.now()});setLibraryVisited(true);setTab('Library');};window.addEventListener('math-open-source',open);return()=>window.removeEventListener('math-open-source',open);},[]);
- const [bridgeOpen,setBridgeOpen]=useState(false),[saveError,setSaveError]=useState('');
- const pendingSources=useRef(new Map());const sourcesFlight=useRef();
- const manuscriptEditor=useRef();const [sourceLine,setSourceLine]=useState(null),[sourceJump,setSourceJump]=useState(0);
- function goToSource(line){const editor=manuscriptEditor.current;if(!editor)return;const lines=editor.value.split('\n'),safeLine=Math.max(1,Math.min(lines.length,line)),offset=lines.slice(0,safeLine-1).reduce((n,x)=>n+x.length+1,0);editor.focus();editor.setSelectionRange(offset,offset+lines[safeLine-1].length);editor.scrollTop=Math.max(0,(safeLine-1)*parseFloat(getComputedStyle(editor).lineHeight)-editor.clientHeight/3);setSourceLine(safeLine);setSourceJump(n=>n+1);}
- const artifactHashes=useRef({});
- const [researchChanges,setResearchChanges]=useState({}),[syncError,setSyncError]=useState('');
- const recoveryKey='axiovela-math-pending-workspace';
- function fileCommand(command){setError('');if(command==='new-project'){setName('');setModal('new-project');}else if(command==='open-project')setModal('project');else if(command==='history')setModal('research-history');else if(command==='export-workspace')download('axiovela-math-workspace.json',JSON.stringify(latest.current,null,2),'application/json');else if(command==='export-recovery'){const pending=localStorage.getItem(recoveryKey);if(pending)download('axiovela-math-recovery.json',pending,'application/json');else setError('No unsaved recovery draft is stored.');}document.querySelector('.fileMenu')?.removeAttribute('open');}
- useEffect(()=>window.methodflowDesktop?.onZoom?.(direction=>{const event=new CustomEvent('math-reader-zoom',{detail:direction,cancelable:true});if(window.dispatchEvent(event))void window.methodflowDesktop.zoomApp(direction);}),[]);
- const commandRef=useRef();commandRef.current=fileCommand;
- useEffect(()=>window.methodflowDesktop?.onCommand?.(command=>commandRef.current(command)),[]);
- const modalRef=useRef();
- useEffect(()=>{try{pendingSources.current=new Map(JSON.parse(localStorage.getItem('axiovela-math-pending-sources')||'[]'));}catch{}},[]);
- const latest=useRef();latest.current=state;const saveInFlight=useRef();const dirtyRef=useRef();dirtyRef.current=dirty;
- useEffect(()=>{request('/api/state').then(s=>{let pending=null;try{pending=JSON.parse(localStorage.getItem(recoveryKey));}catch{}if(pending?.revision===s.revision&&Array.isArray(pending.projects)){setState(pending);setDirty(true);setStatus('Recovered unsaved edits');}else{setState(s);setStatus('Saved locally');if(pending)setError('A recovery draft belongs to an older workspace revision. Export it from Project before reconciling your edits.');}}).catch(e=>setError(e.message));},[]);
- useEffect(()=>{if(dirty&&state)try{localStorage.setItem(recoveryKey,JSON.stringify(state));}catch{setError('Local draft recovery is unavailable. Save the workspace or export your edits.');}},[state,dirty]);
- useEffect(()=>{if(modal&&modalRef.current&&!modalRef.current.open)modalRef.current.showModal();},[modal]);
- useEffect(()=>{const prevent=e=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',prevent);return()=>window.removeEventListener('beforeunload',prevent);},[dirty]);
- const project=state?.projects.find(p=>p.id===state.activeProjectId);
- useEffect(()=>{if(project){setEditProof(false);for(const kind of ['markdown','latex','bibliography'])request(`/api/artifact?project=${project.id}&kind=${kind}`).then(r=>{if(r.text===project[kind])artifactHashes.current[project.id+':'+kind]=r.hash;}).catch(()=>{});request('/api/project-root?project='+project.id).then(x=>setFolder(x.folder)).catch(e=>setError(e.message));try{setFormat(localStorage.getItem('axiovela-math-format:'+project.id)||defaultWriteupFormat());}catch{}}},[project?.id]);
- // Poll independently of the visible chat, including updates made from Library.
- useEffect(()=>{
-  if(!project)return;
-  const id=project.id;let canceled=false,timer;
-  setResearchChanges({});setSyncError('');
-  async function poll(){
-   try{
-    const result=await request('/api/research-artifacts?project='+id);
-    if(canceled)return;
-    setSyncError('');
-    if(!result.working){
-     const discovered=await request('/api/library/discover?project='+id);
-     if(canceled)return;
-     const current=latest.current.projects.find(p=>p.id===id);
-     const {patch,conflicts}=reconcileResearch(current,result.artifacts);
-     for(const kind of ['markdown','latex'])if(kind in patch)artifactHashes.current[id+':'+kind]=result.artifacts[kind].hash;
-     const libraryPatch=addLibrarySources(current,discovered.papers);
-     Object.assign(patch,libraryPatch);
-     if(result.artifacts.connections){try{Object.assign(patch,mergeSourceConnections({...current,...libraryPatch},JSON.parse(result.artifacts.connections.text)));}catch{}}
-     if(libraryPatch.bibliography!==undefined){const key=id+':bibliography';if(!pendingSources.current.has(key))pendingSources.current.set(key,{id,kind:'bibliography',base:current.bibliography});localStorage.setItem('axiovela-math-pending-sources',JSON.stringify([...pendingSources.current]));}
-     setResearchChanges({projectId:id,...conflicts});
-     if(Object.keys(patch).length){
-      const next={...latest.current,projects:latest.current.projects.map(p=>p.id===id?{...p,...patch}:p)};
-      latest.current=next;dirtyRef.current=true;setState(next);setDirty(true);setStatus('Research updated · unsaved');
-     }
+import WorkspaceFeedback from "./WorkspaceFeedback.jsx";
+import { mergeSourceConnections } from "../shared/source-connections.mjs";
+import { addLibrarySources } from "../shared/library.mjs";
+import WriteupFormatMenu, {
+  defaultWriteupFormat,
+  defaultFormatKey,
+} from "./WriteupFormatMenu.jsx";
+import RevisionReview from "./RevisionReview.jsx";
+import { reviewDraft } from "../shared/annotations.mjs";
+import { dropLineOffset, insertBlock } from "./writeup-insertion.mjs";
+import ManuscriptReview from "./ManuscriptReview.jsx";
+import UpdateNotice from "./UpdateNotice.jsx";
+import React, { useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import {
+  Plus,
+  Save,
+  Download,
+  RefreshCw,
+  FolderOpen,
+  BookOpen,
+  Edit3,
+  X,
+  FileText,
+} from "lucide-react";
+import { Cite } from "@citation-js/core";
+import "@citation-js/plugin-bibtex";
+import "@fontsource/manrope/400.css";
+import "@fontsource/manrope/600.css";
+import "@fontsource/manrope/700.css";
+import "@fontsource/dm-mono/400.css";
+import "katex/dist/katex.min.css";
+import { stages, reviewIssues } from "../shared/research.mjs";
+import { Panel, Preview, download, request } from "./ui.jsx";
+import Resizable from "./Resizable.jsx";
+import ChatPanel from "./ChatPanel.jsx";
+import Library from "./Library.jsx";
+import LeanWorkspace from "./LeanWorkspace.jsx";
+import {
+  reconcileResearch,
+  resolveResearch,
+} from "../shared/research-sync.mjs";
+import "./style.css";
+import "./workspace.css";
+function App() {
+  const [state, setState] = useState(null),
+    [tab, setTab] = useState("Research"),
+    [dirty, setDirty] = useState(false),
+    [status, setStatus] = useState("Loading workspace…"),
+    [error, setError] = useState(""),
+    [busy, setBusy] = useState(false),
+    [format, setFormat] = useState(defaultWriteupFormat),
+    [resetKeys, setResetKeys] = useState({}),
+    [modal, setModal] = useState(""),
+    [name, setName] = useState(""),
+    [parent, setParent] = useState(""),
+    [bibStatus, setBibStatus] = useState(""),
+    [pdf, setPdf] = useState({}),
+    [rendering, setRendering] = useState({}),
+    [folder, setFolder] = useState("");
+  const [closedProjects, setClosedProjects] = useState(() => {
+    try {
+      return (
+        JSON.parse(localStorage.getItem("axiovela-math-closed-projects")) || []
+      );
+    } catch {
+      return [];
     }
-   }catch(e){if(!canceled)setSyncError('Research updates paused: '+e.message+' Retrying automatically.');}
-   if(!canceled)timer=setTimeout(poll,1800);
+  });
+  useEffect(() => {
+    localStorage.setItem(
+      "axiovela-math-closed-projects",
+      JSON.stringify(closedProjects),
+    );
+  }, [closedProjects]);
+  async function closeProject(id) {
+    await save();
+    setClosedProjects((ids) => [...ids, id]);
+    const next = latest.current.projects.find(
+      (p) => p.id !== id && !closedProjects.includes(p.id),
+    );
+    if (next && latest.current.activeProjectId === id) {
+      setState((s) => ({ ...s, activeProjectId: next.id }));
+      setDirty(true);
+    }
   }
-  poll();return()=>{canceled=true;clearTimeout(timer);};
- },[project?.id]);
- function resolveChange(kind,useRemote){
-  const remote=researchChanges[kind];if(!remote||researchChanges.projectId!==project.id)return;
-  if(useRemote&&['markdown','latex'].includes(kind))artifactHashes.current[project.id+':'+kind]=remote.hash;
-  update(p=>resolveResearch(p,kind,remote,useRemote));
-  setResearchChanges(c=>({...c,[kind]:null}));setModal('');
- }
- function changeNotice(kind){return researchChanges.projectId===project.id&&researchChanges[kind]?<div className="panelFoot researchChange"><span>Your edits are preserved. An assistant update is ready.</span><button onClick={()=>setModal('research-'+kind)}>Review changes</button></div>:null;}
- function update(patch){setState(s=>{const p=s.projects.find(p=>p.id===project.id),changes=typeof patch==='function'?patch(p):patch;for(const kind of ['markdown','latex','bibliography'])if(kind in changes&&changes[kind]!==p[kind]){const key=p.id+':'+kind;if(!pendingSources.current.has(key))pendingSources.current.set(key,{id:p.id,kind,base:p[kind]});}localStorage.setItem('axiovela-math-pending-sources',JSON.stringify([...pendingSources.current]));const next={...s,projects:s.projects.map(p=>p.id===project.id?{...p,...changes}:p)};latest.current=next;return next;});dirtyRef.current=true;setDirty(true);}
- async function save(){await saveWorkspace();if(sourcesFlight.current){await sourcesFlight.current;if(pendingSources.current.size)return save();return;}const work=(async()=>{for(const [key,record] of pendingSources.current){const text=latest.current.projects.find(p=>p.id===record.id)?.[record.kind];if(text===undefined){pendingSources.current.delete(key);continue;}const url=`/api/artifact?project=${record.id}`;const r=await fetch(url+'&kind='+record.kind);const current=await r.json();if(!r.ok&&r.status!==404)throw Error(current.error);const expected=artifactHashes.current[key]??(r.status===404?null:current.hash);if(r.ok&&current.text!==record.base&&current.text!==text&&artifactHashes.current[key]===undefined)throw Error('A saved '+record.kind+' draft changed outside this editor. Open Write-up actions to load the disk version; your edits remain in the workspace.');if(current.text!==text){const saved=await request(url,{method:'PUT',body:JSON.stringify({kind:record.kind,text,expectedHash:expected})});artifactHashes.current[key]=saved.hash;}else artifactHashes.current[key]=current.hash;if(latest.current.projects.find(p=>p.id===record.id)?.[record.kind]===text)pendingSources.current.delete(key);else record.base=text;localStorage.setItem('axiovela-math-pending-sources',JSON.stringify([...pendingSources.current]));}})();sourcesFlight.current=work;try{await work;setSaveError('');}finally{sourcesFlight.current=null;}if(pendingSources.current.size)return save();}
- useEffect(()=>{if(!state||(!dirty&&!pendingSources.current.size))return;const timer=setTimeout(()=>save().catch(e=>setSaveError(e.message)),650);return()=>clearTimeout(timer);},[state,dirty]);
- async function saveWorkspace(){if(saveInFlight.current){await saveInFlight.current;if(dirtyRef.current)return saveWorkspace();return;}if(!dirtyRef.current)return;const snapshot=latest.current;setBusy(true);const work=(async()=>{const result=await request('/api/state',{method:'PUT',headers:{'If-Match':String(snapshot.revision)},body:JSON.stringify(snapshot)});if(latest.current===snapshot){latest.current=result;setState(result);setDirty(false);dirtyRef.current=false;setStatus('Saved locally');try{localStorage.removeItem(recoveryKey);}catch{}}else{const newer={...latest.current,revision:result.revision};latest.current=newer;setState(newer);setStatus('Newer edits remain unsaved');}})();saveInFlight.current=work;try{await work;}finally{saveInFlight.current=null;setBusy(false);}}
- const safe=fn=>async(...args)=>{setError('');try{return await fn(...args);}catch(e){setError(e.message);}};
- async function addPaper(e){const file=e.target.files?.[0];if(!file)return;setBusy(true);try{const r=await fetch('/api/papers',{method:'POST',headers:{'Content-Type':'application/pdf'},body:file});const data=await r.json();if(!r.ok)throw Error(data.error);update(p=>({papers:[...p.papers,{id:data.id,title:file.name.replace(/\.pdf$/i,''),notes:'',citationKey:'',read:false}]}));}finally{setBusy(false);e.target.value='';}}
- async function insertImage(e){
-  e.preventDefault();const file=e.dataTransfer?.files?.[0]||e.target.files?.[0];if(!file)return;
-  const id=project.id,f=format,editor=manuscriptEditor.current,start=e.dataTransfer?dropLineOffset(editor,e.clientY):editor.selectionStart,snapshot=project[f];
-  setBusy(true);try{const response=await fetch('/api/writeup-image?project='+id,{method:'POST',headers:{'Content-Type':file.type},body:file});const result=await response.json();if(!response.ok)throw Error(result.error);const insertion=f==='latex'?`\\includegraphics[width=\\linewidth]{${result.path}}`:`![Figure](${result.path})`;
-   const current=latest.current.projects.find(p=>p.id===id);if(current[f]!==snapshot)throw Error('Source changed during upload. Your image is saved at '+result.path+'. Insert it when ready.');
-   let text=insertBlock(snapshot,insertion,start).source;if(f==='latex'&&!/\\usepackage(?:\[[^\]]*\])?\{[^}]*graphicx/.test(text))text=text.replace('\\begin{document}','\\usepackage{graphicx}\n\\begin{document}');update({[f]:text});
-  }finally{setBusy(false);if(e.target.type==='file')e.target.value='';}
- }
- async function create(e){e.preventDefault();await save();const result=await request('/api/projects/open',{method:'POST',body:JSON.stringify({directory:name,revision:latest.current.revision})});setClosedProjects(ids=>ids.filter(id=>id!==result.activeProjectId));setState(result);setDirty(false);setModal('');setName('');}
- function useReply(text,role){const fence=text.match(/```(markdown|md|latex|tex)\s*\n([\s\S]*?)```/);if(role==='writing'){const f=fence&&['latex','tex'].includes(fence[1])?'latex':'markdown';update({[f]:fence?fence[2]:text});setFormat(f);localStorage.setItem('axiovela-math-format:'+project.id,f);setTab('Write-up');}else update({proof:fence?fence[2]:text});}
- async function refreshArtifact(kind){await saveWorkspace();const r=await request(`/api/artifact?project=${project.id}&kind=${kind}`);artifactHashes.current[project.id+':'+kind]=r.hash;update(p=>({[kind]:r.text,sourceHistory:[...(p.sourceHistory||[]),{kind,text:p[kind],savedAt:new Date().toISOString()}]}));pendingSources.current.delete(project.id+':'+kind);setSaveError('');localStorage.setItem('axiovela-math-pending-sources',JSON.stringify([...pendingSources.current]));}
- async function saveSource(kind=format){await save();const id=project.id;const p=latest.current.projects.find(p=>p.id===id);const result=await request('/api/artifact?project='+id,{method:'PUT',body:JSON.stringify({kind,text:p[kind],expectedHash:artifactHashes.current[id+':'+kind]??null})});artifactHashes.current[id+':'+kind]=result.hash;setStatus(kind==='bibliography'?'Bibliography saved to project':'Source saved to project');}
- function changeFormat(f){setEditAnnotation(null);setFormat(f);localStorage.setItem('axiovela-math-format:'+project.id,f);}
- async function render(){const id=project.id,source=project.latex,bibliography=project.bibliography;setRendering(r=>({...r,[id]:true}));setError('');try{const result=await request('/api/render?project='+id,{method:'POST',body:JSON.stringify({source,bibliography})});setPdf(p=>({...p,[id]:{...result,source,bibliography}}));}catch(e){setError(`Rendering ${project.name}: ${e.message}`);}finally{setRendering(r=>({...r,[id]:false}));}}
- if(!state)return <div className="loading"><img src="/workbench-mark.png" alt=""/><h1>Axiovela Math</h1><p role="status">{error||status}</p></div>;
- const reset=resetKeys[tab]||0;
- const resetLayout=()=>{localStorage.removeItem('axiovela-math-layout:'+({'Research':'research','Library':'library','Lean Certificates':'lean','Write-up':'writing'}[tab]));if(tab==='Library')localStorage.removeItem('axiovela-math-layout:library-detail');setResetKeys(x=>({...x,[tab]:(x[tab]||0)+1}));};
- const currentPdf=pdf[project.id];const renderBusy=!!rendering[project.id];
- const researchLeft=<Panel title="Executive summary" label="RESEARCH BRIEF" className="fill"><div className="scrollBody"><div className="panelBody"><h3>{project.question||'Start with a mathematical question'}</h3><p className="hint">{project.claims.length} claims · {project.papers.length} sources</p></div><Preview prose sources={project.papers} source={project.summary||'The executive summary will capture the question, current approach, established progress, and unresolved obstacles. Ask the research assistant to maintain it as the work develops.'}/>{project.notes&&<div className="panelBody"><h3>Working notes</h3><Preview prose source={project.notes}/></div>}</div>{changeNotice('summary')}</Panel>;
- const researchMiddle=<Panel title="Proof write-ups" label="DEVELOPING THE ARGUMENT" className="fill" action={<button aria-pressed={proofAnnotating} onClick={()=>setProofAnnotating(!proofAnnotating)}>Annotate</button>}>{project.proof?<ManuscriptReview key={project.id+"proof"} project={project} format="markdown" target={{kind:"proof"}} update={update} annotating={proofAnnotating} editRequest={proofEdit} onQueue={id=>researchChat.current?.queueAnnotation(id)}/>:<div className="empty largeEmpty"><FileText size={30}/><h3>Give the argument room to develop</h3><p>Arguments saved by the assistant appear here automatically, with Markdown and mathematical notation rendered in full.</p><p>The preliminary paper has its own Write-up tab.</p></div>}{changeNotice('proof')}</Panel>;
- const writingLeft=<section className="panel fill writeupFullPane"><header className="panelHead writeupEditorHead"><div><span className="sourcePill">{format==='markdown'?'MARKDOWN SOURCE':'LATEX SOURCE'}</span><h2>Write-up</h2>{sourceLine&&<span className="sourceLineIndicator">Line {sourceLine}</span>}</div><button onClick={safe(()=>saveSource())} disabled={busy}>Save source</button><div className="formatToggle" aria-label="Write-up format">{['markdown','latex'].map(f=><button key={f} aria-pressed={format===f} className={format===f?'selected':''} onClick={()=>changeFormat(f)}>{f==='markdown'?'Markdown':'LaTeX'}<small className={'draftIndicator'+(project[f].trim()?' hasDraft':'')}>{project[f].trim()?'Draft':'Empty'}</small></button>)}</div><button className="bibliographyButton" onClick={()=>setModal('bibliography')}>Bibliography</button><WriteupFormatMenu value={initialFormat} onChange={f=>{localStorage.setItem(defaultFormatKey,f);setInitialFormat(f);if(!localStorage.getItem('axiovela-math-format:'+project.id))setFormat(f);}}><div className="writeupExtraActions" aria-label="Write-up actions"><button onClick={safe(()=>refreshArtifact(format))}>Load assistant’s saved draft</button><button onClick={()=>setModal('review')}>Submission checks</button><button onClick={()=>download('manuscript-comments.md',(project.manuscriptComments||[]).map(c=>`> ${(c.anchor.quote||'').replaceAll('\n','\n> ')}\n\n${c.comment}\n\nRevision: ${c.sourceHash}`).join('\n\n'))}>Export annotations</button><label className="button">Insert image<input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={busy} onChange={safe(insertImage)}/></label></div></WriteupFormatMenu></header><p className="sourceStatus">Write here, ask the assistant to revise, or drop an image onto a source line.</p>{changeNotice(format)}<div className="writeupEditor"><textarea ref={manuscriptEditor} onDragOver={e=>{e.preventDefault();const editor=e.currentTarget,scroll=editor.scrollTop,at=dropLineOffset(editor,e.clientY);editor.focus({preventScroll:true});editor.setSelectionRange(at,at);editor.scrollTop=scroll;}} onDrop={safe(insertImage)} className="code fillEditor" aria-label="Manuscript source" spellCheck={false} placeholder={`Start a ${format==='latex'?'LaTeX':'Markdown'} paper…`} value={project[format]} onChange={e=>update({[format]:e.target.value})}/></div></section>;
- const writingMiddle=<Panel expandable restoreKey={sourceJump} expandLabel="manuscript preview" title="Rendered write-up preview" className="fill manuscriptPreview">
- <p className="panelIntro">Preview generated prose and export from this pane.</p>
- <div className="previewToolbar"><p className="eyebrow">{format==='latex'?'PDF DOCUMENT PREVIEW':'MARKDOWN PREVIEW'}</p><div className="previewButtons">
- <button className="annotateToggle" aria-pressed={annotating} title="Click a sentence or drag a passage to add feedback to your message" disabled={format==='latex'&&(!currentPdf||currentPdf.source!==project.latex||currentPdf.bibliography!==project.bibliography)} onClick={()=>setAnnotating(x=>!x)}><Highlighter size={14}/>Annotate</button>
- {format==='latex'&&<button className="primary" disabled={renderBusy||!project.latex.trim()} onClick={render}>{renderBusy?'Rendering…':'Render document'}</button>}
- <button disabled={!project[format].trim()} onClick={()=>download(format==='markdown'?'main.md':'main.tex',project[format])}><Download size={14}/>Export source</button>
- <button disabled={!project[format].trim()||format==='latex'&&!currentPdf} onClick={()=>format==='markdown'?window.print():(()=>{const a=document.createElement('a');a.href='/api/rendered?project='+project.id+'&id='+currentPdf.id;a.download='main.pdf';a.click();})()}>Export PDF</button>
- </div></div>
- {format==='latex'&&currentPdf&&(currentPdf.source!==project.latex||currentPdf.bibliography!==project.bibliography)&&<div className="panelFoot" role="status">Source or bibliography changed. Render again to update the PDF.</div>}
- <ManuscriptReview key={project.id+format} project={project} format={format} pdf={currentPdf} update={update} onLine={goToSource} annotating={annotating} editRequest={editAnnotation} onQueue={id=>publicationChat.current?.queueAnnotation(id)}/></Panel>;
+  function openProject(id) {
+    setClosedProjects((ids) => ids.filter((x) => x !== id));
+    setState((s) => ({ ...s, activeProjectId: id }));
+    setDirty(true);
+    setModal("");
+  }
+  const [initialFormat, setInitialFormat] = useState(defaultWriteupFormat),
+    [editAnnotation, setEditAnnotation] = useState(null);
+  const researchChat = useRef();
+  const [proofEdit, setProofEdit] = useState(null);
+  useEffect(() => {
+    const open = (e) => {
+      setTab("Research");
+      setProofEdit({ id: e.detail, at: Date.now() });
+    };
+    window.addEventListener("math-edit-proof-note", open);
+    return () => window.removeEventListener("math-edit-proof-note", open);
+  }, []);
+  useEffect(() => {
+    const edit = (e) => {
+      const note = e.detail;
+      if (note.target?.kind === "paper") {
+        setSourceRequest({
+          id: note.target.id,
+          annotationId: note.id,
+          at: Date.now(),
+        });
+        setTab("Library");
+      } else if (note.target?.kind === "proof") {
+        setProofEdit({ id: note.id, at: Date.now() });
+        setTab("Research");
+      }
+    };
+    window.addEventListener("math-edit-reading-note", edit);
+    return () => window.removeEventListener("math-edit-reading-note", edit);
+  }, []);
+  const publicationChat = useRef();
+  const [reviewBusy, setReviewBusy] = useState(false),
+    [proposal, setProposal] = useState(null);
+  function reviewProposal(turn) {
+    try {
+      setProposal({
+        ...turn.review,
+        projectId: project.id,
+        proposed: reviewDraft(turn.output, turn.review.format),
+      });
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+  function applyProposal() {
+    if (
+      proposal.projectId !== project.id ||
+      project[proposal.format] !== proposal.source ||
+      project.bibliography !== proposal.bibliography
+    ) {
+      setError("The draft changed. Request a new review before applying it.");
+      return;
+    }
+    update((p) => ({
+      [proposal.format]: proposal.proposed,
+      sourceHistory: [
+        ...(p.sourceHistory || []),
+        {
+          kind: proposal.format,
+          text: p[proposal.format],
+          savedAt: new Date().toISOString(),
+          reason: "Before accepting annotation feedback",
+        },
+      ],
+    }));
+    setProposal(null);
+  }
+  const [sourceRequest, setSourceRequest] = useState(null);
+  const [libraryVisited, setLibraryVisited] = useState(false);
+  useEffect(() => {
+    if (tab === "Library") setLibraryVisited(true);
+  }, [tab]);
+  useEffect(() => {
+    const open = (e) => {
+      setSourceRequest({ id: e.detail, at: Date.now() });
+      setLibraryVisited(true);
+      setTab("Library");
+    };
+    window.addEventListener("math-open-source", open);
+    return () => window.removeEventListener("math-open-source", open);
+  }, []);
+  const [bridgeOpen, setBridgeOpen] = useState(false),
+    [saveError, setSaveError] = useState("");
+  const pendingSources = useRef(new Map());
+  const sourcesFlight = useRef();
+  const manuscriptEditor = useRef();
+  const [sourceLine, setSourceLine] = useState(null),
+    [sourceJump, setSourceJump] = useState(0);
+  function goToSource(line) {
+    const editor = manuscriptEditor.current;
+    if (!editor) return;
+    const lines = editor.value.split("\n"),
+      safeLine = Math.max(1, Math.min(lines.length, line)),
+      offset = lines
+        .slice(0, safeLine - 1)
+        .reduce((n, x) => n + x.length + 1, 0);
+    editor.focus();
+    editor.setSelectionRange(offset, offset + lines[safeLine - 1].length);
+    editor.scrollTop = Math.max(
+      0,
+      (safeLine - 1) * parseFloat(getComputedStyle(editor).lineHeight) -
+        editor.clientHeight / 3,
+    );
+    setSourceLine(safeLine);
+    setSourceJump((n) => n + 1);
+  }
+  const artifactHashes = useRef({});
+  const [researchChanges, setResearchChanges] = useState({}),
+    [syncError, setSyncError] = useState("");
+  const recoveryKey = "axiovela-math-pending-workspace";
+  function fileCommand(command) {
+    setError("");
+    if (command === "new-project") {
+      setName("");
+      setModal("new-project");
+    } else if (command === "open-project") setModal("project");
+    else if (command === "history") setModal("research-history");
+    else if (command === "export-workspace")
+      download(
+        "axiovela-math-workspace.json",
+        JSON.stringify(latest.current, null, 2),
+        "application/json",
+      );
+    else if (command === "export-recovery") {
+      const pending = localStorage.getItem(recoveryKey);
+      if (pending)
+        download("axiovela-math-recovery.json", pending, "application/json");
+      else setError("No unsaved recovery draft is stored.");
+    }
+    document.querySelector(".fileMenu")?.removeAttribute("open");
+  }
+  useEffect(
+    () =>
+      window.methodflowDesktop?.onZoom?.((direction) => {
+        const event = new CustomEvent("math-reader-zoom", {
+          detail: direction,
+          cancelable: true,
+        });
+        if (window.dispatchEvent(event))
+          void window.methodflowDesktop.zoomApp(direction);
+      }),
+    [],
+  );
+  const commandRef = useRef();
+  commandRef.current = fileCommand;
+  useEffect(
+    () =>
+      window.methodflowDesktop?.onCommand?.((command) =>
+        commandRef.current(command),
+      ),
+    [],
+  );
+  const modalRef = useRef();
+  useEffect(() => {
+    try {
+      pendingSources.current = new Map(
+        JSON.parse(
+          localStorage.getItem("axiovela-math-pending-sources") || "[]",
+        ),
+      );
+    } catch {}
+  }, []);
+  const latest = useRef();
+  latest.current = state;
+  const saveInFlight = useRef();
+  const dirtyRef = useRef();
+  dirtyRef.current = dirty;
+  useEffect(() => {
+    request("/api/state")
+      .then((s) => {
+        let pending = null;
+        try {
+          pending = JSON.parse(localStorage.getItem(recoveryKey));
+        } catch {}
+        if (
+          pending?.revision === s.revision &&
+          Array.isArray(pending.projects)
+        ) {
+          setState(pending);
+          setDirty(true);
+          setStatus("Recovered unsaved edits");
+        } else {
+          setState(s);
+          setStatus("Saved locally");
+          if (pending)
+            setError(
+              "A recovery draft belongs to an older workspace revision. Export it from Project before reconciling your edits.",
+            );
+        }
+      })
+      .catch((e) => setError(e.message));
+  }, []);
+  useEffect(() => {
+    if (dirty && state)
+      try {
+        localStorage.setItem(recoveryKey, JSON.stringify(state));
+      } catch {
+        setError(
+          "Local draft recovery is unavailable. Save the workspace or export your edits.",
+        );
+      }
+  }, [state, dirty]);
+  useEffect(() => {
+    if (modal && modalRef.current && !modalRef.current.open)
+      modalRef.current.showModal();
+  }, [modal]);
+  useEffect(() => {
+    const prevent = (e) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", prevent);
+    return () => window.removeEventListener("beforeunload", prevent);
+  }, [dirty]);
+  const project = state?.projects.find((p) => p.id === state.activeProjectId);
+  useEffect(() => {
+    if (project) {
+      for (const kind of ["markdown", "latex", "bibliography"])
+        request(`/api/artifact?project=${project.id}&kind=${kind}`)
+          .then((r) => {
+            if (r.text === project[kind])
+              artifactHashes.current[project.id + ":" + kind] = r.hash;
+          })
+          .catch(() => {});
+      request("/api/project-root?project=" + project.id)
+        .then((x) => setFolder(x.folder))
+        .catch((e) => setError(e.message));
+      try {
+        setFormat(
+          localStorage.getItem("axiovela-math-format:" + project.id) ||
+            defaultWriteupFormat(),
+        );
+      } catch {}
+    }
+  }, [project?.id]);
+  // Poll independently of the visible chat, including updates made from Library.
+  useEffect(() => {
+    if (!project) return;
+    const id = project.id;
+    let canceled = false,
+      timer;
+    setResearchChanges({});
+    setSyncError("");
+    async function poll() {
+      try {
+        const result = await request("/api/research-artifacts?project=" + id);
+        if (canceled) return;
+        setSyncError("");
+        if (!result.working) {
+          const discovered = await request(
+            "/api/library/discover?project=" + id,
+          );
+          if (canceled) return;
+          const current = latest.current.projects.find((p) => p.id === id);
+          const { patch, conflicts } = reconcileResearch(
+            current,
+            result.artifacts,
+          );
+          for (const kind of ["markdown", "latex"])
+            if (kind in patch)
+              artifactHashes.current[id + ":" + kind] =
+                result.artifacts[kind].hash;
+          const libraryPatch = addLibrarySources(current, discovered.papers);
+          Object.assign(patch, libraryPatch);
+          if (result.artifacts.connections) {
+            try {
+              Object.assign(
+                patch,
+                mergeSourceConnections(
+                  { ...current, ...libraryPatch },
+                  JSON.parse(result.artifacts.connections.text),
+                ),
+              );
+            } catch {}
+          }
+          if (libraryPatch.bibliography !== undefined) {
+            const key = id + ":bibliography";
+            if (!pendingSources.current.has(key))
+              pendingSources.current.set(key, {
+                id,
+                kind: "bibliography",
+                base: current.bibliography,
+              });
+            localStorage.setItem(
+              "axiovela-math-pending-sources",
+              JSON.stringify([...pendingSources.current]),
+            );
+          }
+          setResearchChanges({ projectId: id, ...conflicts });
+          if (Object.keys(patch).length) {
+            const next = {
+              ...latest.current,
+              projects: latest.current.projects.map((p) =>
+                p.id === id ? { ...p, ...patch } : p,
+              ),
+            };
+            latest.current = next;
+            dirtyRef.current = true;
+            setState(next);
+            setDirty(true);
+            setStatus("Research updated · unsaved");
+          }
+        }
+      } catch (e) {
+        if (!canceled)
+          setSyncError(
+            "Research updates paused: " +
+              e.message +
+              " Retrying automatically.",
+          );
+      }
+      if (!canceled) timer = setTimeout(poll, 1800);
+    }
+    poll();
+    return () => {
+      canceled = true;
+      clearTimeout(timer);
+    };
+  }, [project?.id]);
+  function resolveChange(kind, useRemote) {
+    const remote = researchChanges[kind];
+    if (!remote || researchChanges.projectId !== project.id) return;
+    if (useRemote && ["markdown", "latex"].includes(kind))
+      artifactHashes.current[project.id + ":" + kind] = remote.hash;
+    update((p) => resolveResearch(p, kind, remote, useRemote));
+    setResearchChanges((c) => ({ ...c, [kind]: null }));
+    setModal("");
+  }
+  function changeNotice(kind) {
+    return researchChanges.projectId === project.id && researchChanges[kind] ? (
+      <div className="panelFoot researchChange">
+        <span>Your edits are preserved. An assistant update is ready.</span>
+        <button onClick={() => setModal("research-" + kind)}>
+          Review changes
+        </button>
+      </div>
+    ) : null;
+  }
+  function update(patch) {
+    setState((s) => {
+      const p = s.projects.find((p) => p.id === project.id),
+        changes = typeof patch === "function" ? patch(p) : patch;
+      for (const kind of ["markdown", "latex", "bibliography"])
+        if (kind in changes && changes[kind] !== p[kind]) {
+          const key = p.id + ":" + kind;
+          if (!pendingSources.current.has(key))
+            pendingSources.current.set(key, { id: p.id, kind, base: p[kind] });
+        }
+      localStorage.setItem(
+        "axiovela-math-pending-sources",
+        JSON.stringify([...pendingSources.current]),
+      );
+      const next = {
+        ...s,
+        projects: s.projects.map((p) =>
+          p.id === project.id ? { ...p, ...changes } : p,
+        ),
+      };
+      latest.current = next;
+      return next;
+    });
+    dirtyRef.current = true;
+    setDirty(true);
+  }
+  async function save() {
+    await saveWorkspace();
+    if (sourcesFlight.current) {
+      await sourcesFlight.current;
+      if (pendingSources.current.size) return save();
+      return;
+    }
+    const work = (async () => {
+      for (const [key, record] of pendingSources.current) {
+        const text = latest.current.projects.find((p) => p.id === record.id)?.[
+          record.kind
+        ];
+        if (text === undefined) {
+          pendingSources.current.delete(key);
+          continue;
+        }
+        const url = `/api/artifact?project=${record.id}`;
+        const r = await fetch(url + "&kind=" + record.kind);
+        const current = await r.json();
+        if (!r.ok && r.status !== 404) throw Error(current.error);
+        const expected =
+          artifactHashes.current[key] ??
+          (r.status === 404 ? null : current.hash);
+        if (
+          r.ok &&
+          current.text !== record.base &&
+          current.text !== text &&
+          artifactHashes.current[key] === undefined
+        )
+          throw Error(
+            "A saved " +
+              record.kind +
+              " draft changed outside this editor. Open Write-up actions to load the disk version; your edits remain in the workspace.",
+          );
+        if (current.text !== text) {
+          const saved = await request(url, {
+            method: "PUT",
+            body: JSON.stringify({
+              kind: record.kind,
+              text,
+              expectedHash: expected,
+            }),
+          });
+          artifactHashes.current[key] = saved.hash;
+        } else artifactHashes.current[key] = current.hash;
+        if (
+          latest.current.projects.find((p) => p.id === record.id)?.[
+            record.kind
+          ] === text
+        )
+          pendingSources.current.delete(key);
+        else record.base = text;
+        localStorage.setItem(
+          "axiovela-math-pending-sources",
+          JSON.stringify([...pendingSources.current]),
+        );
+      }
+    })();
+    sourcesFlight.current = work;
+    try {
+      await work;
+      setSaveError("");
+    } finally {
+      sourcesFlight.current = null;
+    }
+    if (pendingSources.current.size) return save();
+  }
+  useEffect(() => {
+    if (!state || (!dirty && !pendingSources.current.size)) return;
+    const timer = setTimeout(
+      () => save().catch((e) => setSaveError(e.message)),
+      650,
+    );
+    return () => clearTimeout(timer);
+  }, [state, dirty]);
+  async function saveWorkspace() {
+    if (saveInFlight.current) {
+      await saveInFlight.current;
+      if (dirtyRef.current) return saveWorkspace();
+      return;
+    }
+    if (!dirtyRef.current) return;
+    const snapshot = latest.current;
+    setBusy(true);
+    const work = (async () => {
+      const result = await request("/api/state", {
+        method: "PUT",
+        headers: { "If-Match": String(snapshot.revision) },
+        body: JSON.stringify(snapshot),
+      });
+      if (latest.current === snapshot) {
+        latest.current = result;
+        setState(result);
+        setDirty(false);
+        dirtyRef.current = false;
+        setStatus("Saved locally");
+        try {
+          localStorage.removeItem(recoveryKey);
+        } catch {}
+      } else {
+        const newer = { ...latest.current, revision: result.revision };
+        latest.current = newer;
+        setState(newer);
+        setStatus("Newer edits remain unsaved");
+      }
+    })();
+    saveInFlight.current = work;
+    try {
+      await work;
+    } finally {
+      saveInFlight.current = null;
+      setBusy(false);
+    }
+  }
+  const safe =
+    (fn) =>
+    async (...args) => {
+      setError("");
+      try {
+        return await fn(...args);
+      } catch (e) {
+        setError(e.message);
+      }
+    };
+  async function addPaper(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/papers", {
+        method: "POST",
+        headers: { "Content-Type": "application/pdf" },
+        body: file,
+      });
+      const data = await r.json();
+      if (!r.ok) throw Error(data.error);
+      update((p) =>
+        addLibrarySources(p, [
+          {
+            id: data.id,
+            title: file.name.replace(/\.pdf$/i, ""),
+            notes: "",
+            citationKey: "",
+            read: false,
+          },
+        ]),
+      );
+    } finally {
+      setBusy(false);
+      e.target.value = "";
+    }
+  }
+  async function insertImage(e) {
+    e.preventDefault();
+    const file = e.dataTransfer?.files?.[0] || e.target.files?.[0];
+    if (!file) return;
+    const id = project.id,
+      f = format,
+      editor = manuscriptEditor.current,
+      start = e.dataTransfer
+        ? dropLineOffset(editor, e.clientY)
+        : editor.selectionStart,
+      snapshot = project[f];
+    setBusy(true);
+    try {
+      const response = await fetch("/api/writeup-image?project=" + id, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const result = await response.json();
+      if (!response.ok) throw Error(result.error);
+      const insertion =
+        f === "latex"
+          ? `\\includegraphics[width=\\linewidth]{${result.path}}`
+          : `![Figure](${result.path})`;
+      const current = latest.current.projects.find((p) => p.id === id);
+      if (current[f] !== snapshot)
+        throw Error(
+          "Source changed during upload. Your image is saved at " +
+            result.path +
+            ". Insert it when ready.",
+        );
+      let text = insertBlock(snapshot, insertion, start).source;
+      if (
+        f === "latex" &&
+        !/\\usepackage(?:\[[^\]]*\])?\{[^}]*graphicx/.test(text)
+      )
+        text = text.replace(
+          "\\begin{document}",
+          "\\usepackage{graphicx}\n\\begin{document}",
+        );
+      update({ [f]: text });
+    } finally {
+      setBusy(false);
+      if (e.target.type === "file") e.target.value = "";
+    }
+  }
+  async function create(e) {
+    e.preventDefault();
+    await save();
+    const result = await request("/api/projects/open", {
+      method: "POST",
+      body: JSON.stringify({
+        directory: name,
+        revision: latest.current.revision,
+      }),
+    });
+    setClosedProjects((ids) =>
+      ids.filter((id) => id !== result.activeProjectId),
+    );
+    setState(result);
+    setDirty(false);
+    setModal("");
+    setName("");
+  }
+  function useReply(text, role) {
+    const fence = text.match(/```(markdown|md|latex|tex)\s*\n([\s\S]*?)```/);
+    if (role === "writing") {
+      const f =
+        fence && ["latex", "tex"].includes(fence[1]) ? "latex" : "markdown";
+      update({ [f]: fence ? fence[2] : text });
+      setFormat(f);
+      localStorage.setItem("axiovela-math-format:" + project.id, f);
+      setTab("Write-up");
+    } else update({ proof: fence ? fence[2] : text });
+  }
+  async function refreshArtifact(kind) {
+    await saveWorkspace();
+    const r = await request(`/api/artifact?project=${project.id}&kind=${kind}`);
+    artifactHashes.current[project.id + ":" + kind] = r.hash;
+    update((p) => ({
+      [kind]: r.text,
+      sourceHistory: [
+        ...(p.sourceHistory || []),
+        { kind, text: p[kind], savedAt: new Date().toISOString() },
+      ],
+    }));
+    pendingSources.current.delete(project.id + ":" + kind);
+    setSaveError("");
+    localStorage.setItem(
+      "axiovela-math-pending-sources",
+      JSON.stringify([...pendingSources.current]),
+    );
+  }
+  async function saveSource(kind = format) {
+    await save();
+    const id = project.id;
+    const p = latest.current.projects.find((p) => p.id === id);
+    const result = await request("/api/artifact?project=" + id, {
+      method: "PUT",
+      body: JSON.stringify({
+        kind,
+        text: p[kind],
+        expectedHash: artifactHashes.current[id + ":" + kind] ?? null,
+      }),
+    });
+    artifactHashes.current[id + ":" + kind] = result.hash;
+    setStatus(
+      kind === "bibliography"
+        ? "Bibliography saved to project"
+        : "Source saved to project",
+    );
+  }
+  function changeFormat(f) {
+    setEditAnnotation(null);
+    setFormat(f);
+    localStorage.setItem("axiovela-math-format:" + project.id, f);
+  }
+  const renderFlights = useRef(new Set()),
+    renderAttempt = useRef(new Map());
+  async function render(snapshot = project) {
+    if (!snapshot?.id || renderFlights.current.has(snapshot.id)) return;
+    const { id, latex: source, bibliography } = snapshot;
+    renderFlights.current.add(id);
+    renderAttempt.current.set(id, source + "\0" + bibliography);
+    setRendering((r) => ({ ...r, [id]: true }));
+    setError("");
+    try {
+      const result = await request("/api/render?project=" + id, {
+        method: "POST",
+        body: JSON.stringify({ source, bibliography }),
+      });
+      const current = latest.current.projects.find((p) => p.id === id);
+      if (current?.latex === source && current.bibliography === bibliography)
+        setPdf((p) => ({ ...p, [id]: { ...result, source, bibliography } }));
+    } catch (e) {
+      if (latest.current.activeProjectId === id)
+        setError(`Rendering ${snapshot.name}: ${e.message}`);
+    } finally {
+      renderFlights.current.delete(id);
+      setRendering((r) => ({ ...r, [id]: false }));
+    }
+  }
+  useEffect(() => {
+    if (
+      !project ||
+      format !== "latex" ||
+      !project.latex.trim() ||
+      rendering[project.id]
+    )
+      return;
+    const signature = project.latex + "\0" + project.bibliography;
+    if (renderAttempt.current.get(project.id) === signature) return;
+    const timer = setTimeout(() => void render(project), 1200);
+    return () => clearTimeout(timer);
+  }, [project?.id, project?.latex, project?.bibliography, format, rendering]);
 
- return <div className="app"><div className="projectStrip"><div className="projectBrand"><img src="/workbench-mark.png" alt=""/><strong>Axiovela <span>Math</span></strong></div><div className="projectTabs" aria-label="Projects">{state.projects.filter(p=>!closedProjects.includes(p.id)).map(p=><div key={p.id} className={'projectTab '+(project.id===p.id?'active':'')}><button onClick={()=>openProject(p.id)}>{p.name}</button><button className="tabClose" aria-label={'Close '+p.name} title="Close project tab" onClick={safe(()=>closeProject(p.id))}><X size={13}/></button></div>)}<button className="icon" aria-label="New project" onClick={()=>{setName('');setError('');setModal('new-project');}}><Plus size={16}/></button></div><span className="previewLabel">LINUX DEVELOPMENT</span></div>
- <header className="topbar"><nav aria-label="Workspace sections">{stages.map(s=><button key={s} className={tab===s?'selected':''} onClick={()=>setTab(s)}>{s}</button>)}</nav><div className="topActions"><button onClick={()=>{setTab('Library');setBridgeOpen(true);}}>Bring experiments</button><button onClick={resetLayout}><RefreshCw size={13}/>Reset layout</button>{!window.methodflowDesktop&&<details className="fileMenu sourceMenu"><summary aria-label="File menu">File</summary><div className="sourceOptions"><button onClick={()=>fileCommand('new-project')}>New project…</button><button onClick={()=>fileCommand('open-project')}>Open project…</button><hr/><button onClick={()=>fileCommand('export-workspace')}>Export workspace JSON</button><button onClick={()=>fileCommand('export-recovery')}>Export recovery draft</button><button onClick={()=>fileCommand('history')}>Research version history</button></div></details>}</div></header>
- <UpdateNotice/>{proposal&&proposal.projectId===project.id&&<RevisionReview proposal={proposal} current={project} onApply={applyProposal} onClose={()=>setProposal(null)}/>}{saveError&&<div className="error" role="alert">Auto-save paused: {saveError}<button onClick={()=>save().catch(e=>setSaveError(e.message))}>Retry save</button></div>}
- {syncError&&<div className="error" role="status">{syncError}</div>}
- {error&&<div className="error" role="alert">{error}<button onClick={()=>setError('')}>Dismiss</button></div>}
- <div className="workspaceShell">{closedProjects.includes(project.id)?<div className="empty largeEmpty"><FolderOpen size={28}/><h2>No open project</h2><button onClick={()=>setModal('project')}>Open a project</button></div>:<>
- {tab==='Research'&&<Resizable key={'research'+reset} resetKey={reset} id="research" defaults={[27,43,30]}>{[researchLeft,researchMiddle,<ChatPanel key={project.id+'research'} project={project} role="research" reviewRef={researchChat} onEditAnnotation={note=>{if(note.target?.kind==="proof"){setProofAnnotating(true);setProofEdit({id:note.id,at:Date.now()});}else{setSourceRequest({id:note.target?.id,annotationId:note.id,at:Date.now()});setTab("Library");}}} beforeSend={save} onArtifact={useReply}/>]}</Resizable>}
- {(libraryVisited||tab==='Library')&&<div className={'workspaceView '+(tab==='Library'?'':'inactiveWorkspace')} inert={tab!=='Library'} aria-hidden={tab!=='Library'}><Library sourceRequest={sourceRequest} active={tab==='Library'} importRequested={bridgeOpen} onImportHandled={()=>setBridgeOpen(false)} key={project.id} project={project} update={update} onImport={safe(addPaper)} onBibliography={()=>setModal('bibliography')} resetKey={resetKeys.Library||0} busy={busy} beforeSend={save} onArtifact={useReply}/></div>}
- {tab==='Lean Certificates'&&<LeanWorkspace key={project.id} project={project} resetKey={reset} beforeSend={save} onArtifact={useReply}/>}
- {tab==='Write-up'&&<Resizable key={'writing'+reset} resetKey={reset} id="writing" defaults={[34,37,29]}>{[writingLeft,writingMiddle,<ChatPanel key={project.id+'writing'} project={project} role="writing" workspace="writing" writingFormat={format} reviewRef={publicationChat} onReviewProposal={reviewProposal} onReviewBusy={setReviewBusy} onEditAnnotation={note=>{setFormat(note.format);setEditAnnotation({id:note.id,at:Date.now()});}} beforeSend={save} onArtifact={useReply}/>]}</Resizable>}
- </>} </div>
- {modal==='new-project'&&<dialog ref={modalRef} className="modal appDialog projectCreateDialog" aria-labelledby="project-dialog-title" onCancel={()=>setModal('')}><button className="icon projectDialogClose" aria-label="Close project dialog" onClick={()=>setModal('')}><X size={20}/></button><span className="projectDialogPill">LOCAL PROJECT</span><h2 id="project-dialog-title">Open or create a research project</h2><p>Choose a project folder, or enter a new folder name to create one.</p><form onSubmit={safe(create)}><input autoFocus aria-label="Project folder" className="projectPathInput" value={name} onChange={e=>setName(e.target.value)} placeholder="Project folder or new project name"/>{window.methodflowDesktop?.chooseProjectFolder&&<button type="button" onClick={safe(async()=>{const p=await window.methodflowDesktop.chooseProjectFolder();if(p)setName(p);})}>Browse folders…</button>}{error&&<p className="inlineError" role="alert">{error}</p>}<div className="projectDialogFoot"><button type="button" onClick={()=>setModal('')}>Cancel</button><button className="primary" disabled={busy||!name.trim()}>Open or create</button></div></form></dialog>}
- {modal&&modal!=='new-project'&&<dialog ref={modalRef} onCancel={()=>setModal('')} aria-label={modal==='research-history'?'Research version history':modal.startsWith('research-')?'Review research changes':modal==='project'?'Project settings':modal==='brief'?'Research brief':modal==='bibliography'?'Bibliography':'Submission checks'} className={`modal appDialog ${modal==='bibliography'?'wideModal':''}`}><div className="modalHeader"><h2>{modal==='research-history'?'Research version history':modal.startsWith('research-')?'Review research changes':modal==='project'?'Projects':modal==='brief'?'Research brief':modal==='bibliography'?'Bibliography':'Submission checks'}</h2><button className="icon" aria-label="Close dialog" onClick={()=>setModal('')}><X size={18}/></button></div>
- {error&&<p className="inlineError" role="alert">{error}</p>}
- {modal==='project'&&<><h3>Recent projects</h3><div className="projectPicker">{state.projects.map(p=><button key={p.id} onClick={()=>openProject(p.id)}>{p.name}{closedProjects.includes(p.id)?' · closed':''}</button>)}</div><button onClick={()=>{setName('');setError('');setModal('new-project');}}>Browse or create a project…</button></>}
- {modal.startsWith('research-')&&modal!=='research-history'&&(()=>{const kind=modal.slice(9),remote=researchChanges.projectId===project.id&&researchChanges[kind];return remote?<><p>Your version stays in place until you choose. Replaced text is retained in the workspace recovery history.</p><div className="researchComparison"><section><h3>Your version</h3><Preview source={project[kind]||'(Empty)'}/></section><section><h3>Assistant update</h3><Preview source={remote.text||'(Empty)'}/></section></div><div className="row"><button onClick={()=>resolveChange(kind,false)}>Keep my version</button><button className="primary" onClick={()=>resolveChange(kind,true)}>Use assistant version</button></div></>:<p>No pending change.</p>;})()}
- {modal==='research-history'&&<div className="scrollBody">{[...(project.researchHistory||[])].reverse().map((version,i)=><details key={i}><summary>{version.kind==='proof'?'Working proof':'Executive summary'} · {new Date(version.savedAt).toLocaleString()}</summary><Preview source={version.text||'(Empty)'}/><button onClick={()=>{update(p=>({[version.kind]:version.text,researchHistory:[...(p.researchHistory||[]),{kind:version.kind,text:p[version.kind],savedAt:new Date().toISOString(),reason:'Before restoring an earlier version'}]}));setModal('');}}>Restore this version</button></details>)}</div>}
- {modal==='brief'&&<><label>Question or direction<textarea value={project.question} onChange={e=>update({question:e.target.value})}/></label><label>Executive summary<textarea value={project.summary} onChange={e=>update({summary:e.target.value})}/></label><label>Working notes<textarea value={project.notes} onChange={e=>update({notes:e.target.value})}/></label><button onClick={()=>setModal('')}>Done</button></>}
- {modal==='bibliography'&&<><textarea className="code" aria-label="BibTeX bibliography" value={project.bibliography} onChange={e=>{update({bibliography:e.target.value});setBibStatus('');}}/><div className="row"><button onClick={safe(()=>saveSource('bibliography'))}>Save bibliography</button><button onClick={safe(()=>refreshArtifact('bibliography'))}>Load saved bibliography</button><button onClick={()=>{try{setBibStatus(`${new Cite(project.bibliography).data.length} entries parsed. Source accuracy still requires review.`);}catch(e){setBibStatus(e.message);}}}>Check syntax</button><button onClick={()=>download('references.bib',project.bibliography)}>Export BibTeX</button></div><p role="status">{bibStatus}</p></>}
- {modal==='review'&&<><p>These checks flag recorded gaps. They do not establish novelty or guarantee publication.</p><ul className="issues">{reviewIssues(project).map((x,i)=><li key={i}>{x}</li>)}</ul></>}
- </dialog>}
- </div>;
+  if (!state)
+    return (
+      <div className="loading">
+        <img src="/workbench-mark.png" alt="" />
+        <h1>Axiovela Math</h1>
+        <p role="status">{error || status}</p>
+      </div>
+    );
+  const reset = resetKeys[tab] || 0;
+  const resetLayout = () => {
+    localStorage.removeItem(
+      "axiovela-math-layout:" +
+        {
+          Research: "research",
+          Library: "library",
+          "Lean Certificates": "lean",
+          "Write-up": "writing",
+        }[tab],
+    );
+    if (tab === "Library")
+      localStorage.removeItem("axiovela-math-layout:library-detail");
+    setResetKeys((x) => ({ ...x, [tab]: (x[tab] || 0) + 1 }));
+  };
+  const currentPdf = pdf[project.id];
+  const renderBusy = !!rendering[project.id];
+  const researchLeft = (
+    <Panel title="Executive summary" label="RESEARCH BRIEF" className="fill">
+      <div className="scrollBody">
+        <div className="panelBody">
+          <h3>{project.question || "Start with a mathematical question"}</h3>
+          <p className="hint">
+            {project.claims.length} claims · {project.papers.length} sources
+          </p>
+        </div>
+        <Preview
+          prose
+          sources={project.papers}
+          source={
+            project.summary ||
+            "The executive summary will capture the question, current approach, established progress, and unresolved obstacles. Ask the research assistant to maintain it as the work develops."
+          }
+        />
+        {project.notes && (
+          <div className="panelBody">
+            <h3>Working notes</h3>
+            <Preview prose source={project.notes} />
+          </div>
+        )}
+      </div>
+      {changeNotice("summary")}
+    </Panel>
+  );
+  const researchMiddle = (
+    <Panel
+      title="Proof write-ups"
+      label="DEVELOPING THE ARGUMENT"
+      className="fill"
+    >
+      {project.proof ? (
+        <ManuscriptReview
+          key={project.id + "proof"}
+          project={project}
+          format="markdown"
+          target={{ kind: "proof" }}
+          update={update}
+          annotating
+          editRequest={proofEdit}
+          onQueue={(id) => researchChat.current?.queueAnnotation(id)}
+        />
+      ) : (
+        <div className="empty largeEmpty">
+          <FileText size={30} />
+          <h3>Give the argument room to develop</h3>
+          <p>
+            Arguments saved by the assistant appear here automatically, with
+            Markdown and mathematical notation rendered in full.
+          </p>
+          <p>The preliminary paper has its own Write-up tab.</p>
+        </div>
+      )}
+      {changeNotice("proof")}
+    </Panel>
+  );
+  const writingLeft = (
+    <section className="panel fill writeupFullPane">
+      <header className="panelHead writeupEditorHead">
+        <div>
+          <span className="sourcePill">
+            {format === "markdown" ? "MARKDOWN SOURCE" : "LATEX SOURCE"}
+          </span>
+          <h2>Write-up</h2>
+          {sourceLine && (
+            <span className="sourceLineIndicator">Line {sourceLine}</span>
+          )}
+        </div>
+        <button onClick={safe(() => saveSource())} disabled={busy}>
+          Save source
+        </button>
+        <div className="formatToggle" aria-label="Write-up format">
+          {["markdown", "latex"].map((f) => (
+            <button
+              key={f}
+              aria-pressed={format === f}
+              className={format === f ? "selected" : ""}
+              onClick={() => changeFormat(f)}
+            >
+              {f === "markdown" ? "Markdown" : "LaTeX"}
+              <small
+                className={
+                  "draftIndicator" + (project[f].trim() ? " hasDraft" : "")
+                }
+              >
+                {project[f].trim() ? "Draft" : "Empty"}
+              </small>
+            </button>
+          ))}
+        </div>
+        <button
+          className="bibliographyButton"
+          onClick={() => setModal("bibliography")}
+        >
+          Bibliography
+        </button>
+        <WriteupFormatMenu
+          value={initialFormat}
+          onChange={(f) => {
+            localStorage.setItem(defaultFormatKey, f);
+            setInitialFormat(f);
+            if (!localStorage.getItem("axiovela-math-format:" + project.id))
+              setFormat(f);
+          }}
+        >
+          <div className="writeupExtraActions" aria-label="Write-up actions">
+            <button onClick={safe(() => refreshArtifact(format))}>
+              Load assistant’s saved draft
+            </button>
+            <button onClick={() => setModal("review")}>
+              Submission checks
+            </button>
+            <button
+              onClick={() =>
+                download(
+                  "manuscript-comments.md",
+                  (project.manuscriptComments || [])
+                    .map(
+                      (c) =>
+                        `> ${(c.anchor.quote || "").replaceAll("\n", "\n> ")}\n\n${c.comment}\n\nRevision: ${c.sourceHash}`,
+                    )
+                    .join("\n\n"),
+                )
+              }
+            >
+              Export annotations
+            </button>
+            <label className="button">
+              Insert image
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                hidden
+                disabled={busy}
+                onChange={safe(insertImage)}
+              />
+            </label>
+          </div>
+        </WriteupFormatMenu>
+      </header>
+      <p className="sourceStatus">
+        Write here, ask the assistant to revise, or drop an image onto a source
+        line.
+      </p>
+      {changeNotice(format)}
+      <div className="writeupEditor">
+        <textarea
+          ref={manuscriptEditor}
+          onDragOver={(e) => {
+            e.preventDefault();
+            const editor = e.currentTarget,
+              scroll = editor.scrollTop,
+              at = dropLineOffset(editor, e.clientY);
+            editor.focus({ preventScroll: true });
+            editor.setSelectionRange(at, at);
+            editor.scrollTop = scroll;
+          }}
+          onDrop={safe(insertImage)}
+          className="code fillEditor"
+          aria-label="Manuscript source"
+          spellCheck={false}
+          placeholder={`Start a ${format === "latex" ? "LaTeX" : "Markdown"} paper…`}
+          value={project[format]}
+          onChange={(e) => update({ [format]: e.target.value })}
+        />
+      </div>
+    </section>
+  );
+  const writingMiddle = (
+    <Panel
+      expandable
+      restoreKey={sourceJump}
+      expandLabel="manuscript preview"
+      title="Rendered write-up preview"
+      className="fill manuscriptPreview"
+      action={
+        <>
+          {format === "latex" && (
+            <button
+              className="primary"
+              disabled={renderBusy || !project.latex.trim()}
+              onClick={() => render()}
+            >
+              {renderBusy ? "Rendering…" : "Render document"}
+            </button>
+          )}
+          <button
+            disabled={!project[format].trim()}
+            onClick={() =>
+              download(
+                format === "markdown" ? "main.md" : "main.tex",
+                project[format],
+              )
+            }
+          >
+            <Download size={14} />
+            Export source
+          </button>
+          <button
+            disabled={
+              !project[format].trim() ||
+              (format === "latex" &&
+                (!currentPdf ||
+                  currentPdf.source !== project.latex ||
+                  currentPdf.bibliography !== project.bibliography))
+            }
+            onClick={() =>
+              format === "markdown"
+                ? window.print()
+                : (() => {
+                    const a = document.createElement("a");
+                    a.href =
+                      "/api/rendered?project=" +
+                      project.id +
+                      "&id=" +
+                      currentPdf.id;
+                    a.download = "main.pdf";
+                    a.click();
+                  })()
+            }
+          >
+            Export PDF
+          </button>
+        </>
+      }
+    >
+      <ManuscriptReview
+        key={project.id + format}
+        project={project}
+        format={format}
+        pdf={currentPdf}
+        update={update}
+        onLine={goToSource}
+        annotating
+        editRequest={editAnnotation}
+        onQueue={(id) => publicationChat.current?.queueAnnotation(id)}
+      />
+    </Panel>
+  );
+
+  return (
+    <div className="app">
+      <WorkspaceFeedback
+        key={project.id + tab}
+        project={project}
+        update={update}
+        role={tab === "Write-up" ? "writing" : "research"}
+      />
+      <div className="projectStrip">
+        <div className="projectBrand">
+          <img src="/workbench-mark.png" alt="" />
+          <strong>
+            Axiovela <span>Math</span>
+          </strong>
+        </div>
+        <div className="projectTabs" aria-label="Projects">
+          {state.projects
+            .filter((p) => !closedProjects.includes(p.id))
+            .map((p) => (
+              <div
+                key={p.id}
+                className={
+                  "projectTab " + (project.id === p.id ? "active" : "")
+                }
+              >
+                <button onClick={() => openProject(p.id)}>{p.name}</button>
+                <button
+                  className="tabClose"
+                  aria-label={"Close " + p.name}
+                  title="Close project tab"
+                  onClick={safe(() => closeProject(p.id))}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+          <button
+            className="icon"
+            aria-label="New project"
+            onClick={() => {
+              setName("");
+              setError("");
+              setModal("new-project");
+            }}
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+        <span className="previewLabel">LINUX DEVELOPMENT</span>
+      </div>
+      <header className="topbar">
+        <nav aria-label="Workspace sections">
+          {stages.map((s) => (
+            <button
+              key={s}
+              className={tab === s ? "selected" : ""}
+              onClick={() => setTab(s)}
+            >
+              {s}
+            </button>
+          ))}
+        </nav>
+        <div className="topActions">
+          <button
+            onClick={() => {
+              setTab("Library");
+              setBridgeOpen(true);
+            }}
+          >
+            Bring experiments
+          </button>
+          <button onClick={resetLayout}>
+            <RefreshCw size={13} />
+            Reset layout
+          </button>
+          {!window.methodflowDesktop && (
+            <details className="fileMenu sourceMenu">
+              <summary aria-label="File menu">File</summary>
+              <div className="sourceOptions">
+                <button onClick={() => fileCommand("new-project")}>
+                  New project…
+                </button>
+                <button onClick={() => fileCommand("open-project")}>
+                  Open project…
+                </button>
+                <hr />
+                <button onClick={() => fileCommand("export-workspace")}>
+                  Export workspace JSON
+                </button>
+                <button onClick={() => fileCommand("export-recovery")}>
+                  Export recovery draft
+                </button>
+                <button onClick={() => fileCommand("history")}>
+                  Research version history
+                </button>
+              </div>
+            </details>
+          )}
+        </div>
+      </header>
+      <UpdateNotice />
+      {proposal && proposal.projectId === project.id && (
+        <RevisionReview
+          proposal={proposal}
+          current={project}
+          onApply={applyProposal}
+          onClose={() => setProposal(null)}
+        />
+      )}
+      {saveError && (
+        <div className="error" role="alert">
+          Auto-save paused: {saveError}
+          <button onClick={() => save().catch((e) => setSaveError(e.message))}>
+            Retry save
+          </button>
+        </div>
+      )}
+      {syncError && (
+        <div className="error" role="status">
+          {syncError}
+        </div>
+      )}
+      {error && (
+        <div className="error" role="alert">
+          {error}
+          <button onClick={() => setError("")}>Dismiss</button>
+        </div>
+      )}
+      <div className="workspaceShell">
+        {closedProjects.includes(project.id) ? (
+          <div className="empty largeEmpty">
+            <FolderOpen size={28} />
+            <h2>No open project</h2>
+            <button onClick={() => setModal("project")}>Open a project</button>
+          </div>
+        ) : (
+          <>
+            {tab === "Research" && (
+              <Resizable
+                key={"research" + reset}
+                resetKey={reset}
+                id="research"
+                defaults={[27, 43, 30]}
+              >
+                {[
+                  researchLeft,
+                  researchMiddle,
+                  <ChatPanel
+                    key={project.id + "research"}
+                    project={project}
+                    role="research"
+                    reviewRef={researchChat}
+                    onEditAnnotation={(note) => {
+                      if (note.target?.kind === "proof") {
+                        setProofEdit({ id: note.id, at: Date.now() });
+                      } else {
+                        setSourceRequest({
+                          id: note.target?.id,
+                          annotationId: note.id,
+                          at: Date.now(),
+                        });
+                        setTab("Library");
+                      }
+                    }}
+                    beforeSend={save}
+                    onArtifact={useReply}
+                  />,
+                ]}
+              </Resizable>
+            )}
+            {(libraryVisited || tab === "Library") && (
+              <div
+                className={
+                  "workspaceView " +
+                  (tab === "Library" ? "" : "inactiveWorkspace")
+                }
+                inert={tab !== "Library"}
+                aria-hidden={tab !== "Library"}
+              >
+                <Library
+                  sourceRequest={sourceRequest}
+                  active={tab === "Library"}
+                  importRequested={bridgeOpen}
+                  onImportHandled={() => setBridgeOpen(false)}
+                  key={project.id}
+                  project={project}
+                  update={update}
+                  onImport={safe(addPaper)}
+                  onBibliography={() => setModal("bibliography")}
+                  resetKey={resetKeys.Library || 0}
+                  busy={busy}
+                  beforeSend={save}
+                  onArtifact={useReply}
+                />
+              </div>
+            )}
+            {tab === "Lean Certificates" && (
+              <LeanWorkspace
+                key={project.id}
+                project={project}
+                resetKey={reset}
+                beforeSend={save}
+                onArtifact={useReply}
+              />
+            )}
+            {tab === "Write-up" && (
+              <Resizable
+                key={"writing" + reset}
+                resetKey={reset}
+                id="writing"
+                defaults={[34, 37, 29]}
+              >
+                {[
+                  writingLeft,
+                  writingMiddle,
+                  <ChatPanel
+                    key={project.id + "writing"}
+                    project={project}
+                    role="writing"
+                    workspace="writing"
+                    writingFormat={format}
+                    reviewRef={publicationChat}
+                    onReviewProposal={reviewProposal}
+                    onReviewBusy={setReviewBusy}
+                    onEditAnnotation={(note) => {
+                      setFormat(note.format);
+                      setEditAnnotation({ id: note.id, at: Date.now() });
+                    }}
+                    beforeSend={save}
+                    onArtifact={useReply}
+                  />,
+                ]}
+              </Resizable>
+            )}
+          </>
+        )}{" "}
+      </div>
+      {modal === "new-project" && (
+        <dialog
+          ref={modalRef}
+          className="modal appDialog projectCreateDialog"
+          aria-labelledby="project-dialog-title"
+          onCancel={() => setModal("")}
+        >
+          <button
+            className="icon projectDialogClose"
+            aria-label="Close project dialog"
+            onClick={() => setModal("")}
+          >
+            <X size={20} />
+          </button>
+          <span className="projectDialogPill">LOCAL PROJECT</span>
+          <h2 id="project-dialog-title">Open or create a research project</h2>
+          <p>
+            Choose a project folder, or enter a new folder name to create one.
+          </p>
+          <form onSubmit={safe(create)}>
+            <input
+              autoFocus
+              aria-label="Project folder"
+              className="projectPathInput"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Project folder or new project name"
+            />
+            {window.methodflowDesktop?.chooseProjectFolder && (
+              <button
+                type="button"
+                onClick={safe(async () => {
+                  const p =
+                    await window.methodflowDesktop.chooseProjectFolder();
+                  if (p) setName(p);
+                })}
+              >
+                Browse folders…
+              </button>
+            )}
+            {error && (
+              <p className="inlineError" role="alert">
+                {error}
+              </p>
+            )}
+            <div className="projectDialogFoot">
+              <button type="button" onClick={() => setModal("")}>
+                Cancel
+              </button>
+              <button className="primary" disabled={busy || !name.trim()}>
+                Open or create
+              </button>
+            </div>
+          </form>
+        </dialog>
+      )}
+      {modal && modal !== "new-project" && (
+        <dialog
+          ref={modalRef}
+          onCancel={() => setModal("")}
+          aria-label={
+            modal === "research-history"
+              ? "Research version history"
+              : modal.startsWith("research-")
+                ? "Review research changes"
+                : modal === "project"
+                  ? "Project settings"
+                  : modal === "brief"
+                    ? "Research brief"
+                    : modal === "bibliography"
+                      ? "Bibliography"
+                      : "Submission checks"
+          }
+          className={`modal appDialog ${modal === "bibliography" ? "wideModal" : ""}`}
+        >
+          <div className="modalHeader">
+            <h2>
+              {modal === "research-history"
+                ? "Research version history"
+                : modal.startsWith("research-")
+                  ? "Review research changes"
+                  : modal === "project"
+                    ? "Projects"
+                    : modal === "brief"
+                      ? "Research brief"
+                      : modal === "bibliography"
+                        ? "Bibliography"
+                        : "Submission checks"}
+            </h2>
+            <button
+              className="icon"
+              aria-label="Close dialog"
+              onClick={() => setModal("")}
+            >
+              <X size={18} />
+            </button>
+          </div>
+          {error && (
+            <p className="inlineError" role="alert">
+              {error}
+            </p>
+          )}
+          {modal === "project" && (
+            <>
+              <h3>Recent projects</h3>
+              <div className="projectPicker">
+                {state.projects.map((p) => (
+                  <button key={p.id} onClick={() => openProject(p.id)}>
+                    {p.name}
+                    {closedProjects.includes(p.id) ? " · closed" : ""}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  setName("");
+                  setError("");
+                  setModal("new-project");
+                }}
+              >
+                Browse or create a project…
+              </button>
+            </>
+          )}
+          {modal.startsWith("research-") &&
+            modal !== "research-history" &&
+            (() => {
+              const kind = modal.slice(9),
+                remote =
+                  researchChanges.projectId === project.id &&
+                  researchChanges[kind];
+              return remote ? (
+                <>
+                  <p>
+                    Your version stays in place until you choose. Replaced text
+                    is retained in the workspace recovery history.
+                  </p>
+                  <div className="researchComparison">
+                    <section>
+                      <h3>Your version</h3>
+                      <Preview source={project[kind] || "(Empty)"} />
+                    </section>
+                    <section>
+                      <h3>Assistant update</h3>
+                      <Preview source={remote.text || "(Empty)"} />
+                    </section>
+                  </div>
+                  <div className="row">
+                    <button onClick={() => resolveChange(kind, false)}>
+                      Keep my version
+                    </button>
+                    <button
+                      className="primary"
+                      onClick={() => resolveChange(kind, true)}
+                    >
+                      Use assistant version
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p>No pending change.</p>
+              );
+            })()}
+          {modal === "research-history" && (
+            <div className="scrollBody">
+              {[...(project.researchHistory || [])]
+                .reverse()
+                .map((version, i) => (
+                  <details key={i}>
+                    <summary>
+                      {version.kind === "proof"
+                        ? "Working proof"
+                        : "Executive summary"}{" "}
+                      · {new Date(version.savedAt).toLocaleString()}
+                    </summary>
+                    <Preview source={version.text || "(Empty)"} />
+                    <button
+                      onClick={() => {
+                        update((p) => ({
+                          [version.kind]: version.text,
+                          researchHistory: [
+                            ...(p.researchHistory || []),
+                            {
+                              kind: version.kind,
+                              text: p[version.kind],
+                              savedAt: new Date().toISOString(),
+                              reason: "Before restoring an earlier version",
+                            },
+                          ],
+                        }));
+                        setModal("");
+                      }}
+                    >
+                      Restore this version
+                    </button>
+                  </details>
+                ))}
+            </div>
+          )}
+          {modal === "brief" && (
+            <>
+              <label>
+                Question or direction
+                <textarea
+                  value={project.question}
+                  onChange={(e) => update({ question: e.target.value })}
+                />
+              </label>
+              <label>
+                Executive summary
+                <textarea
+                  value={project.summary}
+                  onChange={(e) => update({ summary: e.target.value })}
+                />
+              </label>
+              <label>
+                Working notes
+                <textarea
+                  value={project.notes}
+                  onChange={(e) => update({ notes: e.target.value })}
+                />
+              </label>
+              <button onClick={() => setModal("")}>Done</button>
+            </>
+          )}
+          {modal === "bibliography" && (
+            <>
+              <textarea
+                className="code"
+                aria-label="BibTeX bibliography"
+                value={project.bibliography}
+                onChange={(e) => {
+                  update({ bibliography: e.target.value });
+                  setBibStatus("");
+                }}
+              />
+              <div className="row">
+                <button onClick={safe(() => saveSource("bibliography"))}>
+                  Save bibliography
+                </button>
+                <button onClick={safe(() => refreshArtifact("bibliography"))}>
+                  Load saved bibliography
+                </button>
+                <button
+                  onClick={() => {
+                    try {
+                      setBibStatus(
+                        `${new Cite(project.bibliography).data.length} entries parsed. Source accuracy still requires review.`,
+                      );
+                    } catch (e) {
+                      setBibStatus(e.message);
+                    }
+                  }}
+                >
+                  Check syntax
+                </button>
+                <button
+                  onClick={() =>
+                    download("references.bib", project.bibliography)
+                  }
+                >
+                  Export BibTeX
+                </button>
+              </div>
+              <p role="status">{bibStatus}</p>
+            </>
+          )}
+          {modal === "review" && (
+            <>
+              <p>
+                These checks flag recorded gaps. They do not establish novelty
+                or guarantee publication.
+              </p>
+              <ul className="issues">
+                {reviewIssues(project).map((x, i) => (
+                  <li key={i}>{x}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </dialog>
+      )}
+    </div>
+  );
 }
-createRoot(document.getElementById('root')).render(<App/>);
+createRoot(document.getElementById("root")).render(<App />);

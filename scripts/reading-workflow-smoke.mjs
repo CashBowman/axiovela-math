@@ -113,17 +113,21 @@ try {
   browser=await chromium.launch();page=await browser.newPage({viewport:{width:1680,height:1050}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url);await page.getByRole('heading',{name:'Math Assistant',exact:true}).waitFor();
   await page.getByRole('button',{name:'Choose research model and provider'}).click();await page.getByRole('button',{name:'Use model',exact:true}).click();await page.getByRole('dialog').waitFor({state:'hidden'});
-  await page.getByRole('button',{name:'Annotate',exact:true}).click();
+
   await page.getByText('First sentence explains the idea.',{exact:false}).first().waitFor();
   assert.ok(await page.locator('.paperPreview .markdown').evaluate(el=>parseFloat(getComputedStyle(el).fontSize)>=16));
   await selectText(page.locator('.paperPreview p').first(),'explains');await note('Clarify the proof sentence.');
   assert.equal(await page.locator('[aria-label="Unsent annotations"] .annotationChip').count(),1);
   const chatId=await page.getByLabel('research conversation',{exact:true}).inputValue();
   assert.equal((await api('/api/conversations?project='+id)).conversations.find(c=>c.id===chatId).turns.length,0);
+  await page.getByRole('button',{name:'Lean Certificates',exact:true}).click();
+  await page.locator('.annotationChipBody').click();
+  await page.getByLabel('Annotation feedback').fill('Clarify the proof sentence.');
+  await page.getByRole('button',{name:'Add to message',exact:true}).click();
   await page.getByRole('button',{name:'Library',exact:true}).click();
   await page.getByRole('heading',{name:'Sampling on a manifold',exact:true}).waitFor();
   assert.equal(await page.locator('.paperPreview .katex').count(),2);
-  await page.getByRole('button',{name:'Annotate',exact:true}).click();
+
   await selectText(page.locator('.paperPreview p').first(),'explains');await note('Relate this source to the proof.');
   assert.equal(await page.locator('[aria-label="Unsent annotations"] .annotationChip').count(),2);
   await page.getByRole('button',{name:'A readable PDF PDF',exact:false}).click();

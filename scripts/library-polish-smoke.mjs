@@ -178,16 +178,9 @@ try {
   checks.push(
     "Pasted web links open readable snapshots and source-type filters organize the library",
   );
-  await page
-    .getByRole("button", { name: "Relationships", exact: true })
-    .click();
-  await page
-    .getByLabel("Another paper or claim")
-    .selectOption("paper:" + paperId);
-  await page.getByRole("button", { name: "Add relationship" }).click();
   await page.getByRole("button", { name: "Connections", exact: true }).click();
   await page.getByRole("group", { name: "Source connections graph" }).waitFor();
-  assert.equal(await page.locator(".graphCanvas circle").count(), 2);
+  assert.equal(await page.locator(".graphCanvas [data-node]").count(), 2);
   await page
     .getByRole("button", { name: "Local connections", exact: true })
     .click();

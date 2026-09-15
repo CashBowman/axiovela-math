@@ -11,8 +11,42 @@ const colors = {
   web: "#668878",
   claim: "#b48b43",
   evidence: "#8a789d",
+  theorem: "#497e85",
+  proof: "#95627b",
 };
-export default function ConnectionsGraph({ items, links, selected, onSelect }) {
+function NodeShape({ kind, r = 12, ...props }) {
+  if (kind === "claim")
+    return <polygon points={`0,${-r} ${r},0 0,${r} ${-r},0`} {...props} />;
+  if (kind === "theorem")
+    return (
+      <polygon
+        points={`${-r},0 ${-r / 2},${-r} ${r / 2},${-r} ${r},0 ${r / 2},${r} ${-r / 2},${r}`}
+        {...props}
+      />
+    );
+  if (kind === "evidence")
+    return <polygon points={`0,${-r} ${r},${r} ${-r},${r}`} {...props} />;
+  if (kind === "proof" || kind === "web")
+    return (
+      <rect
+        x={-r}
+        y={-r * 0.8}
+        width={2 * r}
+        height={r * 1.6}
+        rx={kind === "web" ? 5 : 0}
+        {...props}
+      />
+    );
+  return <circle r={r} {...props} />;
+}
+export default function ConnectionsGraph({
+  items,
+  links,
+  selected,
+  onSelect,
+  onAsk,
+  context,
+}) {
   const root = useRef(),
     drag = useRef();
   const [size, setSize] = useState({ width: 600, height: 500 }),
@@ -53,10 +87,10 @@ export default function ConnectionsGraph({ items, links, selected, onSelect }) {
         "links",
         forceLink(edges)
           .id((n) => n.id)
-          .distance(95),
+          .distance(160),
       )
       .force("charge", forceManyBody().strength(-320))
-      .force("collide", forceCollide(35))
+      .force("collide", forceCollide(78))
       .force("center", forceCenter(size.width / 2, size.height / 2))
       .stop();
     sim.tick(160);
@@ -79,10 +113,16 @@ export default function ConnectionsGraph({ items, links, selected, onSelect }) {
         .filter((l) => l.from === focus || l.to === focus)
         .flatMap((l) => [l.from, l.to]),
     ]);
-  const zoom = (delta) => setView(v => {
-    const k=Math.max(.35,Math.min(3,v.k*delta)), ratio=k/v.k;
-    return {k,x:size.width/2-(size.width/2-v.x)*ratio,y:size.height/2-(size.height/2-v.y)*ratio};
-  });
+  const zoom = (delta) =>
+    setView((v) => {
+      const k = Math.max(0.35, Math.min(3, v.k * delta)),
+        ratio = k / v.k;
+      return {
+        k,
+        x: size.width / 2 - (size.width / 2 - v.x) * ratio,
+        y: size.height / 2 - (size.height / 2 - v.y) * ratio,
+      };
+    });
 
   return (
     <div className="connectionsView">
@@ -188,6 +228,19 @@ export default function ConnectionsGraph({ items, links, selected, onSelect }) {
             drag.current = null;
           }}
         >
+          <defs>
+            <marker
+              id="connection-arrow"
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="5"
+              markerHeight="5"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--blue)" />
+            </marker>
+          </defs>
           <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
             {links.map((l) => {
               const a = point(l.from),
@@ -197,8 +250,20 @@ export default function ConnectionsGraph({ items, links, selected, onSelect }) {
                   key={l.id}
                   x1={a.x}
                   y1={a.y}
-                  x2={b.x}
-                  y2={b.y}
+                  x2={
+                    b.x -
+                    ((b.x - a.x) /
+                      Math.max(1, Math.hypot(b.x - a.x, b.y - a.y))) *
+                      21
+                  }
+                  y2={
+                    b.y -
+                    ((b.y - a.y) /
+                      Math.max(1, Math.hypot(b.x - a.x, b.y - a.y))) *
+                      21
+                  }
+                  markerEnd="url(#connection-arrow)"
+                  strokeDasharray={l.type === "contradicts" ? "5 4" : undefined}
                   stroke="var(--blue)"
                   strokeWidth={l.from === focus || l.to === focus ? 2 : 1}
                   opacity={
@@ -207,7 +272,8 @@ export default function ConnectionsGraph({ items, links, selected, onSelect }) {
                 >
                   <title>
                     {items.find((x) => x.key === l.from)?.label} {l.type}{" "}
-                    {items.find((x) => x.key === l.to)?.label}{l.reason&&<small className="connectionReason">Assistant interpretation: {l.reason}</small>}
+                    {items.find((x) => x.key === l.to)?.label}
+                    {l.reason ? ": " + l.reason : ""}
                   </title>
                 </line>
               ) : null;
@@ -221,13 +287,14 @@ export default function ConnectionsGraph({ items, links, selected, onSelect }) {
                 p && (
                   <g
                     key={n.key}
+                    style={{ pointerEvents: "bounding-box" }}
                     data-node={n.key}
                     transform={`translate(${p.x} ${p.y})`}
                     role="button"
                     tabIndex={0}
                     aria-label={`Select ${n.label}`}
                     aria-pressed={selected === n.key}
-                    opacity={focus && !neighbors.has(n.key) ? 0.35 : 1}
+                    opacity={focus && !neighbors.has(n.key) ? 0.7 : 1}
                     onFocus={() => setHover(n.key)}
                     onBlur={() => setHover("")}
                     onMouseEnter={() => setHover(n.key)}
@@ -253,7 +320,8 @@ export default function ConnectionsGraph({ items, links, selected, onSelect }) {
                     <title>
                       {n.label} · {degree} connections
                     </title>
-                    <circle
+                    <NodeShape
+                      kind={n.sourceType === "web" ? "web" : n.kind}
                       r={9 + Math.min(9, degree * 1.5)}
                       fill={colors[n.sourceType === "web" ? "web" : n.kind]}
                       stroke={
@@ -286,29 +354,60 @@ export default function ConnectionsGraph({ items, links, selected, onSelect }) {
           ["paper", "Papers"],
           ["web", "Web pages"],
           ["claim", "Claims"],
+          ["theorem", "Theorems"],
+          ["proof", "Proofs"],
           ["evidence", "Experiments"],
         ].map(([k, label]) => (
           <span key={k}>
-            <i style={{ background: colors[k] }} />
+            <svg
+              width="22"
+              height="22"
+              viewBox="-15 -15 30 30"
+              aria-hidden="true"
+            >
+              <NodeShape kind={k} fill={colors[k]} />
+            </svg>
             {label}
           </span>
         ))}
       </div>
+      <details className="graphInspector" key={selected}>
+        <summary>
+          Selected item ·{" "}
+          {items.find((x) => x.key === selected)?.label || "Choose a node"}
+        </summary>
+        {context}
+      </details>
+      <div className="graphAssistant">
+        <button onClick={onAsk}>
+          Ask Math Assistant to update connections
+        </button>
+        <small>Adds a draft message for you to send.</small>
+      </div>
       <details className="graphRelationships">
         <summary>Relationships · {links.length}</summary>
         <p className="hint">
-          Links record interpretations, not established proofs. Drag to pan;
-          scroll to zoom. Select a node to inspect its notes.
+          Arrows read “from → to”; the relation and justification appear below.
+          Dashed arrows mean “contradicts”. Links record interpretations, not
+          established proofs. Drag to pan; scroll to zoom. Select a node to
+          inspect its notes.
         </p>
         {links.map((l) => (
           <p key={l.id} className="connectionRow">
             {items.find((x) => x.key === l.from)?.label}{" "}
-            <strong title={l.reason}>{l.type}</strong> {items.find((x) => x.key === l.to)?.label}{l.reason&&<small className="connectionReason">Assistant interpretation: {l.reason}</small>}
+            <strong title={l.reason}>{l.type}</strong>{" "}
+            {items.find((x) => x.key === l.to)?.label}
+            {l.reason && (
+              <small className="connectionReason">
+                Assistant interpretation: {l.reason}
+              </small>
+            )}
           </p>
         ))}
         {!links.length && (
           <p>
-            Ask the Math Assistant to connect the sources as it develops the argument.
+            Ask the Math Assistant to connect the sources as it develops the
+            argument.
           </p>
         )}
       </details>
