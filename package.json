@@ -1,12 +1,12 @@
 {
   "name": "axiovela-math",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "type": "module",
   "license": "MIT",
   "description": "Mathematics research, experiment evidence, Lean checks and publication writing.",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
@@ -27,7 +27,8 @@
     "test:lean": "node scripts/lean-smoke.mjs",
     "test:updates": "node --test tests/updates.test.mjs",
     "test:updates:ui": "node scripts/updates-smoke.mjs",
-    "release:sign": "node scripts/publish-update.mjs"
+    "release:sign": "node scripts/publish-update.mjs",
+    "test:reader": "node scripts/reader-smoke.mjs"
   },
   "dependencies": {
     "@citation-js/core": "0.7.21",
@@ -37,6 +38,7 @@
     "busboy": "1.6.0",
     "katex": "0.18.5",
     "lucide-react": "0.468.0",
+    "pdfjs-dist": "6.3.289",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-markdown": "10.1.0",

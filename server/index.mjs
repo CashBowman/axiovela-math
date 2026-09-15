@@ -1,4 +1,6 @@
 import './desktop-storage.mjs';
+import {saveImage,readImage} from './writeup-assets.mjs';
+import {fetchPaper} from './arxiv.mjs';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -64,7 +66,7 @@ const server=http.createServer(async(req,res)=>{try{
     const file=await projectFile(await projects.root(projectId),names[key],true);let text='';try{text=await fs.readFile(file,'utf8');}catch(e){if(e.code!=='ENOENT')throw e;return json(res,404,{error:'No saved project artifact yet.'});}return json(res,200,{text,hash:createHash('sha256').update(text).digest('hex')});
   }
   if(url.pathname==='/api/artifact'&&req.method==='PUT'){
-    const body=await bodyJson();const names={markdown:'writeups/main.md',latex:'writeups/main.tex',bibliography:'references.bib'};if(!Object.hasOwn(names,body.kind)||typeof body.text!=='string')throw Error('Invalid manuscript artifact.');const file=await projectFile(await projects.root(projectId),names[body.kind],true);if(activeArtifactEdits.has(file))return json(res,409,{error:'This file is being saved. Retry after the current save completes.'});activeArtifactEdits.add(file);try{let previous=null;try{previous=await fs.readFile(file,'utf8');}catch(e){if(e.code!=='ENOENT')throw e;}const hash=previous===null?null:createHash('sha256').update(previous).digest('hex');if((body.expectedHash??null)!==hash)return json(res,409,{error:'The project file differs from this editor. Load the assistant’s saved draft before overwriting it.'});if(previous!==null){const backup=await projectFile(await projects.root(projectId),`writeups/backups/${randomUUID()}-${path.basename(file)}`,true);await fs.mkdir(path.dirname(backup),{recursive:true});await fs.writeFile(backup,previous);}await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file+'.tmp',body.text);await fs.rename(file+'.tmp',file);return json(res,200,{hash:createHash('sha256').update(body.text).digest('hex')});}finally{activeArtifactEdits.delete(file);}
+    const body=await bodyJson();const names={markdown:'writeups/main.md',latex:'writeups/main.tex',bibliography:'references.bib'};if(!Object.hasOwn(names,body.kind)||typeof body.text!=='string')throw Error('Invalid manuscript artifact.');const file=await projectFile(await projects.root(projectId),names[body.kind],true);if(activeArtifactEdits.has(file))return json(res,409,{error:'This file is being saved. Retry after the current save completes.'});activeArtifactEdits.add(file);try{let previous=null;try{previous=await fs.readFile(file,'utf8');}catch(e){if(e.code!=='ENOENT')throw e;}const hash=previous===null?null:createHash('sha256').update(previous).digest('hex');if((body.expectedHash??null)!==hash)return json(res,409,{error:'The project file differs from this editor. Load the assistant’s saved draft before overwriting it.'});if(previous===body.text)return json(res,200,{hash});if(previous!==null){const backup=await projectFile(await projects.root(projectId),`writeups/backups/${randomUUID()}-${path.basename(file)}`,true);await fs.mkdir(path.dirname(backup),{recursive:true});await fs.writeFile(backup,previous);}await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file+'.tmp',body.text);await fs.rename(file+'.tmp',file);return json(res,200,{hash:createHash('sha256').update(body.text).digest('hex')});}finally{activeArtifactEdits.delete(file);}
   }
   if(url.pathname==='/api/lean/setup'&&req.method==='POST'){
     if(chats.controllers.size||chats.admissions.size||leanWorkspace.active.has(projectId))throw Error('Finish the current assistant turn or check before setting up Lean.');
@@ -81,6 +83,16 @@ const server=http.createServer(async(req,res)=>{try{
   if(url.pathname==='/api/rendered'&&req.method==='GET'){const id=url.searchParams.get('id');if(!/^[a-f0-9-]{36}$/.test(id))throw Error('Invalid document.');const file=await projectFile(await projects.root(projectId),`exports/${id}/main.pdf`);res.writeHead(200,{'Content-Type':'application/pdf'});return res.end(await fs.readFile(file));}
   if(url.pathname==='/api/state'&&req.method==='GET'){let state=await store.read();if(state.revision===0){try{state=await store.save(state,0);}catch(e){if(e.status!==409)throw e;state=await store.read();}}return json(res,200,state);}
   if(url.pathname==='/api/state'&&req.method==='PUT'){const value=JSON.parse((await readBody(req,8*1024*1024)).toString());return json(res,200,await store.save(value,Number(req.headers['if-match'])));}
+  if(url.pathname==='/api/writeup-image'&&req.method==='POST')return json(res,201,{path:await saveImage(await projects.root(projectId),await readBody(req))});
+  if(url.pathname==='/api/writeup-image'&&req.method==='GET'){const image=await readImage(await projects.root(projectId),url.searchParams.get('path'));res.writeHead(200,{'Content-Type':'image/'+image.type,'X-Content-Type-Options':'nosniff'});return res.end(image.bytes);}
+  if(url.pathname==='/api/papers/arxiv'&&req.method==='POST'){
+    const {input}=await bodyJson();const {paper,pdf}=await fetchPaper(input);
+    const id=createHash('sha256').update(paper.arxivId).digest('hex').slice(0,32);
+    const paperId=`${id.slice(0,8)}-${id.slice(8,12)}-${id.slice(12,16)}-${id.slice(16,20)}-${id.slice(20)}`;
+    await fs.mkdir(path.join(data,'papers'),{recursive:true});
+    await fs.writeFile(path.join(data,'papers',paperId+'.pdf'),pdf,{flag:'wx'}).catch(e=>{if(e.code!=='EEXIST')throw e;});
+    return json(res,201,{paper:{...paper,id:paperId,notes:'',citationKey:'arxiv'+paper.arxivId.replace(/[^a-zA-Z0-9]/g,''),read:false}});
+  }
   if(url.pathname==='/api/papers'&&req.method==='POST'){
     const body=await readBody(req);if(!body.subarray(0,5).equals(Buffer.from('%PDF-')))return json(res,400,{error:'A PDF file is required.'});
     const id=randomUUID();await fs.mkdir(path.join(data,'papers'),{recursive:true});await fs.writeFile(path.join(data,'papers',id+'.pdf'),body,{flag:'wx'});return json(res,201,{id});
@@ -93,7 +105,7 @@ const server=http.createServer(async(req,res)=>{try{
   const relative=decodeURIComponent(url.pathname).replace(/^\/+/, '')||'index.html';const target=path.resolve(root,'dist',relative);
   if(!target.startsWith(path.join(root,'dist')+path.sep))return json(res,403,{error:'Invalid asset path.'});
   let body;try{body=await fs.readFile(target);}catch(e){if(e.code!=='ENOENT')throw e;body=await fs.readFile(path.join(root,'dist/index.html'));}
-  const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.woff2':'font/woff2'};
+  const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.png':'image/png','.woff2':'font/woff2'};
   res.writeHead(200,{'Content-Type':types[path.extname(target)]||'application/octet-stream','X-Content-Type-Options':'nosniff'});res.end(body);
 }catch(e){json(res,e.status|| (e.code==='ENOENT'?404:400),{error:e.message});}});
 for(const signal of ['SIGINT','SIGTERM'])process.on(signal,async()=>{leanWorkspace.stopAll();await chats.stopAll();server.close();setTimeout(()=>process.exit(0),1500).unref();});

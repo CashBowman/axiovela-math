@@ -1,0 +1,48 @@
+# How the mathematics harness works
+
+A harness is the application code around a model: it supplies context, exposes tools, records results and defines what counts as evidence. Axiovela Math reuses Axiovela's MIT-licensed provider adapters and adds mathematical research instructions, project artifacts and verification workflows. No model weights were trained or fine-tuned for this app.
+
+```mermaid
+flowchart LR
+    A[Request and selected evidence] --> B[Role, context and mathematical methods]
+    B --> C[Chosen provider and access mode]
+    C --> D[Model and tool loop]
+    D --> E[Saved project artifacts]
+    E --> F[App-owned compiler checks]
+    F --> G[Source, diagnostics and remaining obligations]
+    G --> D
+```
+
+## What was built
+
+1. **A shared research conversation.** Research, Library and Lean Certificates use the same conversation. Switching panels changes the supplied context without resetting history or permissions. Publication uses a separate conversation and independent manuscript files.
+2. **Mathematical methods, selected from the request.** [`shared/harness.mjs`](../shared/harness.mjs) combines role guidance with the recipes in [`shared/research.mjs`](../shared/research.mjs): clarify assumptions, inspect primary literature, search for counterexamples, compare proof routes, audit an inference, construct exact witnesses, investigate novelty, formalize, and prepare a manuscript. These are instructions available to one assistant, not a compulsory checklist or separate agents.
+3. **Project context and execution.** [`server/chat.mjs`](../server/chat.mjs) supplies the original question, current draft, selected source or experiment, evidence index, access mode and relevant history. It resumes provider sessions where supported and records turns, tool events, usage reported by the provider, cancellation and queued follow-ups. Context has size limits; large documents still require targeted file retrieval.
+4. **Real tools with real permission boundaries.** The imported [`server/axiovela/`](../server/axiovela/) adapters execute CLI or direct-API work. Read-only access restricts changes; project editing permits file work; full access permits requested commands. Direct APIs expose project tools, but do not automatically acquire browser search or PDF-reading capabilities. A PDF being present in the library does not mean a model has read it.
+5. **Artifacts separated by purpose.** Exploratory summaries and arguments live in `research/`; formal source and mathematical correspondence notes live in `certificates/`; final Markdown and LaTeX drafts live independently in `writeups/`. Imported experiment captures preserve measured results separately from the user's interpretation.
+6. **Verification independent of model verdicts.** [`server/lean-workspace.mjs`](../server/lean-workspace.mjs) tracks saved formal source and app-owned records. [`server/checks.mjs`](../server/checks.mjs) invokes actual local tools. Installation readiness, an entry-file build, axiom checks, correspondence with the intended theorem, and complete certification remain distinct. Editing the source makes an earlier check stale.
+
+For example, “does this numerical pattern imply a dimension-independent bound?” should first lead to inspection of the captured measurements and exact quantifiers, then a cheap counterexample or decisive lemma. Formalizing a weaker statement and reporting it as the original target would violate the harness's evidence contract. Instructions encourage that behavior; they do not establish that every model will follow it.
+
+## Why optional claims exist
+
+A claim records a particular statement and revision so that a paper, experiment or review can refer to the same mathematical target. If a hypothesis changes, an earlier supporting relationship may no longer apply. This is the engineering rationale for revisioned claims: explicit referents and traceability.
+
+The feature is optional. It does not gate conversation or formalization, and adding a claim does not establish its truth. It was not derived from a validated study showing that this exact interface improves mathematical research. Likewise, a source's read checkbox is a user's reading state, not evidence that the assistant read it or that its theorem applies.
+
+## What is not established
+
+- This is one adaptive tool-using workflow by default, with no automatic swarm or independent reviewer. Asking the same conversation to audit itself is self-review.
+- The direct-API loop stops after 40 tool rounds; CLI runtimes have their own execution behavior. A suggested dollar budget is not an enforced spending ceiling.
+- Build success can certify only what was actually checked. It does not establish statement fidelity, absence of inappropriate assumptions, novelty or publication readiness.
+- Prompt and fixture tests validate contracts, persistence and tool protocols. They do not benchmark mathematical discovery or validate a real paid provider account.
+
+A credible effectiveness study would use frozen tasks, the same model and tool budget, a baseline without the mathematical guidance, independent grading of exact statements, and separate measures for correct proofs, counterexamples, false acceptance, time and cost. No such comparative evaluation is claimed for this release.
+
+## Reading and reviewing a manuscript
+
+Comments store a quote or location and the source/bibliography revision. Earlier comments remain visible after edits and can be resolved, reopened, edited or exported. They do not silently modify the manuscript and are not embedded annotations in the exported PDF.
+
+The PDF viewer uses PDF.js. Tectonic emits SyncTeX records during compilation; the app selects a nearby source record for a clicked PDF position. This is an approximate line-level map for the main manuscript, not character-level mapping or recovery of source from an imported paper. A stale preview must be rendered again before navigation. Generated bibliographies and complex layouts can have limited correspondence. [Overleaf documents the same underlying SyncTeX mechanism and its limitations](https://docs.overleaf.com/navigating-in-the-editor/working-with-the-pdf-viewer/moving-between-the-editor-and-pdf).
+
+The review design takes source-linked notes from [Zotero's documented annotation workflow](https://www.zotero.org/support/pdf_reader) and uses native two-state reading checkboxes consistent with the [W3C checkbox pattern](https://www.w3.org/WAI/ARIA/apg/patterns/checkbox/). These are design precedents, not evidence of a measured usability improvement in this app.

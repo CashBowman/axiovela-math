@@ -1,3 +1,4 @@
+import {createPortal} from 'react-dom';
 import React, {useEffect, useState} from 'react';
 import './updates.css';
 
@@ -16,12 +17,12 @@ export default function UpdateNotice() {
     const stop = api.onUpdate(setState), stopOpen = api.onUpdateOpen(() => setOpen(true));
     return () => { mounted = false; stop(); stopOpen(); };
   }, [api]);
-  if (!state) return <button onClick={()=>window.open('https://github.com/CashBowman/axiovela-math/releases','_blank','noopener')}>Updates & downloads</button>;
+  if (!state) return null;
   const act = async (action, value) => { setError(''); try { setState(await api.update(action, value)); } catch (e) { setError(e.message); } };
   const busy = ['checking', 'downloading'].includes(state.status);
   const selected = state.formats.includes(format) ? format : state.format;
   const notice = state.release && dismissed !== state.release.version;
-  return <><button title="Check for updates" onClick={()=>{setOpen(true);void act('check');}}>Updates{notice?' · '+state.release.version:''}</button><aside className="update-notice" aria-label="Application updates">
+  return <>{createPortal(<aside className="update-notice" aria-label="Application updates">
     {!open && notice && <button className="update-badge" onClick={() => setOpen(true)}>Update available · {state.release.version}</button>}
     {open && <section className="update-panel" aria-label="Update details">
       <div className="update-heading"><strong>{state.release ? `Update available · ${state.release.version}` : 'Application updates'}</strong><button aria-label="Close update details" onClick={() => { setOpen(false); setDismissed(state.release?.version); }}>×</button></div>
@@ -43,5 +44,5 @@ export default function UpdateNotice() {
         <button onClick={() => { setOpen(false); setDismissed(state.release?.version); }}>Later</button>
       </div>
     </section>}
-  </aside></>;
+  </aside>,document.body)}</>;
 }

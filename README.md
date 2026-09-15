@@ -1,23 +1,29 @@
 # Axiovela Math
 
+<img src="public/workbench-mark.png" alt="Axiovela Math compass and blue integral" width="80" align="right" />
+
 A Linux-first workspace for mathematical research, experimental evidence, Lean checks and publication writing.
 
 [Download for Linux](https://github.com/CashBowman/axiovela-math/releases/latest) · [Getting started](docs/getting-started.md) · [Report an issue](https://github.com/CashBowman/axiovela-math/issues)
 
 - **Research:** executive summary, rendered mathematical arguments and a research assistant.
-- **Library:** papers, bibliography, claims, notes and connections between ideas. Bring selected experiments from [Axiovela](https://github.com/CashBowman/axiovela) into immutable evidence snapshots.
+- **Library:** paste an arXiv link or ID to import its paper and citation, expand the reader, and track reading with source checkboxes. Bring selected experiments from [Axiovela](https://github.com/CashBowman/axiovela) into immutable evidence snapshots.
 - **Lean Certificates:** formalization notes and actual checker results, with one-click Lean/mathlib setup. Research, Library and Lean share the same conversation.
-- **Write-up:** final manuscript editor, Markdown/LaTeX preview, PDF rendering and a separate publication assistant.
+- **Write-up:** independent Markdown/LaTeX drafts, PDF rendering, comments attached to passages, and a separate publication assistant. Double-click a preview to find its source line.
 
-Panels resize and retain their layout. Projects, conversations and writing stay on your computer. Connect Codex, Claude Code, Gemini CLI, OpenCode or Pi through CLI authentication, or use OpenAI, Anthropic, Gemini and compatible APIs. Account access and usage costs belong to the chosen provider.
+Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Projects, conversations and writing stay on your computer. Connect Codex, Claude Code, Gemini CLI, OpenCode or Pi through CLI authentication, or use OpenAI, Anthropic, Gemini and compatible APIs. Account access and usage costs belong to the chosen provider.
 
 This is an early Linux x64 release. Tectonic is bundled for LaTeX rendering; first use may download TeX resources. Lean and mathematical libraries download through **Lean Certificates → Set up Lean**, which runs a real installation test. First setup needs internet and several GB of storage. A successful compiler run is not a complete mathematical certificate or a novelty check.
 
-**Updates** in the app and **Help → Check for updates** offer signed, verified downloads with progress, cancellation and retry. Installation is guided; the app does not replace itself or interrupt your research automatically. [Update details](docs/updates.md).
+The native **Help → Check for updates** menu offers signed, verified downloads with progress, cancellation and retry. Installation is guided; the app does not replace itself or interrupt your research automatically. [Update details](docs/updates.md).
+
+## How the math assistant works
+
+The math harness combines a chosen model with project context, mathematical task guidance, permission-controlled tools and recorded execution. It adapts between literature review, counterexamples, proof development and formalization. Saved source and actual verifier output drive the Lean panels. It is application orchestration, not a newly trained model or a proven guarantee of mathematical correctness. See [the harness architecture, evidence rules and limitations](docs/math-harness.md).
 
 ## Development
 
-Requires Node.js 22.12+ and npm.
+Requires Node.js 22.13+ and npm.
 
 ```sh
 npm ci

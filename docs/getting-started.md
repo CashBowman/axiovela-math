@@ -14,4 +14,24 @@ Library can import selected Axiovela experiments as evidence snapshots and conne
 
 The setup-tested Lean/mathlib baseline is v4.19.0. Existing projects can use another pinned official release. Missing basic Linux utilities may require your administrator password; Lean installs per user. The first setup needs internet and several GB of disk space. Source, compiler status, statement correspondence and full certification are separate states.
 
-Use **Updates** or **Help → Check for updates** for new releases. Save your work and close the app before replacing application files. Profiles and project folders stay separate from application files. Keep the previous app until the new one works. The app does not perform automatic replacement or downgrade.
+Use the native application menu **Help → Check for updates** for new releases. Finish current work and close the app before replacing application files. Profiles and project folders stay separate from application files. Keep the previous app until the new one works. The app does not perform automatic replacement or downgrade.
+
+## Library and project tabs
+
+The search field filters saved items by title, author or arXiv identifier. Paste an arXiv abstract URL, PDF URL, or identifier such as `2502.02150`, `2302.03660` or `2302.03660v3` into that same field to import immediately. You can also type one and press Enter. Ordinary search text only filters your existing library. It retrieves the PDF, records the resolved version and authors, and adds a BibTeX entry. If the arXiv API is temporarily unavailable, the importer tries the paper’s canonical abstract-page citation metadata. Existing entries are selected without duplication; use an explicit version ID to import another version. New entries and the bibliography save automatically. Use the checkbox beside a source to record whether you have read it. This does not change the assistant’s knowledge or verify a citation.
+
+Close a project tab with its × button. Closing saves workspace edits and keeps its project files and conversations. Reopen it through **Project**. **Reset layout** in the top bar restores the current panel arrangement. **Bring experiments** opens the Axiovela import workflow from the same toolbar. Closing a tab does not stop an active assistant.
+
+Write-up uses Axiovela’s source-editor and preview arrangement. Its actions menu contains source reload, submission checks and image insertion. Drop PNG, JPEG or WebP images on a source line, or insert them at the cursor. Images stay in the project’s `writeups/assets/`; LaTeX rendering copies referenced images into its isolated export folder.
+
+Claims are optional, revisioned statements that sources and experimental evidence can refer to. They do not gate chat or Lean formalization. Recorded relationships express an interpretation, and an informal status is not formal verification.
+
+## Automatic saving and review
+
+Workspace edits, manuscript text, bibliography and comments save automatically after a short typing pause. Normal saving stays quiet. A failed or conflicting save displays a recovery action; it never silently overwrites an external manuscript revision. Use Write-up actions to load an assistant's saved draft when needed. Prior source files are retained in the project's `writeups/backups/`; local drafts and replaced editor text also remain in workspace recovery/history.
+
+Expand the Library reader or manuscript preview with its corner expand button; Escape restores the panel. The PDF reader has page navigation, zoom, fit width and an external PDF link.
+
+In Write-up, open **Comments**, select text or click a passage, and add feedback. Comments can be edited, resolved, reopened and exported as Markdown. They retain the source revision and show when they belong to an earlier draft. They are app comments, not freehand marks or annotations embedded in the PDF; export them when sharing feedback or supplying it to an assistant.
+
+Double-click a Markdown preview block to select its originating source line. In a newly rendered LaTeX PDF, double-click a passage to navigate using compiler-generated SyncTeX data. Navigation restores an expanded preview so the source is visible. This is approximate line-level navigation for the main manuscript; it cannot recover LaTeX from imported research PDFs. Render again after source or bibliography changes. See [the implementation and its limits](math-harness.md).

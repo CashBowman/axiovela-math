@@ -18,5 +18,6 @@ docs/*
 !docs/development.md
 !docs/updates.md
 !docs/third-party.md
+!docs/math-harness.md
 *.pem
 *.key
