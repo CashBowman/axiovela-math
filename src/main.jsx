@@ -112,7 +112,7 @@ function App() {
           at: Date.now(),
         });
         setTab("Library");
-      } else if (note.target?.kind === "proof") {
+      } else if (["proof", "summary"].includes(note.target?.kind)) {
         setProofEdit({ id: note.id, at: Date.now() });
         setTab("Research");
       }
@@ -798,14 +798,22 @@ function App() {
             {project.claims.length} claims · {project.papers.length} sources
           </p>
         </div>
-        <Preview
-          prose
-          sources={project.papers}
-          source={
-            project.summary ||
-            "The executive summary will capture the question, current approach, established progress, and unresolved obstacles. Ask the research assistant to maintain it as the work develops."
-          }
-        />
+        {project.summary ? (
+          <ManuscriptReview
+            inline
+            project={project}
+            format="markdown"
+            target={{ kind: "summary" }}
+            update={update}
+            editRequest={proofEdit}
+            onQueue={(id) => researchChat.current?.queueAnnotation(id)}
+          />
+        ) : (
+          <Preview
+            prose
+            source="The executive summary will capture the question, current approach, established progress, and unresolved obstacles. Ask the Math Assistant to maintain it as the work develops."
+          />
+        )}
         {project.notes && (
           <div className="panelBody">
             <h3>Working notes</h3>
@@ -1184,7 +1192,7 @@ function App() {
                     role="research"
                     reviewRef={researchChat}
                     onEditAnnotation={(note) => {
-                      if (note.target?.kind === "proof") {
+                      if (["proof", "summary"].includes(note.target?.kind)) {
                         setProofEdit({ id: note.id, at: Date.now() });
                       } else {
                         setSourceRequest({

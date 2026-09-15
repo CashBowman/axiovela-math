@@ -19,6 +19,7 @@ export default function ManuscriptReview({
   onLine,
   onQueue,
   annotating = true,
+  inline = false,
   captured,
   capturePosition,
   onDismiss,
@@ -27,6 +28,7 @@ export default function ManuscriptReview({
 }) {
   const [draft, setDraft] = useState(null),
     [comment, setComment] = useState(""),
+    [copyStatus, setCopyStatus] = useState(""),
     [hash, setHash] = useState(""),
     [notice, setNotice] = useState(""),
     [editingId, setEditingId] = useState(null),
@@ -72,7 +74,13 @@ export default function ManuscriptReview({
   useEffect(() => {
     if (draft || editingId) {
       previousFocus.current = document.activeElement;
-      input.current?.focus();
+      // A dragged selection stays available for native Copy. Click feedback to type.
+      if (
+        editingId ||
+        draft?.focusFeedback ||
+        window.getSelection()?.isCollapsed
+      )
+        input.current?.focus();
     }
   }, [!!draft, editingId]);
   useEffect(() => {
@@ -87,7 +95,7 @@ export default function ManuscriptReview({
   useEffect(() => {
     if (!draft && !editingId) return;
     const dismiss = (e) => {
-      if (!popup.current?.contains(e.target)) closeNote();
+      if (e.button === 0 && !popup.current?.contains(e.target)) closeNote();
     };
     const other = () => closeNote();
     document.addEventListener("pointerdown", dismiss);
@@ -110,17 +118,18 @@ export default function ManuscriptReview({
     if (stale || !hash) return;
     if (!captured) window.dispatchEvent(new Event("math-dismiss-feedback"));
     setComment("");
+    setCopyStatus("");
     setNotice("");
     setDraft(anchor);
     setEditingId(null);
     setPosition(capturePosition || null);
-    if (!captured) window.getSelection()?.removeAllRanges();
   }
   function edit(id) {
     const c = comments.find((c) => c.id === id);
     if (!c) return;
     setDraft(null);
     setEditingId(id);
+    setCopyStatus("");
     setComment(c.comment);
     setPosition(null);
   }
@@ -203,7 +212,11 @@ export default function ManuscriptReview({
     : { right: 20, bottom: 20 };
   return (
     <div
-      className={captured ? "workspaceFeedback" : "manuscriptReview"}
+      className={
+        captured
+          ? "workspaceFeedback"
+          : "manuscriptReview" + (inline ? " inlineReview" : "")
+      }
       data-reading-review="true"
     >
       {notice && (
@@ -221,7 +234,7 @@ export default function ManuscriptReview({
       {!captured && (
         <div className="reviewDocument">
           {format === "markdown" ? (
-            <div className="scrollBody paperPreview">
+            <div className={(inline ? "" : "scrollBody ") + "paperPreview"}>
               <AnnotationSurface
                 {...annotation}
                 tabIndex={0}
@@ -322,6 +335,26 @@ export default function ManuscriptReview({
               <blockquote>
                 {draft?.quote || shown?.anchor.quote || "Selected location"}
               </blockquote>
+              <div className="annotationCopyRow">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(
+                        draft?.quote || shown?.anchor.quote || "",
+                      );
+                      setCopyStatus("Copied");
+                    } catch {
+                      setCopyStatus(
+                        "Select the passage and use Ctrl+C to copy.",
+                      );
+                    }
+                  }}
+                >
+                  Copy passage
+                </button>
+                <small role="status">{copyStatus}</small>
+              </div>
               <textarea
                 ref={input}
                 aria-label="Annotation feedback"

@@ -119,7 +119,6 @@ button,input,select,textarea{font-size:14px}
 .manuscriptPreview>.panelHead button{padding:7px 10px;min-height:34px;font-size:12px}
 .libraryFilter{display:block;width:100%;margin-top:10px}
 .libraryItem button>span:first-of-type{flex:1;min-width:0}
-.libraryItem .sourceAiBadge{flex:none;width:27px;height:27px;display:grid;place-items:center;border-radius:50%;border:1px solid #caa65b;background:#f7eacb;color:#75551e;font-size:10px;font-weight:800;letter-spacing:.02em;margin-left:8px}
 .graphLegend{flex-wrap:wrap;gap:8px 14px}
 .graphLegend>span{display:inline-flex;align-items:center;gap:5px}
 .graphLegend svg{flex:none}
@@ -130,3 +129,11 @@ button,input,select,textarea{font-size:14px}
 .graphAssistant{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .graphAssistant small{color:var(--muted)}
 .workspaceFeedback{display:contents}
+
+.libraryItem .sourceMeta{display:flex;align-items:baseline;justify-content:space-between;gap:4px 12px;flex-wrap:wrap}
+.libraryItem .sourceAiAttribution{margin-left:auto;font-size:11px;font-weight:400;white-space:nowrap;color:var(--blue)}
+.inlineReview,.inlineReview>.reviewDocument{display:block;flex:none}
+.inlineReview .paperPreview{overflow:visible}
+.annotationCopyRow{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.annotationCopyRow button{padding:4px 8px;font-size:11px}
+.annotationCopyRow small{color:var(--blue)}

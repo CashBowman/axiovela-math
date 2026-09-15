@@ -132,6 +132,7 @@ export default function AnnotationSurface({
       )[0];
       callbacks.current.onCapture?.({
         ...anchor,
+        ...(event.type === "keydown" ? { focusFeedback: true } : {}),
         ...(page
           ? {
               page,
@@ -159,7 +160,7 @@ export default function AnnotationSurface({
       }
       onMouseUp={(e) => {
         clearTimeout(captureTimer.current);
-        if (e.detail > 1) return;
+        if (e.button !== 0 || e.detail > 1) return;
         if (!window.getSelection()?.isCollapsed) capture(e);
         else {
           const event = {

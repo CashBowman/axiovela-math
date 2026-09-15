@@ -104,6 +104,14 @@ else app.whenReady().then(async()=>{
  const savedWindow=await readJson(path.join(userDir,'window.json'));
  win=new BrowserWindow({width:Math.max(880,Math.min(2400,Number(savedWindow.width)||1560)),height:Math.max(620,Math.min(1600,Number(savedWindow.height)||1000)),minWidth:880,minHeight:620,title:'Axiovela Math',icon:path.join(__dirname,'../public/workbench-mark.png'),webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
  win.webContents.session.setPermissionRequestHandler((contents,permission,callback,details)=>callback(permission==='clipboard-sanitized-write'&&contents===win.webContents&&details.requestingUrl===origin+'/'));
+ // Native edit roles preserve standard selection and input clipboard behavior.
+ win.webContents.on('context-menu',(_event,params)=>{
+  const items=[];
+  if(params.isEditable)items.push({role:'cut',enabled:params.editFlags.canCut});
+  if(params.selectionText)items.push({role:'copy',enabled:params.editFlags.canCopy});
+  if(params.isEditable)items.push({role:'paste',enabled:params.editFlags.canPaste},{role:'selectAll'});
+  if(items.length)Menu.buildFromTemplate(items).popup({window:win});
+ });
  win.webContents.setWindowOpenHandler(({url})=>{if(/^https?:\/\//.test(url))void shell.openExternal(url);return {action:'deny'};});
  win.webContents.on('will-navigate',(event,url)=>{if(url!==origin+'/')event.preventDefault();});
  win.webContents.on('will-prevent-unload',event=>{const choice=dialog.showMessageBoxSync(win,{type:'question',message:'Discard unsaved edits and close?',detail:'A recovery copy remains available when you reopen the app.',buttons:['Keep working','Close'],defaultId:0,cancelId:0});if(choice===1)event.preventDefault();else approvedClose=false;});

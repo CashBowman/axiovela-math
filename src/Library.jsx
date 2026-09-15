@@ -494,34 +494,42 @@ export default function Library({
                       )}
                       <span>
                         {x.label}
-                        <small>
-                          {kind === "paper"
-                            ? (x.sourceType === "web" ? "Web page" : "PDF") +
-                              " · " +
-                              (x.read ? "Read" : "Unread")
-                            : kind === "evidence"
-                              ? x.sourceName +
-                                (x.removed
-                                  ? " · removed"
-                                  : " · " +
-                                    new Date(x.capturedAt).toLocaleString([], {
-                                      month: "short",
-                                      day: "numeric",
-                                      hour: "numeric",
-                                      minute: "2-digit",
-                                    }))
-                              : (x.status || "unverified").replaceAll("-", " ")}
+                        <small className="sourceMeta">
+                          <span>
+                            {kind === "paper"
+                              ? (x.sourceType === "web" ? "Web page" : "PDF") +
+                                " · " +
+                                (x.read ? "Read" : "Unread")
+                              : kind === "evidence"
+                                ? x.sourceName +
+                                  (x.removed
+                                    ? " · removed"
+                                    : " · " +
+                                      new Date(x.capturedAt).toLocaleString(
+                                        [],
+                                        {
+                                          month: "short",
+                                          day: "numeric",
+                                          hour: "numeric",
+                                          minute: "2-digit",
+                                        },
+                                      ))
+                                : (x.status || "unverified").replaceAll(
+                                    "-",
+                                    " ",
+                                  )}
+                          </span>
+                          {kind === "paper" && x.discovered && (
+                            <span
+                              className="sourceAiAttribution"
+                              title="Added by the Math Assistant"
+                              aria-label="AI-added source"
+                            >
+                              AI added source
+                            </span>
+                          )}
                         </small>
                       </span>
-                      {kind === "paper" && x.discovered && (
-                        <span
-                          className="sourceAiBadge"
-                          title="Added by the Math Assistant"
-                          aria-label="AI-added source"
-                        >
-                          AI
-                        </span>
-                      )}
                     </button>
                   </div>
                 ))}

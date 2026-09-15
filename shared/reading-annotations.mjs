@@ -12,6 +12,12 @@ export function readingDocument(project, target) {
         " (selected snapshot)",
       revision: target.role,
     };
+  if (target?.kind === "summary")
+    return {
+      source: project.summary || "",
+      title: "Executive summary",
+      revision: "",
+    };
   if (target?.kind === "proof")
     return {
       source: project.proof || "",

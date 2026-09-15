@@ -232,6 +232,28 @@ try {
       .first(),
     "geometric assumptions",
   );
+  await page.locator(".inlineReview .draftHighlight").first().waitFor();
+  assert.equal(
+    await page.evaluate(() => window.getSelection().toString()),
+    "geometric assumptions",
+  );
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.keyboard.press("Control+c");
+  assert.equal(
+    await page.evaluate(() => navigator.clipboard.readText()),
+    "geometric assumptions",
+  );
+  await page.getByRole("button", { name: "Copy passage", exact: true }).click();
+  assert.equal(
+    await page.evaluate(() => navigator.clipboard.readText()),
+    "The geometric assumptions need careful justification.",
+  );
+  await page.getByLabel("Annotation feedback").focus();
+  await page.keyboard.press("Control+v");
+  assert.equal(
+    await page.getByLabel("Annotation feedback").inputValue(),
+    "The geometric assumptions need careful justification.",
+  );
   await page.getByLabel("Annotation feedback").fill("A canceled thought.");
   await page
     .getByRole("heading", { name: "Math Assistant", exact: true })
@@ -259,6 +281,10 @@ try {
     "geometric assumptions",
   );
   await note("Check the summary assumptions.");
+  await page.locator(".inlineReview .annotationPin").waitFor();
+  await page.locator(".inlineReview .passageHighlight").first().waitFor();
+  await page.screenshot({ path: ".local/qa/summary-highlight.png" });
+
   await page.locator(".annotationChipBody").click();
   await page
     .getByLabel("Annotation feedback")
@@ -322,6 +348,18 @@ try {
   assert.equal(await page.locator(".libraryItem").count(), 2);
   assert.equal(await page.getByLabel("AI-added source").count(), 1);
   assert.equal(
+    await page.getByLabel("AI-added source").textContent(),
+    "AI added source",
+  );
+  assert.ok(
+    await page.getByLabel("AI-added source").evaluate((el) => {
+      const a = el.getBoundingClientRect(),
+        b = el.previousElementSibling.getBoundingClientRect();
+      return Math.abs(a.bottom - b.bottom) < 5 && a.left > b.right;
+    }),
+  );
+
+  assert.equal(
     await page.getByLabel("Mark " + title + " as read").isChecked(),
     true,
   );
@@ -359,7 +397,7 @@ try {
     ),
   );
   checks.push(
-    "duplicate consolidation, read state and reversible backup; right-aligned AI badge; filters; typed AI map and source context",
+    "duplicate consolidation, read state and reversible backup; AI attribution on metadata line; summary highlights and native clipboard selection; filters; typed AI map and source context",
   );
   await page.getByRole("button", { name: "Write-up", exact: true }).click();
   const welcome = page.locator(".chatWelcome p").first();

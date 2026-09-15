@@ -243,3 +243,25 @@ test("AI corrections invalidate old claim reviews and explicitly remove obsolete
     {},
   );
 });
+
+test("summary feedback is revision-bound and rejects an earlier summary after editing", () => {
+  const p = { ...blankProject("p"), summary: "The assumptions need checking." },
+    target = { kind: "summary" };
+  p.manuscriptComments = [
+    {
+      id: "s",
+      target,
+      anchor: { quote: p.summary },
+      comment: "Clarify.",
+      sourceHash: createHash("sha256")
+        .update(readingIdentity(p, target))
+        .digest("hex"),
+    },
+  ];
+  assert.equal(
+    prepareReadingFeedback(p, ["s"], "research")[0].title,
+    "Executive summary",
+  );
+  p.summary = "Revised assumptions.";
+  assert.throws(() => prepareReadingFeedback(p, ["s"], "research"), /changed/);
+});
