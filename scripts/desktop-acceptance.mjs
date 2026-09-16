@@ -40,9 +40,9 @@ try{
  for(let i=0;i<30 && !(await app.evaluate(()=>globalThis.contextRoles?.includes('paste')));i++)await new Promise(r=>setTimeout(r,100));
  assert.ok((await app.evaluate(()=>globalThis.contextRoles))?.includes('paste'));
  await app.evaluate(({Menu})=>{Menu.prototype.popup=globalThis.originalPopup;});
- await page.getByRole('button',{name:'Copy passage',exact:true}).click();for(let i=0;i<30 && (await app.evaluate(({clipboard})=>clipboard.readText()))!=='A sentence to annotate.';i++)await new Promise(r=>setTimeout(r,100));assert.equal(await app.evaluate(({clipboard})=>clipboard.readText()),'A sentence to annotate.');
- await page.getByLabel('Annotation feedback').focus();await page.keyboard.press('Control+v');assert.equal(await page.getByLabel('Annotation feedback').inputValue(),'A sentence to annotate.');
- await page.getByLabel('Annotation feedback').fill('Clarify this sentence.');await page.getByRole('button',{name:'Add to message',exact:true}).click();await page.locator('[aria-label="Unsent annotations"] .annotationChip').waitFor();checks.push('packaged passage highlights, native Copy/Paste shortcuts and context menus, explicit Copy passage and unsent feedback');
+ assert.equal(await page.getByRole('button',{name:'Copy passage',exact:true}).count(),0);
+ await page.getByLabel('Annotation feedback').focus();await page.keyboard.press('Control+v');assert.equal(await page.getByLabel('Annotation feedback').inputValue(),'sentence');
+ await page.getByLabel('Annotation feedback').fill('Clarify this sentence.');await page.getByRole('button',{name:'Add to message',exact:true}).click();await page.locator('[aria-label="Unsent annotations"] .annotationChip').waitFor();checks.push('packaged passage highlights, native Copy/Paste shortcuts and context menus, compact annotation popup and unsent feedback');
 
  await page.route('**/api/state',r=>r.request().method()==='PUT'?r.abort():r.continue());await page.getByRole('button',{name:'Markdown',exact:false}).first().click();await page.getByLabel('Manuscript source').fill('# Desktop recovery fixture');
  await app.evaluate(({dialog,app})=>{globalThis.closeAttempts=0;dialog.showMessageBoxSync=()=>{globalThis.closeAttempts++;return 0;};app.quit();});

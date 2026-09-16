@@ -155,14 +155,12 @@ try {
   );
 
   await selectText(page.locator(".paperPreview p").first(), "explains");
-  assert.equal(
-    await page
-      .getByRole("dialog", { name: "Add annotation" })
-      .locator("blockquote")
-      .textContent(),
-    "First sentence explains the idea.",
-  );
+  const popover = page.getByRole("dialog", { name: "Add annotation" });
+  assert.equal(await popover.locator("blockquote").count(), 0);
+  assert.equal(await popover.getByRole("button", {name: "Copy passage"}).count(), 0);
+  assert.equal(await popover.getByText(/Enter adds|Shift\+Enter/).count(), 0);
   await note("Make this sentence clearer.");
+  assert.match(await page.locator(".annotationChipBody").first().getAttribute("title"), /First sentence explains the idea\./);
   await page.getByRole("button", { name: "Comment 1", exact: true }).waitFor();
   await page
     .getByRole("button", { name: "Choose writing model and provider" })
@@ -175,15 +173,8 @@ try {
     "important assumptions",
     "why those assumptions matter.",
   );
-  assert.ok(
-    (
-      await page
-        .getByRole("dialog", { name: "Add annotation" })
-        .locator("blockquote")
-        .textContent()
-    ).startsWith("A second sentence"),
-  );
   await note("Explain how these hypotheses connect.");
+  assert.match(await page.locator(".annotationChipBody").last().getAttribute("title"), /A second sentence/);
   assert.equal(
     await page.getByRole("button", { name: /^Comments/ }).count(),
     0,

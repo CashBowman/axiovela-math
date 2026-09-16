@@ -28,7 +28,6 @@ export default function ManuscriptReview({
 }) {
   const [draft, setDraft] = useState(null),
     [comment, setComment] = useState(""),
-    [copyStatus, setCopyStatus] = useState(""),
     [hash, setHash] = useState(""),
     [notice, setNotice] = useState(""),
     [editingId, setEditingId] = useState(null),
@@ -118,7 +117,6 @@ export default function ManuscriptReview({
     if (stale || !hash) return;
     if (!captured) window.dispatchEvent(new Event("math-dismiss-feedback"));
     setComment("");
-    setCopyStatus("");
     setNotice("");
     setDraft(anchor);
     setEditingId(null);
@@ -129,7 +127,6 @@ export default function ManuscriptReview({
     if (!c) return;
     setDraft(null);
     setEditingId(id);
-    setCopyStatus("");
     setComment(c.comment);
     setPosition(null);
   }
@@ -338,29 +335,6 @@ export default function ManuscriptReview({
                   <X size={14} />
                 </button>
               </div>
-              <blockquote>
-                {draft?.quote || shown?.anchor.quote || "Selected location"}
-              </blockquote>
-              <div className="annotationCopyRow">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(
-                        draft?.quote || shown?.anchor.quote || "",
-                      );
-                      setCopyStatus("Copied");
-                    } catch {
-                      setCopyStatus(
-                        "Select the passage and use Ctrl+C to copy.",
-                      );
-                    }
-                  }}
-                >
-                  Copy passage
-                </button>
-                <small role="status">{copyStatus}</small>
-              </div>
               <textarea
                 ref={input}
                 aria-label="Annotation feedback"
@@ -370,7 +344,6 @@ export default function ManuscriptReview({
                 onChange={(e) => setComment(e.target.value)}
               />
               <div className="annotationPopoverFoot">
-                <small>Enter adds · Shift+Enter for a new line · Unsent</small>
                 <button className="primary" disabled={!comment.trim()}>
                   Add to message
                 </button>

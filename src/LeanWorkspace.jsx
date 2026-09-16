@@ -5,6 +5,7 @@ import Resizable from "./Resizable.jsx";
 import ChatPanel from "./ChatPanel.jsx";
 import {
   certificateResults,
+  certificateOutline,
   resultCheckState,
   certificateProgress,
 } from "../shared/certificate-results.mjs";
@@ -83,7 +84,7 @@ export default function LeanWorkspace({
     current = data.records[0],
     plan = data.plan;
 
-  const results = certificateResults(project, data),
+  const results = certificateOutline(certificateResults(project, data), project.links),
     selected =
       results.find((r) => r.ref === selectedRef) ||
       results.find((r) => r.mainResult) ||
@@ -94,7 +95,7 @@ export default function LeanWorkspace({
       (l) => l.from === selected?.ref || l.to === selected?.ref,
     );
   const label = (ref) =>
-    results.find((r) => r.ref === ref)?.title ||
+    results.find((r) => r.ref === ref)?.label ||
     project.papers.find((p) => "paper:" + p.id === ref)?.title ||
     ref;
   const left = (
@@ -120,6 +121,7 @@ export default function LeanWorkspace({
             theorems and lemmas appear here automatically.
           </p>
         )}
+        {!!results.length && <p className="resultOutlineHint">Argument outline · supporting results first</p>}
         <div className="resultCards" aria-label="Research results">
           {results.map((r) => {
             const status = resultCheckState(r, data);
@@ -131,12 +133,14 @@ export default function LeanWorkspace({
                 onClick={() => setSelectedRef(r.ref)}
               >
                 <span className="resultCardMeta">
-                  <span>{r.kind}</span>
+                  <span>{r.label}</span>
                   {r.mainResult && (
                     <span className="mainResultTag">Main result</span>
                   )}
                 </span>
-                <strong>{r.title}</strong>
+                <strong>{r.displayTitle}</strong>
+                {!!r.prerequisites.length && <span className="resultPrerequisites">Builds on {r.prerequisites.map(label).join(", ")}</span>}
+                {r.circular && <span className="resultPrerequisites">Dependency order needs review</span>}
                 <span className={"resultState " + status.tone}>
                   {status.label}
                 </span>
@@ -164,12 +168,14 @@ export default function LeanWorkspace({
         {selected && (
           <section className="selectedResult" aria-label="Selected result">
             <div className="resultCardMeta">
-              <span>{selected.kind}</span>
+              <span>{selected.label}</span>
               {selected.mainResult && (
                 <span className="mainResultTag">Main result</span>
               )}
             </div>
-            <h3>{selected.title}</h3>
+            <h3>{selected.displayTitle}</h3>
+            {!!selected.prerequisites.length && <div className="resultOutlineLinks" aria-label="Supporting results"><span>Builds on</span>{selected.prerequisites.map(ref => <button key={ref} onClick={() => setSelectedRef(ref)}>{label(ref)}</button>)}</div>}
+            {selected.circular && <p className="hint">A circular connection prevents a complete dependency order. Review the proposed links below.</p>}
             <Preview source={selected.statement} lean />
             <p className={"resultState " + state.tone}>{state.label}</p>
             <p className="hint">{state.detail}</p>

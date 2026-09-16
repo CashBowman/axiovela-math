@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   certificateResults,
+  certificateOutline,
   resultCheckState,
   certificateProgress,
 } from "../shared/certificate-results.mjs";
@@ -143,4 +144,42 @@ test("saved result mappings omit assistant verdicts and validate endpoint refere
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
+});
+
+
+test("certificate outline orders supporting work, labels types, and preserves formal mappings", () => {
+  const input = certificateResults(project, {plan: {results: [{ref: "idea:main", declarations: ["main"]}]}});
+  const links = [{from: "idea:main", to: "idea:helper", type: "depends on"}, {from: "paper:p", to: "idea:main", type: "supports"}];
+  const outline = certificateOutline(input, links);
+  assert.deepEqual(outline.map(r => r.label), ["Claim 1", "Lemma 1", "Theorem 1"]);
+  assert.deepEqual(outline.at(-1).prerequisites, ["idea:helper"]);
+  assert.equal(outline.at(-1).formal, input[1].formal);
+  assert.deepEqual(certificateOutline(input).map(r => r.label).sort(), outline.map(r => r.label).sort());
+  assert.equal(input[1].label, undefined);
+});
+
+test("existing manuscript numbering is preserved and fallback numbers avoid collisions", () => {
+  const input = [
+    {ref: "a", kind: "lemma", title: "First supporting fact"},
+    {ref: "b", kind: "lemma", title: "Lemma 1: Existing number"},
+    {ref: "c", kind: "theorem", title: "Proposition 3.1 — Terminal bound"},
+    {ref: "d", kind: "theorem", title: "Theorem 2.1 Continuity"},
+  ];
+  const outline = certificateOutline(input);
+  assert.deepEqual(outline.map(r => r.label), ["Lemma 2", "Lemma 1", "Proposition 3.1", "Theorem 2.1"]);
+  assert.equal(outline[2].displayTitle, "Terminal bound");
+  assert.equal(outline[2].title, input[2].title);
+});
+
+test("cyclic and dangling connections never hide results or imply certification", () => {
+  const input = certificateResults(project);
+  const outline = certificateOutline(input, [
+    {from: "idea:main", to: "idea:helper", type: "depends on"},
+    {from: "idea:helper", to: "idea:main", type: "depends on"},
+    {from: "claim:C1", to: "idea:missing", type: "uses"},
+  ]);
+  assert.equal(outline.length, input.length);
+  assert.equal(outline.filter(r => r.circular).length, 2);
+  assert.equal(certificateProgress(outline, {}).certified, 0);
+  assert.ok(outline.every(r => resultCheckState(r, {}).label === "Not formalized"));
 });

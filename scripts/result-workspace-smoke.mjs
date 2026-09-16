@@ -159,9 +159,14 @@ try {
     .getByRole("heading", { name: "Main additive identity", exact: true })
     .waitFor();
   assert.equal(await page.locator(".resultCard").count(), 2);
+  assert.match(await page.locator(".resultCard").first().innerText(), /Lemma 1/);
+  assert.match(await page.locator(".resultCard").last().innerText(), /Builds on Lemma 1/);
+  await page.getByRole("region", {name: "Selected result"}).getByRole("button", {name: "Lemma 1",exact:true}).click();
+  await page.getByRole("heading", {name: "Supporting identity", exact:true}).waitFor();
+  await page.getByRole("button", {name: /Theorem 1 Main result Main additive identity/}).click();
   await page.getByText("fixture_add_zero", { exact: true }).first().waitFor();
   await page
-    .getByRole("button", { name: /lemma Supporting identity Not formalized/ })
+    .getByRole("button", { name: /Lemma 1 Supporting identity Not formalized/ })
     .click();
   await page
     .getByRole("heading", { name: "Supporting identity", exact: true })
@@ -171,7 +176,7 @@ try {
     /No formal declaration is linked/,
   );
   await page
-    .getByRole("button", { name: /theorem Main result Main additive identity/ })
+    .getByRole("button", { name: /Theorem 1 Main result Main additive identity/ })
     .click();
   await page.screenshot({ path: ".local/qa/result-certificates.png" });
   checks.push(

@@ -134,9 +134,6 @@ button,input,select,textarea{font-size:14px}
 .libraryItem .sourceAiAttribution{margin-left:auto;font-size:11px;font-weight:400;white-space:nowrap;color:var(--blue)}
 .inlineReview,.inlineReview>.reviewDocument{display:block;flex:none}
 .inlineReview .paperPreview{overflow:visible}
-.annotationCopyRow{display:flex;align-items:center;gap:8px;margin:0 0 8px}
-.annotationCopyRow button{padding:4px 8px;font-size:11px}
-.annotationCopyRow small{color:var(--blue)}
 
 /* Reading chrome stays compact at every size; fullscreen gives space to content. */
 .libraryReaderPanel>.panelHead{padding:8px 14px;min-height:48px;gap:12px}
@@ -177,3 +174,8 @@ button,input,select,textarea{font-size:14px}
 .projectCertificateChecks>summary,.resultDependencies>summary,.formalNotes>summary{font-weight:650;font-size:13px;padding:5px 0;cursor:pointer}
 .resultDependencies{margin-top:18px}.resultDependencies>div{border-top:1px solid var(--line);padding:8px 0;font-size:13px}
 .resultDependencies button{font-size:12px;padding:5px 9px}.formalNotes{margin-top:14px}
+
+.resultOutlineHint{font-size:12px;color:var(--blue);margin:14px 0 10px}
+.resultPrerequisites{font-size:12px;color:var(--blue);line-height:1.5}
+.resultOutlineLinks{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:12px 0}
+.resultOutlineLinks button{padding:4px 9px;font-size:12px}
