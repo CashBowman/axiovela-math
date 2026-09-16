@@ -17,6 +17,7 @@ import {ExperimentBridge} from './experiment-bridge.mjs';
 import {Chats} from './chat.mjs';
 import {LeanWorkspace} from './lean-workspace.mjs';
 import {readResearchArtifacts} from './research-artifacts.mjs';
+import {queryProofAttempts} from './proof-attempts.mjs';
 import {compileLatex} from './checks.mjs';
 import {projectFile} from './axiovela/assistant-api.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -44,6 +45,11 @@ const server=http.createServer(async(req,res)=>{try{
   if(url.pathname==='/api/projects/open'&&req.method==='POST')return json(res,200,await projects.openOrCreate(await bodyJson()));
   if(url.pathname==='/api/projects'&&req.method==='POST')return json(res,201,await projects.create(await bodyJson()));
   const projectId=url.searchParams.get('project');
+  if(url.pathname==='/api/proof-attempts'&&req.method==='GET'){
+    const project=(await store.read()).projects.find(p=>p.id===projectId);
+    if(!project)throw Error('Project not found.');
+    return json(res,200,await queryProofAttempts(await projects.root(projectId),project,Object.fromEntries(['query','targetRef','status','label'].map(key=>[key,url.searchParams.get(key)||'']))));
+  }
   if(url.pathname==='/api/bridge/sources'&&req.method==='GET')return json(res,200,{sources:await bridge.discover()});
   if(url.pathname==='/api/bridge/sources'&&req.method==='POST'){const body=await bodyJson();return json(res,200,{source:body.folder?await bridge.remember(body.folder):await bridge.chooseFolder()});}
   if(url.pathname==='/api/bridge/runs'&&req.method==='GET')return json(res,200,await bridge.browse(url.searchParams.get('source')));

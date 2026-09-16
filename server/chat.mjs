@@ -27,6 +27,7 @@ import {
 import { apiProviders, saveProvider } from "./axiovela/provider-settings.mjs";
 import { projectFile } from "./axiovela/assistant-api.mjs";
 import { cliProviders } from "./axiovela/assistant-cli.mjs";
+import {prepareProofAttempts, captureProofAttempts, queryProofAttempts} from './proof-attempts.mjs';
 const roles = ["research", "writing", "lean"];
 export const connectionStubs = () =>
   connectionIds.map((id) => ({
@@ -89,6 +90,13 @@ export class Chats {
             j.status = "interrupted";
             j.error =
               "The app stopped before this turn finished. Retry explicitly.";
+            if (j.proofMemory) {
+              try { j.proofMemoryResult = await captureProofAttempts(await this.projects.root(id), j); }
+              catch (error) {
+                j.proofMemoryResult = {status: 'error', saved: 0, error: error.message};
+                j.artifactError = [j.artifactError, 'Proof-attempt memory: ' + error.message].filter(Boolean).join('\n');
+              }
+            }
           }
       }
       if (migrated) {
@@ -321,6 +329,18 @@ export class Chats {
         startedAt: new Date().toISOString(),
         selection: { ...selection },
       };
+      let proofMemoryPrompt = '';
+      if (c.role === 'research' && !review) {
+        try {
+          const memory = await prepareProofAttempts(cwd, p, {...turn, conversationId: c.id}, context);
+          turn.proofMemory = memory.admission;
+          proofMemoryPrompt = '\n\n' + memory.prompt;
+        } catch (error) {
+          turn.proofMemoryResult = {status: 'error', saved: 0, error: error.message};
+          turn.artifactError = 'Proof-attempt memory: ' + error.message;
+          proofMemoryPrompt = '\n\nProof-attempt memory is unavailable. Do not infer that no prior work exists. Explain this limitation if it affects substantial research.';
+        }
+      }
       if (
         c.selection.adapterId !== selection.adapterId ||
         c.selection.modelId !== selection.modelId
@@ -364,7 +384,7 @@ export class Chats {
           : "") +
         prompt +
         readingFeedbackPrompt(annotations) +
-        (review ? "\n\n" + manuscriptReviewPrompt(review) : "");
+        (review ? "\n\n" + manuscriptReviewPrompt(review) : "") + proofMemoryPrompt;
       turn.promptHash = createHash("sha256")
         .update(runtimePrompt)
         .digest("hex");
@@ -378,6 +398,7 @@ export class Chats {
             sessionId: review ? null : c.sessionId,
             signal: controller.signal,
             prompt: runtimePrompt,
+            queryProofAttempts: c.role === 'research' ? filters => queryProofAttempts(cwd, p, filters) : undefined,
             onSession: async (session) => {
               if (!review) {
                 c.sessionId = session;
@@ -450,6 +471,12 @@ export class Chats {
           c.queuePaused = true;
         } finally {
           turn.completedAt = new Date().toISOString();
+          if (turn.proofMemory) {
+            try { turn.proofMemoryResult = await captureProofAttempts(cwd, turn); }
+            catch (error) { turn.proofMemoryResult = {status: 'error', saved: 0, error: error.message}; }
+            if (turn.proofMemoryResult.status === 'error')
+              turn.artifactError = [turn.artifactError, 'Proof-attempt memory: ' + turn.proofMemoryResult.error].filter(Boolean).join('\n');
+          }
           this.controllers.delete(id);
           await this.persist(projectId);
           if (turn.status === "complete" && !c.queuePaused && c.queue.length) {

@@ -42,6 +42,26 @@ test('conversation cancellation retains queue and separate roles stay independen
  await chats.persist(id);
  const restored=new Chats(projects,store);const list=await restored.load(id);assert.equal(list.find(c=>c.id===a.id).queue.length,1);
 }));
+
+test('all API protocols expose read-only attempt retrieval and retain the entire current request',async()=>fixture(async cwd=>{
+ process.env.WORKBENCH_PROVIDER_SETTINGS_PATH=path.join(cwd,'private/providers.json');const original=globalThis.fetch;
+ try{for(const id of ['openai-api','anthropic-api','gemini-api','compatible-api']){
+  await saveProvider(id,{apiKey:'fixture-key',...(id==='compatible-api'?{endpoint:'http://127.0.0.1:5555/v1'}:{})});let round=0,queries=0;
+  const args={query:'spectral',targetRef:'claim:C1',status:'blocked',label:''};
+  globalThis.fetch=async(url,init)=>{
+   const body=JSON.parse(init.body);round++;const first=round===1;
+   const serialized=JSON.stringify(body);assert.match(serialized,/CURRENT_REQUEST_START/);assert.match(serialized,/CURRENT_MEMORY_END/);
+   assert.match(serialized,/query_proof_attempts/);assert.doesNotMatch(serialized,/"name":"write_file"/);
+   if(!first)assert.match(serialized,/saved spectral obstruction/);
+   if(id==='openai-api')return Response.json({status:'completed',output:first?[{type:'function_call',call_id:'q1',name:'query_proof_attempts',arguments:JSON.stringify(args)}]:[{type:'message',content:[{type:'output_text',text:'Used saved attempts'}]}]});
+   if(id==='anthropic-api')return Response.json({stop_reason:first?'tool_use':'end_turn',content:first?[{type:'tool_use',id:'q1',name:'query_proof_attempts',input:args}]:[{type:'text',text:'Used saved attempts'}]});
+   if(id==='gemini-api')return Response.json({candidates:[{finishReason:'STOP',content:{role:'model',parts:first?[{functionCall:{name:'query_proof_attempts',args}}]:[{text:'Used saved attempts'}]}}]});
+   return Response.json({choices:[{message:{role:'assistant',content:first?null:'Used saved attempts',...(first?{tool_calls:[{id:'q1',type:'function',function:{name:'query_proof_attempts',arguments:JSON.stringify(args)}}]}:{})}}]});
+  };
+  const result=await runApi({selection:{adapterId:id,modelId:'fixture-model',effort:''},cwd,mode:'ask',prompt:'CURRENT_REQUEST_START'+'.'.repeat(33000)+'CURRENT_MEMORY_END',signal:new AbortController().signal,...callbacks,queryProofAttempts:async filters=>{queries++;assert.deepEqual(filters,args);return {attempts:[{outcome:'saved spectral obstruction'}]};}},{id:'fixture-model'});
+  assert.equal(result,'Used saved attempts');assert.equal(queries,1);assert.equal(round,2);
+ }}finally{globalThis.fetch=original;}
+}));
 test('Lean missing project remains unverified and reports a useful obligation',async()=>fixture(async root=>{
  const r=await inspectLean(root,true);assert.equal(r.status,'not-configured');assert.equal(r.formalCertificate,false);assert.equal(r.checks[0].status,'missing');
 }));

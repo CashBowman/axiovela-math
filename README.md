@@ -19,6 +19,7 @@ Develop a proof, revise a manuscript, and explore another project at the same ti
 - **Research and write together.** Run the Math Assistant and publication assistant simultaneously.
 - **Move freely between projects.** Switch tabs without interrupting independent conversations.
 - **Keep your context.** Research, Library, and Lean Certificates share a conversation; publication has its own.
+- **Build on earlier attempts.** A background proof-attempt ledger retains saved approaches, outcomes, blockers and next steps across research conversations. Relevant summaries return as compact context, with older target revisions flagged and revisits linked to their predecessors. [Proof-attempt memory →](docs/proof-attempts.md)
 - **Give precise feedback.** Highlight sentences or passages in summaries, proofs, papers, and previews. **Add to message** places feedback in the appropriate composer; you decide when to send it. [Passage annotations →](docs/annotations.md)
 
 Consecutive turns within one conversation stay ordered. Provider limits and available compute still apply, and assistants in the same project share its files.
@@ -35,11 +36,15 @@ Use **Projects** beside the tabs to reopen saved work, pin folders, or inspect e
 
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Connect Codex, Claude Code, Gemini CLI, OpenCode, Pi, or a supported API connection. [Connections and first session →](docs/getting-started.md)
 
+The current source version, **0.1.15-dev.2**, includes project search and pinning, explained project connections, manuscript-linked result numbering, compact passage feedback, and background proof-attempt memory. The ledger uses local retrieval without extra model calls. It requires saved assistant checkpoints, does not backfill older chats, and does not certify mathematical outcomes or guarantee that a route will never be repeated. No extra panel or Library source is added.
+
 ## Start with the desktop app
 
 The desktop app includes its runtime and Tectonic for LaTeX rendering. You do not need Node.js or npm to run a packaged app. Repository access is required to download the current private Linux release.
 
 **Linux · Validated x64 release**
+
+The private download below is the earlier **0.1.13** release. To use the features in **0.1.15-dev.2**, run the current source or install a locally built package; newer development installers have not been uploaded to GitHub.
 
 <a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.13/Axiovela-Math-0.1.13-linux-x64.AppImage"><img src="docs/assets/downloads/linux.svg" alt="Download Axiovela Math 0.1.13 for Linux: 64-bit AppImage" width="320" height="88" /></a>
 

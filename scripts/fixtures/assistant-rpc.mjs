@@ -36,6 +36,12 @@ for await (const line of readline.createInterface({input: process.stdin})) {
       result = {turn: {id: 'turn-1'}};
       const prompt = p.input[0].text;
       const request = prompt.match(/^User request:[ \t]*\n?([\s\S]*?)(?:\n\n|$)/m)?.[1] || prompt;
+      if(request.includes('FIXTURE_ATTEMPT')&&session.sandbox!=='read-only'){
+        const relative=prompt.match(/checkpoint concise attempt summaries in (research\/attempts\/inbox\/[a-f0-9-]+\.json)/)?.[1];
+        if(!relative)throw Error('Missing attempt checkpoint path');
+        await mkdir(path.dirname(path.join(process.cwd(),relative)),{recursive:true});
+        await writeFile(path.join(process.cwd(),relative),JSON.stringify({schema:'axiovela.proof-attempts/v1',attempts:[{id:'spectral',targetRef:'project',scope:'Uniform spectral bound in dimension.',approach:'Diagonal reduction.',status:'blocked',labels:['method:spectral'],outcome:'Dimension factor survives; the route is blocked, not refuted.',nextStep:'Check trace normalization.',evidence:[]}]}));
+      }
       if(request.includes('FIXTURE_LEAN_ARTIFACT')&&session.sandbox!=='read-only'){
         const folder=path.join(process.cwd(),'certificates');await mkdir(folder,{recursive:true});
         await writeFile(path.join(folder,'Main.lean'),'theorem fixture_add_zero (n : Nat) : n + 0 = n := by simp\n');
