@@ -78,3 +78,9 @@ The reader uses a compact title/action row and PDF navigation row. Open original
 ## Project navigation and paper numbering
 
 See [Projects and manuscript navigation](project-navigator.md) for the revisioned catalog, exact-source graph rules, stable result anchors and local acceptance commands. Keep navigation overlays temporary, preserve underlying drafts and selection on dismissal, and reserve manuscript numbers for results actually linked to the chosen draft.
+
+## 0.1.15-beta.1 changes
+
+The private preview includes named-theorem Lean audits, concise status labels, automatic checks after project-editing turns, source title repair and consolidation, safe recovery from Codex session writer conflicts, and shorter executive summaries. Annotation capture supplies its initial viewport position before display. Markdown/KaTeX rendering is memoized, unchanged chat polling snapshots are skipped, idle elapsed timers stop, and annotation text projections are reused.
+
+Run `npm test`, `npm run build`, `npm run test:ui`, `npm run test:lean`, `npm run test:results`, and `npm run test:annotations`. `PERF_LABEL=current PERF_ASSERT=1 node scripts/interaction-perf-smoke.mjs` profiles isolated long mathematical chat/document fixtures; timings are machine-specific. Native Linux acceptance and launch/relaunch checks are separate from cross-building Windows and Mac archives. The repository stays private and all builds run locally.

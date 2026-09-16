@@ -42,25 +42,25 @@ test("result selection uses exact mappings and never confuses project compilatio
     },
     results = certificateResults(project, data);
   assert.equal(results.length, 3);
-  assert.equal(resultCheckState(results[1], data).label, "Not formalized");
+  assert.equal(resultCheckState(results[1], data).label, "Not started");
   assert.equal(
     resultCheckState(results[2], data).label,
-    "Project build passed",
+    "Proof checks pending",
   );
   assert.equal(certificateProgress(results, data).certified, 0);
   assert.equal(certificateProgress(results, data).linked, 1);
   assert.equal(
     resultCheckState(results[2], { ...data, stale: true }).label,
-    "Needs recheck",
+    "Recheck needed",
   );
   assert.equal(
     resultCheckState(results[2], { ...data, sourceHash: null }).label,
-    "Source missing",
+    "Proof not saved",
   );
   assert.equal(
     resultCheckState({ ...results[2], formal: { declarations: [] } }, data)
       .label,
-    "Mapping incomplete",
+    "Theorem not linked",
   );
 });
 test("legacy formalization stays selectable without attributing it to unrelated research claims", () => {
@@ -75,7 +75,7 @@ test("legacy formalization stays selectable without attributing it to unrelated 
     results = certificateResults(project, data);
   assert.equal(results[0].ref, "formal:main");
   assert.equal(results[0].formal, data.plan);
-  assert.equal(resultCheckState(results[1], data).label, "Not formalized");
+  assert.equal(resultCheckState(results[1], data).label, "Not started");
 });
 test("assistant lemmas and main-result roles import without forged verdicts, and stable ids update", () => {
   let patch = mergeSourceConnections(project, {
@@ -174,5 +174,5 @@ test("cyclic and dangling connections never hide results or imply certification"
   assert.equal(outline.length, input.length);
   assert.equal(outline.filter(r => r.circular).length, 2);
   assert.equal(certificateProgress(outline, {}).certified, 0);
-  assert.ok(outline.every(r => resultCheckState(r, {}).label === "Not formalized"));
+  assert.ok(outline.every(r => resultCheckState(r, {}).label === "Not started"));
 });

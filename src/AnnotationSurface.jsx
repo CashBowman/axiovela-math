@@ -85,7 +85,10 @@ export default function AnnotationSurface({
     };
     const resize = new ResizeObserver(update);
     resize.observe(element);
-    const mutation = new MutationObserver(update);
+    const mutation = new MutationObserver(records => {
+      // Measuring highlights must not react to its own overlay DOM updates.
+      if (records.some(r => !(r.target.nodeType === 1 ? r.target : r.target.parentElement)?.closest("[data-annotation-ui]"))) update();
+    });
     mutation.observe(target, {
       subtree: true,
       childList: true,
@@ -121,15 +124,17 @@ export default function AnnotationSurface({
         line:
           Number(figure.closest("[data-source-line]")?.dataset.sourceLine) ||
           undefined,
-      });
+      }, figure.getBoundingClientRect());
       return;
     }
-    const anchor = capturePassage(target, event, { exact });
+    const projection = textProjection(target);
+    const anchor = capturePassage(target, event, { exact, projection });
     if (anchor) {
-      const rect = rangeRects(
-        rangeFromAnchor(textProjection(target), anchor),
+      const rects = rangeRects(
+        rangeFromAnchor(projection, anchor),
         root.current,
-      )[0];
+      );
+      const rect = rects[0], last = rects.at(-1), base = root.current.getBoundingClientRect();
       callbacks.current.onCapture?.({
         ...anchor,
         ...(event.type === "keydown" ? { focusFeedback: true } : {}),
@@ -140,7 +145,7 @@ export default function AnnotationSurface({
               y: (rect?.top || 0) / pageScale,
             }
           : {}),
-      });
+      }, last ? {left: base.left + last.left, top: base.top + last.top, width: last.width, height: last.height} : null);
     }
   }
   let lastPinTop = -24;
@@ -207,7 +212,7 @@ export default function AnnotationSurface({
                 onMouseUp={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.stopPropagation();
-                  callbacks.current.onSelect?.(mark.id);
+                  callbacks.current.onSelect?.(mark.id, e.currentTarget.getBoundingClientRect());
                 }}
               >
                 {mark.number}

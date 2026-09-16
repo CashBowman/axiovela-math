@@ -24,6 +24,7 @@ export function sourceAliases(p) {
     ...new Set(
       [
         p.id,
+        p.pdfId,
         p.sourceUrl,
         p.localPath,
         p.originalName,
@@ -38,8 +39,19 @@ const normalizedTitle = (p) =>
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
+export function canonicalSourceUrl(value) {
+  try {
+    const url = new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol)) return value;
+    url.hash = '';
+    for (const key of [...url.searchParams.keys()])
+      if (/^(utm_|fbclid$|gclid$)/i.test(key)) url.searchParams.delete(key);
+    url.searchParams.sort();
+    return url.href;
+  } catch { return value; }
+}
 function identity(p) {
-  const keys = sourceAliases(p).map((x) => "ref:" + x.replace(/#.*$/, ""));
+  const keys = sourceAliases(p).map((x) => "ref:" + canonicalSourceUrl(x));
   if (p.contentHash) keys.push("hash:" + p.contentHash);
   if (p.doi)
     keys.push(
@@ -47,7 +59,7 @@ function identity(p) {
         p.doi.toLowerCase().replace(/^https?:\/\/(?:dx\.)?doi.org\//, ""),
     );
   const arxiv =
-    p.arxivId || p.sourceUrl?.match(/arxiv.org\/(?:abs|pdf)\/([^?#]+)/)?.[1];
+    p.arxivId || p.sourceUrl?.match(/arxiv.org\/(?:abs|pdf|html)\/([^?#]+)/)?.[1];
   if (arxiv)
     keys.push("arxiv:" + arxiv.replace(/\.pdf$/, "").replace(/v\d+$/, ""));
   const title = normalizedTitle(p);
@@ -55,7 +67,7 @@ function identity(p) {
   if (
     title.length >= 24 &&
     title.split(" ").length >= 4 &&
-    !/^(imported pdf|source from|untitled|abstract|unknown)/.test(title) &&
+    !/^(imported pdf|source from|untitled|abstract|unknown|subject|pdf title unavailable)/.test(title) &&
     !/[a-f0-9]{24}/.test(title) &&
     !/[.](html?|pdf)$/i.test(p.title || "")
   )
@@ -142,7 +154,8 @@ export function addLibrarySources(project, incoming = []) {
   if (JSON.stringify(papers) !== JSON.stringify(project.papers))
     patch.papers = papers;
   if (bibliography !== project.bibliography) patch.bibliography = bibliography;
-  if (mergedIds.some((id) => project.papers.some((p) => p.id === id))) {
+  const renamedIds = project.papers.filter(p => papers.some(q => q.id === p.id && q.title !== p.title)).map(p => p.id);
+  if (renamedIds.length || mergedIds.some((id) => project.papers.some((p) => p.id === id))) {
     const endpoint = (x) =>
       x?.startsWith("paper:") && aliases.has(x.slice(6))
         ? "paper:" + aliases.get(x.slice(6))
@@ -162,10 +175,16 @@ export function addLibrarySources(project, incoming = []) {
       ...(project.sourceMergeHistory || []),
       {
         at: new Date().toISOString(),
-        papers: project.papers.filter((p) => mergedIds.includes(p.id)),
+        papers: project.papers.filter((p) => mergedIds.includes(p.id) || renamedIds.includes(p.id)),
         links: project.links || [],
       },
     ];
+  }
+  // An enriched record can bridge two formerly unrelated rows (URL + PDF hash).
+  // Collapse the remaining group in another pass, retaining all alias migrations.
+  if (papers.length < project.papers.length + incoming.length && papers.some((p, i) =>
+      papers.slice(0, i).some(q => identity(q).some(k => identity(p).includes(k))))) {
+    return {...patch, ...addLibrarySources({...project, ...patch})};
   }
   return patch;
 }

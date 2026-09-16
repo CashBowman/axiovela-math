@@ -167,7 +167,7 @@ try {
   await page.getByRole("button", {name: /Theorem Main result Main additive identity/}).click();
   await page.getByText("fixture_add_zero", { exact: true }).first().waitFor();
   await page
-    .getByRole("button", { name: /Lemma Supporting identity Not formalized/ })
+    .getByRole("button", { name: /Lemma Supporting identity Not started/ })
     .click();
   await page
     .getByRole("heading", { name: "Supporting identity", exact: true })

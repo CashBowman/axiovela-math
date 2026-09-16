@@ -46,6 +46,7 @@ export default function ChatPanel({
     [queueEdit, setQueueEdit] = useState(null),
     [clock, setClock] = useState(Date.now()),
     [atBottom, setAtBottom] = useState(true);
+  const conversationSnapshot = useRef("");
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const messages = useRef(),
@@ -69,7 +70,11 @@ export default function ChatPanel({
   async function refresh() {
     const value = await api("/api/conversations");
     if (!alive.current) return;
-    setList(value.conversations);
+    const snapshot = JSON.stringify(value.conversations);
+    if (snapshot !== conversationSnapshot.current) {
+      conversationSnapshot.current = snapshot;
+      setList(value.conversations);
+    }
     if (!selectedRef.current) {
       const existing = value.conversations.find((c) => c.role === role);
       if (existing) {
@@ -93,6 +98,7 @@ export default function ChatPanel({
   }
   useEffect(() => {
     alive.current = true;
+    conversationSnapshot.current = "";
     setList([]);
     setSelected(localStorage.getItem(key) || "");
     setDraft(
@@ -132,9 +138,11 @@ export default function ChatPanel({
     };
   }, [project.id, role]);
   useEffect(() => {
+    if (!running) return;
+    setClock(Date.now());
     const t = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [running]);
   useEffect(() => {
     try {
       localStorage.setItem(key + ":draft:" + selected, draft);

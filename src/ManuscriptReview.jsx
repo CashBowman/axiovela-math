@@ -2,7 +2,7 @@ import {
   readingDocument,
   webMarkdown,
 } from "../shared/reading-annotations.mjs";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { Preview } from "./ui.jsx";
@@ -38,11 +38,11 @@ export default function ManuscriptReview({
   const reading = target ? readingDocument(project, target) : null;
   const source = reading ? reading.source : project[format],
     revision = reading ? reading.revision : project.bibliography,
-    comments = (project.manuscriptComments || []).filter((c) =>
+    comments = useMemo(() => (project.manuscriptComments || []).filter((c) =>
       target
         ? c.target?.kind === target.kind && c.target?.id === target.id
         : !c.target && c.format === format,
-    ),
+    ), [project.manuscriptComments, target?.kind, target?.id, format]),
     stale =
       !target &&
       format === "latex" &&
@@ -79,7 +79,7 @@ export default function ManuscriptReview({
         draft?.focusFeedback ||
         window.getSelection()?.isCollapsed
       )
-        input.current?.focus();
+        input.current?.focus({ preventScroll: true });
     }
   }, [!!draft, editingId]);
   useEffect(() => {
@@ -113,22 +113,22 @@ export default function ManuscriptReview({
     previousFocus.current?.isConnected &&
       previousFocus.current.focus({ preventScroll: true });
   }
-  function capture(anchor) {
+  function capture(anchor, rect) {
     if (stale || !hash) return;
     if (!captured) window.dispatchEvent(new Event("math-dismiss-feedback"));
     setComment("");
     setNotice("");
     setDraft(anchor);
     setEditingId(null);
-    setPosition(capturePosition || null);
+    setPosition(rect || capturePosition || null);
   }
-  function edit(id) {
+  function edit(id, rect) {
     const c = comments.find((c) => c.id === id);
     if (!c) return;
     setDraft(null);
     setEditingId(id);
     setComment(c.comment);
-    setPosition(null);
+    setPosition(rect || capturePosition || null);
   }
   function add(e) {
     e.preventDefault();
@@ -170,7 +170,7 @@ export default function ManuscriptReview({
     if (hit) onLine(hit.line);
     else setNotice("This PDF location has no manuscript source mapping.");
   }
-  const annotations =
+  const annotations = useMemo(() =>
     annotating && !stale
       ? comments
           .filter(
@@ -183,20 +183,28 @@ export default function ManuscriptReview({
             ...c,
             number: comments.findIndex((x) => x.id === c.id) + 1,
           }))
-      : [];
-  const annotation = {
+      : [], [annotating, stale, comments, hash]);
+  const handlers = useRef();
+  handlers.current = {capture, edit};
+  const annotation = useMemo(() => ({
     annotating: annotating && !stale,
     annotations,
     draft,
-    onCapture: capture,
-    onSelect: edit,
+    onCapture: (...args) => handlers.current.capture(...args),
+    onSelect: (...args) => handlers.current.edit(...args),
     onDraftRect: (r) =>
       setPosition((old) =>
         old && Math.abs(old.left - r.left) < 1 && Math.abs(old.top - r.top) < 1
           ? old
           : r,
       ),
-  };
+  }), [annotating, stale, annotations, draft]);
+  const imageUrl = useCallback((src) =>
+    target?.kind === "paper" && /^https?:\/\//i.test(src || "")
+      ? `/api/library/image?project=${project.id}&source=${target.id}&url=${encodeURIComponent(src)}`
+      : src?.startsWith("assets/")
+        ? `/api/writeup-image?project=${project.id}&path=${encodeURIComponent(src)}`
+        : null, [target?.kind, target?.id, project.id]);
   const shown = editingId ? comments.find((c) => c.id === editingId) : null;
   const style = position
     ? {
@@ -206,7 +214,7 @@ export default function ManuscriptReview({
           Math.min(innerHeight - 300, position.top + position.height + 10),
         ),
       }
-    : { right: 20, bottom: 20 };
+    : { right: 20, bottom: 20, ...(draft && !captured ? { visibility: "hidden" } : {}) };
   return (
     <div
       className={
@@ -250,13 +258,7 @@ export default function ManuscriptReview({
                   bibliography={project.bibliography}
                   onSourceLine={onLine}
                   sourceLocations
-                  imageUrl={(src) =>
-                    target?.kind === "paper" && /^https?:\/\//i.test(src || "")
-                      ? `/api/library/image?project=${project.id}&source=${target.id}&url=${encodeURIComponent(src)}`
-                      : src?.startsWith("assets/")
-                        ? `/api/writeup-image?project=${project.id}&path=${encodeURIComponent(src)}`
-                        : null
-                  }
+                  imageUrl={imageUrl}
                 />
               </AnnotationSurface>
             </div>

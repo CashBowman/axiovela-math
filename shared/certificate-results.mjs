@@ -128,38 +128,50 @@ export function certificateOutline(results, links = [], manuscript = {}) {
 export function resultCheckState(result, data) {
   if (!result?.formal)
     return {
-      label: "Not formalized",
+      label: "Not started",
       tone: "muted",
       detail: "No formal declaration is linked to this result yet.",
     };
+  if (data.running)
+    return {label: "Checking proofs", tone: "muted", detail: "Lean is checking the saved project and linked theorems."};
   if (!data.sourceHash)
     return {
-      label: "Source missing",
+      label: "Proof not saved",
       tone: "attention",
       detail:
-        "A declaration mapping is saved, but the Lean entry file has not been saved.",
+        "A formalization plan exists, but its Lean entry file is missing. Ask the Math Assistant to save the Lean proof files.",
     };
   if (!result.formal.declarations?.length)
     return {
-      label: "Mapping incomplete",
+      label: "Theorem not linked",
       tone: "attention",
       detail:
-        "Name the formal declarations corresponding to this result before reviewing its certificate.",
+        "The plan does not name the Lean theorems or definitions for this result. Ask the Math Assistant to link this result to its saved Lean declarations.",
     };
   if (data.stale)
     return {
-      label: "Needs recheck",
+      label: "Recheck needed",
       tone: "attention",
       detail:
         "The saved formalization has changed since the last project check.",
     };
   const record = data.records?.[0];
+  if (record?.status === "build-passed" && record.declarationChecks?.length) {
+    const checks = result.formal.declarations.map(name => record.declarationChecks.find(c => c.name === name));
+    if (checks.every(c => c?.status === 'checked')) return {
+      label: 'Proofs verified', tone: 'build',
+      detail: 'Lean found each linked theorem and its proof uses only standard Lean axioms, with no unfinished proofs in its dependencies. Lean checks the formal statements. The assistant separately assesses their match to your mathematical claim.',
+    };
+    const statuses = checks.map(c => c?.status);
+    return {label: statuses.includes('incomplete') ? 'Proof incomplete' : statuses.includes('extra-axioms') ? 'Uses extra assumptions' : statuses.includes('missing') ? 'Theorem not found' : statuses.includes('not-a-theorem') ? 'Linked item is not a theorem' : 'Proof check incomplete', tone: 'attention',
+      detail: 'The file compiled, but the named theorem checks did not all pass. Ask the Math Assistant to repair the formalization; details are shown below.'};
+  }
   if (record?.status === "build-passed")
     return {
-      label: "Project build passed",
-      tone: "build",
+      label: "Proof checks pending",
+      tone: "muted",
       detail:
-        "The project entry file compiled. This result’s declaration mapping, axioms, dependencies and statement correspondence still require review.",
+        "Lean accepted the saved entry file, but this older check did not audit the linked theorems. Run Lean check to check their proofs and transitive axioms automatically. The assistant assesses whether the statements match your claim.",
     };
   if (
     record &&
@@ -172,12 +184,12 @@ export function resultCheckState(result, data) {
     ].includes(record.status)
   )
     return {
-      label: record.status.replaceAll("-", " "),
+      label: leanCheckLabel(record.status),
       tone: "attention",
       detail: record.message || "Review the project check below.",
     };
   return {
-    label: "Awaiting check",
+    label: "Proof checks pending",
     tone: "muted",
     detail:
       "Formal source is saved. No passing build is recorded for the current project revision.",
@@ -192,4 +204,29 @@ export function certificateProgress(results, data) {
     ).length,
     certified: 0,
   };
+}
+
+// Human-readable labels also cover historical verifier records without rewriting them.
+export function leanCheckLabel(status) {
+  return ({
+    'build-passed': 'Compilation passed',
+    'build-failed': 'Check failed',
+    'tool-unavailable': 'Checker unavailable',
+    'timed-out': 'Check timed out',
+    canceled: 'Check stopped',
+    stale: 'Recheck needed',
+    preflight: 'Proof checks pending',
+    'not-configured': 'Not started',
+  })[status] || status?.replaceAll('-', ' ') || 'Not checked';
+}
+export function leanItemLabel(label) {
+  return ({
+    'Admission preflight': 'Unfinished proofs and added axioms',
+    'Statement correspondence': 'Does the Lean statement match your result?',
+    'Pinned Lean toolchain': 'Fixed Lean version',
+    'Locked dependencies': 'Fixed library versions',
+  })[label] || label;
+}
+export function leanItemStatus(status) {
+  return ({present: 'Found', clear: 'No obvious issues found', attention: 'Needs attention', missing: 'Missing', 'review-required': 'Assistant assessment'})[status] || status?.replaceAll('-', ' ');
 }

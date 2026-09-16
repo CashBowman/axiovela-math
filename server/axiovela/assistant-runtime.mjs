@@ -213,8 +213,19 @@ export async function runAssistant(options) {
       let thread;
       try { thread = await rpc.request(sessionId ? 'thread/resume' : 'thread/start', {...options, ...(sessionId ? {threadId: sessionId} : {ephemeral: false})}); }
       catch (error) {
-        await recoverArchive(error, sessionId);
-        thread = await rpc.request('thread/resume', {...options, threadId: sessionId});
+        if (sessionId && /\bthread\b.*\balready has an active writer\b/i.test(error.message) && !signal.aborted) {
+          // A different client owns the original. Preserve its history and writer;
+          // only fork a rejected resume, never replay a submitted turn.
+          try {
+            thread = await rpc.request('thread/fork', {...options, threadId: sessionId, ephemeral: false, deferGoalContinuation: true});
+          } catch (cause) {
+            throw new Error('Codex has this conversation open in another session. Axiovela could not copy its saved history. Close that conversation in Codex and retry. Your chat and files are preserved. ' + cause.message);
+          }
+          onEvent({kind: 'connection', label: 'Conversation was open in another Codex session. Continuing from a copy of its saved history; the original session is unchanged.', status: 'complete'});
+        } else {
+          await recoverArchive(error, sessionId);
+          thread = await rpc.request('thread/resume', {...options, threadId: sessionId});
+        }
       }
       threadId = thread.thread.id;
       await onSession(threadId);

@@ -92,3 +92,22 @@ test('concurrent first loads and conversation creation retain both histories',as
  assert.notEqual(a.id,b.id);assert.equal((await chats.load(s.activeProjectId)).length,2);
  const reopened=new Chats(projects,store);assert.equal((await reopened.load(s.activeProjectId)).length,2);
 }));
+
+test('a writer-locked resume copies history once, preserves permissions and resumes the copy next time',async()=>fixture(async cwd=>{
+ process.env.WORKBENCH_CODEX_PATH=path.resolve('scripts/fixtures/assistant-rpc.mjs');
+ let sessionId;const events=[];
+ const options={selection:{adapterId:'codex',modelId:'test-model',effort:'high'},mode:'ask',cwd,prompt:'FIXTURE_STATE',signal:new AbortController().signal,...callbacks,onSession:id=>{sessionId=id;},onEvent:e=>events.push(e)};
+ await runAssistant(options);
+ const originalId=sessionId,file=path.join(cwd,`.fixture-${sessionId}.json`);
+ const original={...JSON.parse(await fs.readFile(file,'utf8')),writerLocked:true};
+ await fs.writeFile(file,JSON.stringify(original));
+ const result=JSON.parse(await runAssistant({...options,sessionId}));
+ assert.notEqual(sessionId,originalId);assert.equal(result.forkedFrom,originalId);assert.equal(result.turns,2);
+ assert.equal(result.sandbox,'read-only');assert.equal(result.approvalPolicy,'never');assert.equal(result.effort,'high');
+ assert.deepEqual(JSON.parse(await fs.readFile(file,'utf8')),original);
+ assert.ok(events.some(e=>e.label.includes('copy of its saved history')));
+ const copyId=sessionId;const next=JSON.parse(await runAssistant({...options,sessionId}));assert.equal(sessionId,copyId);assert.equal(next.turns,3);
+ await fs.writeFile(file,JSON.stringify({...original,forkFails:true}));
+ await assert.rejects(runAssistant({...options,sessionId:originalId}),/Your chat and files are preserved/);
+ assert.equal(sessionId,copyId);
+}));

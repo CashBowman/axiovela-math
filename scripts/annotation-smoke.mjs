@@ -154,8 +154,27 @@ try {
       (await state()).projects.find((p) => p.id === id).markdown === source,
   );
 
+  await page.evaluate(() => {
+    window.firstAnnotationPosition = null;
+    const observer = new MutationObserver(() => {
+      const popup = document.querySelector('.annotationPopover');
+      if (popup && getComputedStyle(popup).visibility !== 'hidden') {
+        window.firstAnnotationPosition = {left: popup.style.left, top: popup.style.top, right: popup.style.right};
+        observer.disconnect();
+      }
+    });
+    observer.observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['style']});
+  });
   await selectText(page.locator(".paperPreview p").first(), "explains");
   const popover = page.getByRole("dialog", { name: "Add annotation" });
+  await popover.waitFor();
+  const initialPosition = await page.evaluate(() => window.firstAnnotationPosition);
+  assert.ok(initialPosition?.left && initialPosition?.top, 'First visible annotation is already positioned at its passage');
+  assert.equal(initialPosition.right, '');
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  assert.equal(await popover.evaluate(e => e.style.left), initialPosition.left);
+  assert.equal(await popover.evaluate(e => e.style.top), initialPosition.top);
+  checks.push('annotation opens at its passage on the first visible frame without a corner jump');
   assert.equal(await popover.locator("blockquote").count(), 0);
   assert.equal(await popover.getByRole("button", {name: "Copy passage"}).count(), 0);
   assert.equal(await popover.getByText(/Enter adds|Shift\+Enter/).count(), 0);

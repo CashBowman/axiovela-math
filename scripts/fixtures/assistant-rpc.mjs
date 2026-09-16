@@ -15,8 +15,14 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   try {
     if (method === 'model/list') result = {data: [{id: 'test-model', model: 'test-model', displayName: 'Test model', isDefault: true, supportedReasoningEfforts: [{reasoningEffort: 'low'}, {reasoningEffort: 'high'}], defaultReasoningEffort: 'low'}, {id: 'second-model', model: 'second-model', displayName: 'Second model', supportedReasoningEfforts: [{reasoningEffort: 'low'}], defaultReasoningEffort: 'low'}], nextCursor: null};
     if (method === 'config/read') result = {config: {model: 'test-model', model_reasoning_effort: 'low', privateToken: 'NEVER-EXPOSE-FIXTURE'}};
-    if (method === 'thread/start' || method === 'thread/resume') {
-      session = method === 'thread/resume' ? JSON.parse(await readFile(store(p.threadId), 'utf8')) : {id: randomUUID(), turns: 0};
+    if (method === 'thread/start' || method === 'thread/resume' || method === 'thread/fork') {
+      session = method !== 'thread/start' ? JSON.parse(await readFile(store(p.threadId), 'utf8')) : {id: randomUUID(), turns: 0};
+      if (method === 'thread/resume' && session.writerLocked) throw new Error(`thread ${session.id} already has an active writer`);
+      if (method === 'thread/fork') {
+        if (session.forkFails) throw new Error('Fixture fork unavailable');
+        if (p.deferGoalContinuation !== true) throw new Error('Automatic goal continuation must be deferred');
+        session = {...session, id: randomUUID(), forkedFrom: session.id, writerLocked: false};
+      }
       if (session.archived) throw new Error(`session ${session.id} is archived. Run codex unarchive first.`);
       Object.assign(session, {model: p.model, effort: p.config?.model_reasoning_effort, sandbox: p.sandbox, approvalPolicy: p.approvalPolicy, approvalsReviewer: p.approvalsReviewer});
       // A started session must survive cancellation before its first turn.

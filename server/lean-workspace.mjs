@@ -3,6 +3,8 @@ import path from "node:path";
 import os from "node:os";
 import { createHash } from "node:crypto";
 import { projectFile } from "./axiovela/assistant-api.mjs";
+import {auditLean} from "./lean-audit.mjs";
+import {runCommand} from "./checks.mjs";
 import { inspectLean } from "./checks.mjs";
 import { LeanSetup } from "./lean-setup.mjs";
 
@@ -209,6 +211,15 @@ export class LeanWorkspace {
         lake: await lakeLocation(),
         save: false,
       });
+      if (record.status === 'build-passed') {
+        record.declarationChecks = await auditLean(root, before.plan, {
+          lake: await lakeLocation(), signal: controller.signal,
+        }, runCommand);
+        const checks = record.declarationChecks;
+        record.message = checks.length
+          ? `Entry file compiled. ${checks.filter(c => c.status === 'checked').length} of ${checks.length} linked theorems passed the proof and axiom checks. Statement matching is assessed separately by the assistant.`
+          : 'Entry file compiled. No theorem names are linked yet; ask the assistant to link the intended results so their proofs can be checked.';
+      }
       record.snapshotHash = before.snapshotHash;
       if ((await leanSnapshot(root)).snapshotHash !== before.snapshotHash) {
         record.status = "stale";
@@ -230,7 +241,7 @@ export class LeanWorkspace {
   async afterTurn(id, before, mode, signal) {
     const after = await this.snapshot(id);
     if (!after.snapshotHash || after.snapshotHash === before) return null;
-    return this.check(id, mode === "full" && !signal?.aborted, signal);
+    return this.check(id, !signal?.aborted && (mode === "full" || (mode === "auto" && !!(await lakeLocation()))), signal);
   }
   async saveDraft(id, conversation, turnId) {
     if (this.saving.has(id) || this.active.has(id))

@@ -35,3 +35,13 @@ test('full-access change performs a real checker process; missing tools and forg
  await fs.writeFile(path.join(root,'certificates/certificate.json'),JSON.stringify({title:'Forged success',status:'verified',formalCertificate:true}));snap=await lean.read(id);assert.equal(snap.plan.formalCertificate,undefined);assert.equal(snap.stale,true);
  process.env.AXIOVELA_LAKE_PATH=path.join(dir,'missing');assert.equal((await lean.check(id,true)).status,'tool-unavailable');
 }));
+
+test('project editing automatically checks saved theorems; read-only changes only inspect files',()=>fixture(async({dir,id,lean,root})=>{
+ const executable=path.join(dir,'lake-fixture');
+ await fs.writeFile(executable,`#!${process.execPath}\nconst fs=require('fs');const file=process.argv[4];if(file!=='Main.lean'){const text=fs.readFileSync(file,'utf8');const marker=text.match(/AXIOVELA_AUDIT_[a-f0-9]+:/)[0];console.log(marker+JSON.stringify({name:'target',kind:'theorem',type:'True',axioms:[]}));}\n`,{mode:0o755});
+ process.env.AXIOVELA_LAKE_PATH=executable;
+ await fs.mkdir(path.join(root,'certificates'),{recursive:true});
+ for(const [name,text] of Object.entries({'Main.lean':'theorem target : True := by trivial','lean-toolchain':'leanprover/lean4:v4.19.0','lake-manifest.json':'{}','certificate.json':JSON.stringify({declarations:['target']})}))await fs.writeFile(path.join(root,'certificates',name),text);
+ const readOnly=await lean.afterTurn(id,null,'ask');assert.equal(readOnly.status,'preflight');assert.equal(readOnly.declarationChecks,undefined);
+ const editing=await lean.afterTurn(id,null,'auto');assert.equal(editing.status,'build-passed');assert.equal(editing.declarationChecks[0].status,'checked');assert.equal(editing.formalCertificate,false);
+}));

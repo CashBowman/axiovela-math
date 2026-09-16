@@ -8,6 +8,9 @@ import {
   certificateOutline,
   resultCheckState,
   certificateProgress,
+  leanCheckLabel,
+  leanItemLabel,
+  leanItemStatus,
 } from "../shared/certificate-results.mjs";
 export default function LeanWorkspace({
   project,
@@ -114,7 +117,7 @@ export default function LeanWorkspace({
       results.find((r) => r.ref === selectedRef) ||
       results.find((r) => r.mainResult) ||
       results[0],
-    state = selected ? resultCheckState(selected, data) : null,
+    state = selected ? resultCheckState(selected, { ...data, running: checking || data.running }) : null,
     progress = certificateProgress(results, data),
     related = (project.links || []).filter(
       (l) => l.from === selected?.ref || l.to === selected?.ref,
@@ -136,8 +139,8 @@ export default function LeanWorkspace({
           </strong>
           <span>{progress.linked} linked to formal source</span>
           <small>
-            No complete certificates issued. A project build alone does not
-            certify a result.
+            Lean checks the saved proofs and their axioms. Matching the formal
+            statements to your claims is assessed separately by the assistant.
           </small>
         </div>
         {!results.length && (
@@ -155,7 +158,7 @@ export default function LeanWorkspace({
         )}
         <div className="resultCards" aria-label="Research results">
           {results.map((r, index) => {
-            const status = resultCheckState(r, data);
+            const status = resultCheckState(r, { ...data, running: checking || data.running });
             return (
               <React.Fragment key={r.ref}>
                 {(index === 0 || results[index - 1].section !== r.section) && (
@@ -181,7 +184,7 @@ export default function LeanWorkspace({
                   )}
                   {r.circular && (
                     <span className="resultPrerequisites">
-                      Dependency order needs review
+                      Circular dependencies
                     </span>
                   )}
                   <span className={"resultState " + status.tone}>
@@ -242,7 +245,7 @@ export default function LeanWorkspace({
             <p className="hint">{state.detail}</p>
             {selected.formal?.declarations?.length > 0 && (
               <>
-                <h4>Linked declarations</h4>
+                <h4>Linked Lean theorems and definitions</h4>
                 {selected.formal.declarations.map((n) => (
                   <p className="declarationName" key={n}>
                     {n}
@@ -250,9 +253,15 @@ export default function LeanWorkspace({
                 ))}
               </>
             )}
+            {!data.stale && current?.status === 'build-passed' && current.declarationChecks?.filter(c => selected.formal?.declarations?.includes(c.name)).map(c => (
+              <div className="checkRow" key={c.name}>
+                {c.status === 'checked' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                <div><strong>{c.name}</strong><p>{({checked: 'Proof verified; only standard Lean axioms used.', incomplete: 'An unfinished proof (sorry) occurs in this theorem or a dependency.', 'extra-axioms': 'Additional axioms are used: ' + (c.axioms || []).join(', '), missing: 'This declaration was not found in the saved entry file.', 'not-a-theorem': 'This declaration is not a theorem.', 'invalid-name': 'The saved declaration name cannot be checked.'})[c.status] || c.detail || 'Declaration check unavailable.'}</p></div>
+              </div>
+            ))}
             {selected.formal?.scopeNotes && (
               <>
-                <h4>Statement correspondence</h4>
+                <h4>Assistant assessment of statement matching</h4>
                 <Preview source={selected.formal.scopeNotes} lean />
               </>
             )}
@@ -263,7 +272,7 @@ export default function LeanWorkspace({
                     <h4>
                       {field === "assumptions"
                         ? "Assumptions"
-                        : "Remaining obligations"}
+                        : "What still needs to be checked"}
                     </h4>
                     {selected.formal[field].map((x, i) => (
                       <Preview key={i} source={x} lean />
@@ -349,7 +358,7 @@ export default function LeanWorkspace({
               </>
             )}
           </div>
-          {data.setup && (
+          {data.setup && !(current?.status === "build-passed" && !data.stale && data.lakeAvailable) && (
             <div className="notice leanSetup">
               {data.setup.state === "ready" ? (
                 <CheckCircle2 size={17} />
@@ -428,8 +437,8 @@ export default function LeanWorkspace({
             </button>
           </div>
           <p className="hint">
-            Checks use saved source. Full access also allows the assistant to
-            run checks.
+            Saved proofs are checked automatically after assistant edits when
+            Lean is available. Read-only chats do not run checks.
           </p>
           {error && (
             <p className="inlineError" role="alert">
@@ -446,7 +455,7 @@ export default function LeanWorkspace({
           (data.sourceHash || current.status !== "not-configured") ? (
             <>
               <h3 className="checkHeading">
-                {current.status.replaceAll("-", " ")}
+                {leanCheckLabel(current.status)}
               </h3>
               <p>{current.message}</p>
               {current.checks.map((c, i) => (
@@ -457,10 +466,10 @@ export default function LeanWorkspace({
                     <AlertCircle size={18} />
                   )}
                   <div>
-                    <strong>{c.label}</strong>
-                    <p>{c.detail}</p>
+                    <strong>{leanItemLabel(c.label)}</strong>
+                    <p>{c.label === "Statement correspondence" ? "The assistant compares the formal statement with your claim. Lean checks the encoded statement; it cannot guarantee the natural-language translation." : c.detail}</p>
                   </div>
-                  <span className="badge">{c.status.replaceAll("-", " ")}</span>
+                  <span className="badge">{leanItemStatus(c.status)}</span>
                 </div>
               ))}
               <p className="hint">
@@ -476,7 +485,7 @@ export default function LeanWorkspace({
             {data.records.map((r) => (
               <div className="historyRow" key={r.id}>
                 <span>{new Date(r.checkedAt).toLocaleString()}</span>
-                <span>{r.status.replaceAll("-", " ")}</span>
+                <span>{leanCheckLabel(r.status)}</span>
               </div>
             ))}
           </details>

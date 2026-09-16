@@ -140,30 +140,47 @@ export function bookmark(input) {
     addedAt: new Date().toISOString(),
   };
 }
-async function pdfTitle(file) {
+export function pdfMetadataTitle(output) {
+  return readableTitle(output.match(/^Title:[ \t]*([^\r\n]*)$/m)?.[1]?.trim());
+}
+export async function pdfTitle(file) {
   try {
     const { stdout } = await execute("pdfinfo", [file], {
       timeout: 5000,
       maxBuffer: 128000,
     });
-    const title = stdout.match(/^Title:\s+(.+)$/m)?.[1]?.trim();
+    const title = pdfMetadataTitle(stdout);
     if (readableTitle(title)) return { title, titleOrigin: "PDF metadata" };
   } catch {}
   try {
     const { stdout } = await execute(
       "pdftotext",
-      ["-f", "1", "-l", "1", "-layout", file, "-"],
+      ["-f", "1", "-l", "1", "-raw", file, "-"],
       { timeout: 5000, maxBuffer: 256000 },
     );
-    const title = stdout
-      .split("\n")
-      .map((s) => s.trim())
-      .find(
-        (s) =>
-          s.length > 12 &&
-          s.length < 200 &&
-          !/^(arxiv:|https?:|\d|submitted|published|preprint)/i.test(s),
-      );
+    const lines = stdout.split("\n").map(s => s.trim());
+    const index = lines.findIndex(s => readableTitle(s) && s.length > 12 && s.length < 200 &&
+      !/^(arxiv:|https?:|\d|submitted|published|preprint|proceedings|journal|physical review|copyright)/i.test(s));
+    let title = lines[index] || '';
+    // Small-cap conference titles often span multiple consecutive uppercase lines.
+    for (let i = index + 1; index >= 0 && i < Math.min(index + 4, lines.length); i++) {
+      if (!/^[A-Z][A-Z\s\-–—,:()]+$/.test(title) || !/^[A-Z][A-Z\s\-–—,:()]+$/.test(lines[i]) || /^(ABSTRACT|INTRODUCTION)$/.test(lines[i])) break;
+      title += ' ' + lines[i];
+    }
+    if (title && title !== title.toUpperCase()) {
+      const {stdout: layout} = await execute('pdftotext', ['-f', '1', '-l', '1', '-layout', file, '-'], {timeout: 5000, maxBuffer: 256000});
+      const rows = layout.split('\n').map(s => s.trim());
+      const compact = s => s.replace(/\s/g, '');
+      const start = rows.findIndex(s => compact(s) === compact(title));
+      if (start >= 0) {
+        const block = [rows[start]];
+        for (let i = start + 1; i < Math.min(start + 4, rows.length) && rows[i]; i++) {
+          if (/[@*†‡]|\d|^(abstract|introduction|department|university)\b/i.test(rows[i])) break;
+          block.push(rows[i]);
+        }
+        title = block.join(' ');
+      }
+    }
     if (readableTitle(title)) return { title, titleOrigin: "first-page text" };
   } catch {}
   return {};
@@ -308,6 +325,8 @@ export async function discoverSources(
       ...(await pdfTitle(file)),
       contentHash: createHash("sha256").update(bytes).digest("hex"),
       sourceType: "pdf",
+      contentVersion: CONTENT_VERSION,
+      capturedAt: new Date().toISOString(),
       localPath: file,
       originalName: entry.name,
       notes: "",
@@ -343,9 +362,9 @@ export async function discoverSources(
   // Start bounded enrichment jobs without holding document refresh or a chat open.
   for (const p of found.values())
     if (
-      p.sourceUrl &&
-      p.sourceType === "web" &&
-      p.contentVersion !== CONTENT_VERSION
+      (p.sourceType === "web" ? p.sourceUrl : true) &&
+      (p.contentVersion !== CONTENT_VERSION ||
+        (p.previewError && Date.now() - Date.parse(p.capturedAt || 0) > 300000))
     )
       scheduleImport(p, data, fetcher);
   const result = [];
@@ -353,8 +372,8 @@ export async function discoverSources(
     const ready = imports.get(data + "\0" + p.id)?.result;
     if (
       ready &&
-      (p.contentVersion !== ready.contentVersion ||
-        p.capturedAt !== ready.capturedAt)
+      (ready.contentVersion > (p.contentVersion || 0) ||
+        (ready.contentVersion === p.contentVersion && Date.parse(ready.capturedAt) > Date.parse(p.capturedAt || 0)))
     )
       result.push({ ...p, ...ready, id: p.id, discovered: p.discovered });
     else if (!project.papers.some((x) => x.id === p.id)) result.push(p);
@@ -367,13 +386,23 @@ let importing = 0;
 function scheduleImport(p, data, fetcher) {
   const key = data + "\0" + p.id,
     previous = imports.get(key);
-  if (previous && (previous.result || Date.now() - previous.at < 300000))
+  if (previous && (Date.now() - previous.at < 300000 || (previous.result && !previous.result.previewError)))
     return;
   const job = { at: Date.now() };
   imports.set(key, job);
   waiting.push(async () => {
-    const { paper } = await importSource(p.sourceUrl, data, fetcher, p.id);
-    job.result = paper;
+    if (p.sourceType === 'web') {
+      const { paper } = await importSource(p.sourceUrl, data, fetcher, p.id);
+      job.result = paper;
+    } else {
+      const file = path.join(data, 'papers', (p.pdfId || p.id) + '.pdf');
+      const bytes = await fs.readFile(file);
+      const metadata = await pdfTitle(file);
+      job.result = {...p, ...(!p.titleEdited && !readableTitle(p.title) ? metadata : {}),
+        title: p.titleEdited || readableTitle(p.title) ? p.title : metadata.title || 'PDF title unavailable',
+        contentHash: createHash('sha256').update(bytes).digest('hex'),
+        contentVersion: CONTENT_VERSION, capturedAt: new Date().toISOString()};
+    }
   });
   drainImports();
 }

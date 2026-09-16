@@ -16,6 +16,7 @@ export function textProjection(root) {
         : NodeFilter.FILTER_ACCEPT;
     },
   });
+  const isPdf = root.classList.contains("textLayer") || !!root.querySelector(".textLayer");
   let node;
   while ((node = walker.nextNode())) {
     const block =
@@ -24,8 +25,7 @@ export function textProjection(root) {
       ) || root;
     if (previousBlock && previousBlock !== block && !/\s$/.test(text))
       text +=
-        root.classList.contains("textLayer") ||
-        !!root.querySelector(".textLayer")
+        isPdf
           ? "\n"
           : "\n\n";
     entries.push({
@@ -64,8 +64,8 @@ function offset(projection, node, at) {
   const inside = projection.entries.filter((e) => node.contains?.(e.node));
   return inside.at(-1)?.end;
 }
-export function capturePassage(root, event, { exact = false } = {}) {
-  const projection = textProjection(root);
+export function capturePassage(root, event, { exact = false, projection: existingProjection } = {}) {
+  const projection = existingProjection || textProjection(root);
   if (!projection.text.trim()) return null;
   const selection = window.getSelection();
   let range = selection?.rangeCount ? selection.getRangeAt(0) : null;

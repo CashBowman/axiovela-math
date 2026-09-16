@@ -10,7 +10,7 @@ Axiovela Math keeps your sources, mathematical arguments, formal checks, and wri
 
 The mathematics companion to [Axiovela](https://github.com/CashBowman/axiovela), built around the same research and writing workflow.
 
-**Private development.** This repository and its downloads require access. Linux x64 is validated; Windows and macOS builds are in development. A public product release has not been approved.
+**Private development.** This repository and its downloads require access. Linux x64 is validated; Windows and macOS preview downloads are available with native acceptance still pending. A public product release has not been approved.
 
 ## Keep research moving in parallel
 
@@ -36,36 +36,38 @@ Use **Projects** beside the tabs to reopen saved work, pin folders, or inspect e
 
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Connect Codex, Claude Code, Gemini CLI, OpenCode, Pi, or a supported API connection. [Connections and first session →](docs/getting-started.md)
 
-The current source version, **0.1.15-dev.2**, includes project search and pinning, explained project connections, manuscript-linked result numbering, compact passage feedback, and background proof-attempt memory. The ledger uses local retrieval without extra model calls. It requires saved assistant checkpoints, does not backfill older chats, and does not certify mathematical outcomes or guarantee that a route will never be repeated. No extra panel or Library source is added.
+Version **0.1.15-beta.1** adds automatic checks of linked Lean proofs and their axioms, clearer progress labels, repaired PDF titles and source deduplication, smoother annotation placement, and more responsive typing in long mathematical conversations. It also preserves project navigation, manuscript result numbering, and background proof-attempt memory. [Release notes →](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.15-beta.1)
 
 ## Start with the desktop app
 
-The desktop app includes its runtime and Tectonic for LaTeX rendering. You do not need Node.js or npm to run a packaged app. Repository access is required to download the current private Linux release.
+**Download 0.1.15-beta.1 · Private preview**
 
-**Linux · Validated x64 release**
+The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node.js and npm are not required. Sign in to GitHub with repository access to download. All builds were produced locally; no GitHub build jobs were used.
 
-The private download below is the earlier **0.1.13** release. To use the features in **0.1.15-dev.2**, run the current source or install a locally built package; newer development installers have not been uploaded to GitHub.
+**Windows · x64 installer**
 
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.13/Axiovela-Math-0.1.13-linux-x64.AppImage"><img src="docs/assets/downloads/linux.svg" alt="Download Axiovela Math 0.1.13 for Linux: 64-bit AppImage" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-win32-x64-unsigned.exe"><img src="docs/assets/downloads/windows.svg" alt="Download Windows x64 unsigned preview installer" width="320" height="88" /></a>
 
-[Linux x64 · portable archive](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.13/Axiovela-Math-0.1.13-linux-x64.tar.gz) · [Release notes and checksums](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.13)
+[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-win32-x64-unsigned.zip). Cross-built on Linux; unsigned and not yet launch-tested on Windows.
 
-**Windows · Private development build**
+**macOS · Development app bundles**
 
-<a href="docs/desktop-platforms.md#build-commands"><img src="docs/assets/downloads/windows.svg" alt="Windows x64: local installer build instructions" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-darwin-arm64-unsigned.zip"><img src="docs/assets/downloads/mac-arm.svg" alt="Download Mac Apple silicon unsigned development app ZIP" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-darwin-x64-unsigned.zip"><img src="docs/assets/downloads/mac-intel.svg" alt="Download Mac Intel unsigned development app ZIP" width="320" height="88" /></a>
 
-**macOS · Private development builds**
+These are cross-built, unsigned app ZIPs for development, not finished Mac installers. Native signing, notarization, DMGs, and launch testing require a Mac and remain pending. [Mac build instructions →](docs/desktop-platforms.md#build-commands)
 
-<a href="docs/desktop-platforms.md#build-commands"><img src="docs/assets/downloads/mac-arm.svg" alt="Mac with Apple silicon: local build instructions" width="320" height="88" /></a>
-<a href="docs/desktop-platforms.md#build-commands"><img src="docs/assets/downloads/mac-intel.svg" alt="Mac with Intel processor: local build instructions" width="320" height="88" /></a>
+**Linux · Validated x64 packages**
 
-Windows and Mac buttons open the local build guide. The current development outputs are an unsigned Windows x64 installer and unsigned Mac app bundles; they have not been uploaded as downloads. Native Windows/Mac acceptance remains pending. Mac DMG creation and signing require a Mac. [Build status and platform requirements →](docs/desktop-platforms.md)
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-linux-x64.AppImage"><img src="docs/assets/downloads/linux.svg" alt="Download Linux x64 AppImage" width="320" height="88" /></a>
 
-[Installation and first session](docs/getting-started.md) · [Local packaging](docs/desktop-platforms.md) · [Update details](docs/updates.md)
+[Linux x64 · portable archive](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-linux-x64.tar.gz) · [Release notes and SHA-256 checksums](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.15-beta.1)
+
+[Installation and first session](docs/getting-started.md) · [Platform status and local packaging](docs/desktop-platforms.md) · [Update details](docs/updates.md)
 
 First LaTeX rendering may download TeX resources. On Linux, **Lean Certificates → Set up Lean** installs the compiler and project libraries, then runs a small installation test. Allow internet access and several GB for mathlib. Lean setup on Windows and Mac is currently manual.
 
-New development builds explain private distribution in **Help → Check for updates**. The earlier 0.1.13 Linux download predates this change; obtain updates directly from the project owner while the repository is private. Installation remains manual, and projects and app data stay separate from application files.
+**Help → Check for updates** explains private distribution; it does not authenticate to GitHub or fetch private downloads. Obtain updates from the release page. Close the app before installing an update; projects and app data remain separate from application files.
 
 ## Prefer to run from source?
 
@@ -85,7 +87,7 @@ For the browser development view, run `npm run dev` and open **http://127.0.0.1:
 ## Keep the mathematics under your control
 
 - **Evidence first.** Sources, imported observations, proposed results, and proofs retain their own status. Experimental measurements do not become mathematical proofs.
-- **Checks with clear limits.** A successful Lean entry-file build is not a whole-claim certificate. Statement correspondence, assumptions, dependencies, and axioms still need review. The [math harness](docs/math-harness.md) guides models and records execution; it is not a newly trained model or a guarantee of correctness.
+- **Checks with clear limits.** A successful Lean entry-file build is not a whole-claim certificate. Linked theorems are checked for unfinished proofs and extra axioms. The assistant assesses whether the formal statements match the mathematical claims; Lean does not certify that translation. The [math harness](docs/math-harness.md) guides models and records execution; it is not a newly trained model or a guarantee of correctness.
 - **Portable work.** Projects use ordinary files. Markdown and LaTeX drafts remain independent, with reversible backups for source changes.
 - **Your provider.** AI connections use your account and may transmit selected project context or incur charges. Full access permits commands on your computer. Direct API connections do not automatically include web browsing.
 - **Your data.** Projects and conversations stay on your computer. **File → Open app data folder** locates the desktop profile; back it up along with separately stored project folders. Desktop API keys require OS encryption; CLI sign-in remains with the provider. Browser previews use a separate, ignored `.workspace/` directory by default.

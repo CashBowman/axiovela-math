@@ -149,3 +149,38 @@ test("generic source bibliography stays minimal and duplicate imports preserve n
   patch.papers[0].notes = "My interpretation";
   assert.deepEqual(addLibrarySources(patch, [web]), {});
 });
+
+test('PDF metadata labels are never publication titles and URL tracking does not create duplicates', async () => {
+ const {readableTitle}=await import('../server/article-content.mjs');
+ const {addLibrarySources}=await import('../shared/library.mjs');
+ assert.equal(readableTitle('Subject:'),'');assert.equal(readableTitle('Title: Subject:'),'');
+ const original={papers:[{id:'first',title:'A useful source',sourceUrl:'https://example.org/paper?utm_source=chat',notes:'keep notes',read:true}],bibliography:''};
+ const patch=addLibrarySources(original,[{id:'second',title:'A useful source',sourceUrl:'https://example.org/paper',notes:'extra notes'}]);
+ assert.equal(patch.papers.length,1);assert.match(patch.papers[0].notes,/keep notes/);assert.match(patch.papers[0].notes,/extra notes/);assert.equal(patch.papers[0].read,true);
+});
+test('enrichment bridges a saved URL and duplicate PDF without losing links or the PDF', async () => {
+ const {addLibrarySources}=await import('../shared/library.mjs');
+ const original={papers:[{id:'web',title:'Source from example.org',sourceType:'web',sourceUrl:'https://example.org/a',notes:'web notes'},{id:'pdf',title:'Subject:',sourceType:'pdf',contentHash:'same-bytes',notes:'PDF notes'}],links:[{from:'paper:pdf',to:'idea:x',type:'uses'}],bibliography:''};
+ const patch=addLibrarySources(original,[{id:'web',title:'The actual title of a mathematical paper',sourceType:'pdf',contentHash:'same-bytes',contentVersion:4,capturedAt:'now'}]);
+ assert.equal(patch.papers.length,1);assert.equal(patch.papers[0].title,'The actual title of a mathematical paper');assert.match(patch.papers[0].notes,/PDF notes/);assert.equal(patch.links[0].from,'paper:web');assert.ok(patch.sourceMergeHistory.length);
+});
+
+test('empty PDF Title field cannot consume the following Subject field', async () => {
+ const {pdfMetadataTitle}=await import('../server/library-sources.mjs');
+ assert.equal(pdfMetadataTitle('Title:          \nSubject:        \nAuthor: Name'), '');
+ assert.equal(pdfMetadataTitle('Title: Real paper title\r\nSubject: topic'), 'Real paper title');
+});
+
+test('background source metadata cannot replace a newer manual refresh', async () => {
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'library-refresh-order-')),data=path.join(root,'data');
+ try {
+  const p=bookmark('https://example.org/background-order');
+  const fetcher=async()=>({type:'text/html',bytes:Buffer.from('<html><head><title>A real background article</title></head><body><article><p>Saved background text.</p></article></body></html>')});
+  await discoverSources(root,data,{papers:[p]},[],fetcher);
+  let enriched;
+  for(let i=0;i<50&&!enriched;i++){await new Promise(r=>setTimeout(r,10));enriched=(await discoverSources(root,data,{papers:[p]},[],fetcher))[0];}
+  assert.ok(enriched);
+  const newer={...enriched,text:'Newer manually refreshed content',capturedAt:new Date(Date.now()+60000).toISOString()};
+  assert.deepEqual(await discoverSources(root,data,{papers:[newer]},[],fetcher),[]);
+ } finally {await fs.rm(root,{recursive:true,force:true});}
+});
