@@ -243,16 +243,12 @@ try {
     await page.evaluate(() => navigator.clipboard.readText()),
     "geometric assumptions",
   );
-  await page.getByRole("button", { name: "Copy passage", exact: true }).click();
-  assert.equal(
-    await page.evaluate(() => navigator.clipboard.readText()),
-    "The geometric assumptions need careful justification.",
-  );
+  assert.equal(await page.getByRole("button", { name: "Copy passage", exact: true }).count(),0);
   await page.getByLabel("Annotation feedback").focus();
   await page.keyboard.press("Control+v");
   assert.equal(
     await page.getByLabel("Annotation feedback").inputValue(),
-    "The geometric assumptions need careful justification.",
+    "geometric assumptions",
   );
   await page.getByLabel("Annotation feedback").fill("A canceled thought.");
   await page

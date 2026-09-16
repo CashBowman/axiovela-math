@@ -142,8 +142,9 @@ try {
   const point = await hit.evaluate((el) => {
     const svg = el.ownerSVGElement,
       p = svg.createSVGPoint();
-    p.x = (el.x1.baseVal.value + el.x2.baseVal.value) / 2;
-    p.y = (el.y1.baseVal.value + el.y2.baseVal.value) / 2;
+    const midpoint=el.getPointAtLength(el.getTotalLength()/2);
+    p.x = midpoint.x;
+    p.y = midpoint.y;
     const q = p.matrixTransform(el.getScreenCTM());
     return { x: q.x, y: q.y };
   });
@@ -159,14 +160,14 @@ try {
     .getByRole("heading", { name: "Main additive identity", exact: true })
     .waitFor();
   assert.equal(await page.locator(".resultCard").count(), 2);
-  assert.match(await page.locator(".resultCard").first().innerText(), /Lemma 1/);
-  assert.match(await page.locator(".resultCard").last().innerText(), /Builds on Lemma 1/);
-  await page.getByRole("region", {name: "Selected result"}).getByRole("button", {name: "Lemma 1",exact:true}).click();
+  assert.match(await page.locator(".resultCard").first().innerText(), /Lemma/);
+  assert.match(await page.locator(".resultCard").last().innerText(), /Builds on Lemma/);
+  await page.getByRole("region", {name: "Selected result"}).getByRole("button", {name: "Lemma",exact:true}).click();
   await page.getByRole("heading", {name: "Supporting identity", exact:true}).waitFor();
-  await page.getByRole("button", {name: /Theorem 1 Main result Main additive identity/}).click();
+  await page.getByRole("button", {name: /Theorem Main result Main additive identity/}).click();
   await page.getByText("fixture_add_zero", { exact: true }).first().waitFor();
   await page
-    .getByRole("button", { name: /Lemma 1 Supporting identity Not formalized/ })
+    .getByRole("button", { name: /Lemma Supporting identity Not formalized/ })
     .click();
   await page
     .getByRole("heading", { name: "Supporting identity", exact: true })
@@ -176,7 +177,7 @@ try {
     /No formal declaration is linked/,
   );
   await page
-    .getByRole("button", { name: /Theorem 1 Main result Main additive identity/ })
+    .getByRole("button", { name: /Theorem Main result Main additive identity/ })
     .click();
   await page.screenshot({ path: ".local/qa/result-certificates.png" });
   checks.push(
@@ -260,6 +261,31 @@ try {
   checks.push(
     "real PDF fullscreen chrome below 100px; narrow-window controls; page retained through tab changes",
   );
+  await page.getByRole("button", {name:"Restore paper reader"}).click();
+  await page.getByRole("button", {name:"Write-up",exact:true}).click();
+  await page.getByLabel("Manuscript source").fill("## 3. Results\n### Lemma 3.1: Supporting identity\n<!-- axiovela-result: idea:helper -->\nA supporting result.\n### Theorem 3.2: Main additive identity\n<!-- axiovela-result: idea:zero -->\nA proposed conclusion.");
+  await page.getByRole("button", {name:"Lean Certificates",exact:true}).click();
+  await page.locator(".resultCard").filter({hasText:"Theorem 3.2"}).waitFor();
+  assert.match(await page.locator(".resultCard").first().innerText(),/Lemma 3.1/);
+  await page.screenshot({path:".local/qa/manuscript-numbering-markdown.png"});
+  await page.getByRole("button", {name:"Write-up",exact:true}).click();
+  await page.getByRole("button", {name:/^LaTeX/}).first().click();
+  await page.getByLabel("Manuscript source").fill(String.raw`\documentclass{article}
+\usepackage{amsthm}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\begin{document}
+\setcounter{section}{2}
+\section{Results}
+\begin{lemma}[Supporting identity]\label{idea:helper}A supporting result.\end{lemma}
+\begin{theorem}[Main additive identity]\label{idea:zero}A proposed conclusion.\end{theorem}
+\end{document}`);
+  await until(async()=> (await api("/api/manuscript-labels?project="+id)).labels?.["idea:zero"]==="3.2");
+  await page.getByRole("button", {name:"Lean Certificates",exact:true}).click();
+  await page.locator(".resultCard").filter({hasText:"Theorem 3.2"}).waitFor();
+  assert.match(await page.locator(".resultCard").first().innerText(),/Lemma 3.1/);
+  await page.screenshot({path:".local/qa/manuscript-numbering-latex.png"});
+  checks.push("Markdown manuscript anchors and actual Tectonic auxiliary labels give identical section-based result numbers with stable certificate mappings");
   assert.deepEqual(errors, []);
   await fs.writeFile(
     ".local/result-workspace-validation.json",

@@ -12,6 +12,8 @@ import {
 export default function LeanWorkspace({
   project,
   resetKey,
+  manuscriptFormat = "markdown",
+  renderedManuscript,
   beforeSend,
   onArtifact,
 }) {
@@ -84,7 +86,30 @@ export default function LeanWorkspace({
     current = data.records[0],
     plan = data.plan;
 
-  const results = certificateOutline(certificateResults(project, data), project.links),
+  const [compiled, setCompiled] = useState({});
+  useEffect(() => {
+    let canceled = false;
+    if (manuscriptFormat === "latex")
+      request("/api/manuscript-labels?project=" + project.id)
+        .then((value) => {
+          if (!canceled) setCompiled(value);
+        })
+        .catch(() => {
+          if (!canceled) setCompiled({});
+        });
+    return () => {
+      canceled = true;
+    };
+  }, [project.id, project.latex, manuscriptFormat, data.sourceHash]);
+  const results = certificateOutline(
+      certificateResults(project, data),
+      project.links,
+      {
+        source: project[manuscriptFormat],
+        format: manuscriptFormat,
+        compiled: renderedManuscript || compiled,
+      },
+    ),
     selected =
       results.find((r) => r.ref === selectedRef) ||
       results.find((r) => r.mainResult) ||
@@ -121,30 +146,49 @@ export default function LeanWorkspace({
             theorems and lemmas appear here automatically.
           </p>
         )}
-        {!!results.length && <p className="resultOutlineHint">Argument outline · supporting results first</p>}
+        {!!results.length && (
+          <p className="resultOutlineHint">
+            {manuscriptFormat === "latex"
+              ? "LaTeX manuscript order"
+              : "Markdown manuscript order"}
+          </p>
+        )}
         <div className="resultCards" aria-label="Research results">
-          {results.map((r) => {
+          {results.map((r, index) => {
             const status = resultCheckState(r, data);
             return (
-              <button
-                key={r.ref}
-                className="resultCard"
-                aria-pressed={selected?.ref === r.ref}
-                onClick={() => setSelectedRef(r.ref)}
-              >
-                <span className="resultCardMeta">
-                  <span>{r.label}</span>
-                  {r.mainResult && (
-                    <span className="mainResultTag">Main result</span>
+              <React.Fragment key={r.ref}>
+                {(index === 0 || results[index - 1].section !== r.section) && (
+                  <h3 className="resultSection">{r.section}</h3>
+                )}
+                <button
+                  key={r.ref}
+                  className="resultCard"
+                  aria-pressed={selected?.ref === r.ref}
+                  onClick={() => setSelectedRef(r.ref)}
+                >
+                  <span className="resultCardMeta">
+                    <span>{r.label}</span>
+                    {r.mainResult && (
+                      <span className="mainResultTag">Main result</span>
+                    )}
+                  </span>
+                  <strong>{r.displayTitle}</strong>
+                  {!!r.prerequisites.length && (
+                    <span className="resultPrerequisites">
+                      Builds on {r.prerequisites.map(label).join(", ")}
+                    </span>
                   )}
-                </span>
-                <strong>{r.displayTitle}</strong>
-                {!!r.prerequisites.length && <span className="resultPrerequisites">Builds on {r.prerequisites.map(label).join(", ")}</span>}
-                {r.circular && <span className="resultPrerequisites">Dependency order needs review</span>}
-                <span className={"resultState " + status.tone}>
-                  {status.label}
-                </span>
-              </button>
+                  {r.circular && (
+                    <span className="resultPrerequisites">
+                      Dependency order needs review
+                    </span>
+                  )}
+                  <span className={"resultState " + status.tone}>
+                    {status.label}
+                  </span>
+                </button>
+              </React.Fragment>
             );
           })}
         </div>
@@ -174,8 +218,25 @@ export default function LeanWorkspace({
               )}
             </div>
             <h3>{selected.displayTitle}</h3>
-            {!!selected.prerequisites.length && <div className="resultOutlineLinks" aria-label="Supporting results"><span>Builds on</span>{selected.prerequisites.map(ref => <button key={ref} onClick={() => setSelectedRef(ref)}>{label(ref)}</button>)}</div>}
-            {selected.circular && <p className="hint">A circular connection prevents a complete dependency order. Review the proposed links below.</p>}
+            {!!selected.prerequisites.length && (
+              <div
+                className="resultOutlineLinks"
+                aria-label="Supporting results"
+              >
+                <span>Builds on</span>
+                {selected.prerequisites.map((ref) => (
+                  <button key={ref} onClick={() => setSelectedRef(ref)}>
+                    {label(ref)}
+                  </button>
+                ))}
+              </div>
+            )}
+            {selected.circular && (
+              <p className="hint">
+                A circular connection prevents a complete dependency order.
+                Review the proposed links below.
+              </p>
+            )}
             <Preview source={selected.statement} lean />
             <p className={"resultState " + state.tone}>{state.label}</p>
             <p className="hint">{state.detail}</p>
@@ -311,33 +372,44 @@ export default function LeanWorkspace({
                     : data.setup.message ||
                       "Install the compiler and project libraries, then test setup. Requires internet and several GB for mathlib."}
                 </p>
-                {data.setup.state !== "ready" && data.setup.automaticSetup !== false && (
-                  <button disabled={busy} onClick={setup}>
-                    {data.setup.busy
-                      ? "Setup in progress…"
-                      : ["failed", "interrupted", "needs-setup"].includes(
-                            data.setup.state,
-                          )
-                        ? "Retry Lean setup"
-                        : "Set up Lean"}
-                  </button>
-                )}
-                {setupMessage && <p role="status">{setupMessage}</p>}
-                {data.setup.automaticSetup === false && <a href="https://lean-lang.org/install/" target="_blank" rel="noreferrer">Lean installation guide</a>}
-                {data.setup.command && <details>
-                  <summary>Setup details and terminal command</summary>
-                  <p>
-                    Existing formal source and dependency versions are
-                    preserved. Setup may run the project’s Lake configuration to
-                    fetch and check its libraries. Close the setup terminal to
-                    stop; retry resumes installed downloads.
-                  </p>
-                  <button onClick={copySetup}>Copy setup command</button>
-                  <code>{data.setup.command}</code>
-                  {data.setup.log && (
-                    <pre className="setupLog">{data.setup.log}</pre>
+                {data.setup.state !== "ready" &&
+                  data.setup.automaticSetup !== false && (
+                    <button disabled={busy} onClick={setup}>
+                      {data.setup.busy
+                        ? "Setup in progress…"
+                        : ["failed", "interrupted", "needs-setup"].includes(
+                              data.setup.state,
+                            )
+                          ? "Retry Lean setup"
+                          : "Set up Lean"}
+                    </button>
                   )}
-                </details>}
+                {setupMessage && <p role="status">{setupMessage}</p>}
+                {data.setup.automaticSetup === false && (
+                  <a
+                    href="https://lean-lang.org/install/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Lean installation guide
+                  </a>
+                )}
+                {data.setup.command && (
+                  <details>
+                    <summary>Setup details and terminal command</summary>
+                    <p>
+                      Existing formal source and dependency versions are
+                      preserved. Setup may run the project’s Lake configuration
+                      to fetch and check its libraries. Close the setup terminal
+                      to stop; retry resumes installed downloads.
+                    </p>
+                    <button onClick={copySetup}>Copy setup command</button>
+                    <code>{data.setup.command}</code>
+                    {data.setup.log && (
+                      <pre className="setupLog">{data.setup.log}</pre>
+                    )}
+                  </details>
+                )}
               </div>
             </div>
           )}

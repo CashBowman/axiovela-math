@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   forceSimulation,
   forceManyBody,
@@ -8,6 +8,8 @@ import {
 } from "d3-force";
 import { Preview } from "./ui.jsx";
 const colors = {
+  project: "#497e85",
+  experiment: "#8a789d",
   paper: "#4d7898",
   web: "#668878",
   claim: "#b48b43",
@@ -37,7 +39,7 @@ function NodeShape({ kind, r = 12, ...props }) {
         {...props}
       />
     );
-  if (kind === "evidence")
+  if (kind === "evidence" || kind === "experiment")
     return <polygon points={`0,${-r} ${r},${r} ${-r},${r}`} {...props} />;
   if (kind === "proof" || kind === "web")
     return (
@@ -59,14 +61,17 @@ export default function ConnectionsGraph({
   onSelect,
   onAsk,
   context,
+  catalog = false,
+  edgeActions,
 }) {
+  const arrowId = useId();
   const root = useRef(),
     drag = useRef();
   const [size, setSize] = useState({ width: 600, height: 500 }),
     [view, setView] = useState({ x: 0, y: 0, k: 1 }),
     [hover, setHover] = useState(""),
     [edgeId, setEdgeId] = useState(null),
-    [local, setLocal] = useState(false),
+    [local, setLocal] = useState(catalog),
     [moved, setMoved] = useState({});
   useEffect(() => {
     const el = root.current,
@@ -124,6 +129,21 @@ export default function ConnectionsGraph({
     );
   }, [signature, size.width, size.height]);
   useEffect(() => setMoved({}), [signature, size.width, size.height]);
+  const offsets = useMemo(() => {
+    const groups = new Map(),
+      values = {};
+    for (const link of links) {
+      const key = [link.from, link.to].sort().join("|");
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(link);
+    }
+    for (const group of groups.values())
+      group.forEach((l, i) => {
+        values[l.id] =
+          (i - (group.length - 1) / 2) * 55 * (l.from < l.to ? 1 : -1);
+      });
+    return values;
+  }, [links]);
   const point = (id) => moved[id] || positions[id];
   const focus = hover || selected,
     neighbors = new Set([
@@ -148,7 +168,7 @@ export default function ConnectionsGraph({
       <div className="graphToolbar">
         <div className="formatSwitch">
           <button aria-pressed={!local} onClick={() => setLocal(false)}>
-            All sources
+            {catalog ? "Overview" : "All sources"}
           </button>
           <button
             aria-pressed={local}
@@ -249,7 +269,7 @@ export default function ConnectionsGraph({
         >
           <defs>
             <marker
-              id="connection-arrow"
+              id={arrowId}
               viewBox="0 0 10 10"
               refX="9"
               refY="5"
@@ -277,6 +297,11 @@ export default function ConnectionsGraph({
                         y2: b.y - ((b.y - a.y) / length) * 21,
                       }
                     : {};
+              const offset = offsets[l.id] || 0;
+              const curve =
+                a && b
+                  ? `M ${line.x1} ${line.y1} Q ${(a.x + b.x) / 2 - ((b.y - a.y) / length) * offset} ${(a.y + b.y) / 2 + ((b.x - a.x) / length) * offset} ${line.x2} ${line.y2}`
+                  : "";
               return a && b ? (
                 <g
                   key={l.id}
@@ -295,20 +320,32 @@ export default function ConnectionsGraph({
                     }
                   }}
                 >
-                  <line
-                    {...line}
+                  <path
+                    d={curve}
+                    fill="none"
                     stroke="transparent"
                     strokeWidth={24}
                     vectorEffect="non-scaling-stroke"
                     className="edgeHit"
                   />
-                  <line
-                    {...line}
-                    markerEnd="url(#connection-arrow)"
+                  <path
+                    d={curve}
+                    fill="none"
+                    markerEnd={
+                      l.type === "shares sources with"
+                        ? undefined
+                        : `url(#${arrowId})`
+                    }
                     strokeDasharray={
                       l.type === "contradicts" ? "5 4" : undefined
                     }
-                    stroke={edgeId === l.id ? "var(--ink)" : "var(--blue)"}
+                    stroke={
+                      edgeId === l.id
+                        ? "var(--ink)"
+                        : l.manual
+                          ? "var(--gold-text)"
+                          : "var(--blue)"
+                    }
                     strokeWidth={
                       edgeId === l.id
                         ? 3
@@ -403,6 +440,12 @@ export default function ConnectionsGraph({
       </div>
       <div className="graphLegend">
         {[
+          ...(catalog
+            ? [
+                ["project", "Projects"],
+                ["experiment", "Experiments"],
+              ]
+            : []),
           ["paper", "Papers"],
           ["web", "Web pages"],
           ["claim", "Claims"],
@@ -410,20 +453,34 @@ export default function ConnectionsGraph({
           ["lemma", "Lemmas"],
           ["proof", "Proofs"],
           ["evidence", "Experiments"],
-        ].map(([k, label]) => (
-          <span key={k}>
-            <svg
-              width="22"
-              height="22"
-              viewBox="-15 -15 30 30"
-              aria-hidden="true"
-            >
-              <NodeShape kind={k} fill={colors[k]} />
-            </svg>
-            {label}
-          </span>
-        ))}
+        ]
+          .filter(([k]) => !catalog || items.some((i) => i.kind === k))
+          .map(([k, label]) => (
+            <span key={k}>
+              <svg
+                width="22"
+                height="22"
+                viewBox="-15 -15 30 30"
+                aria-hidden="true"
+              >
+                <NodeShape kind={k} fill={colors[k]} />
+              </svg>
+              {label}
+            </span>
+          ))}
       </div>
+      {catalog && (
+        <div className="graphLegend">
+          <span className="edgeLegend">
+            <i aria-hidden="true" />
+            Recorded or exact match
+          </span>
+          <span className="edgeLegend manual">
+            <i aria-hidden="true" />
+            User connection
+          </span>
+        </div>
+      )}
       {selectedEdge ? (
         <section
           className="connectionDetail"
@@ -433,7 +490,13 @@ export default function ConnectionsGraph({
             <strong>Connection</strong>
             <button
               aria-label="Close connection explanation"
-              onClick={() => setEdgeId(null)}
+              onClick={() => {
+                const el = [
+                  ...root.current.querySelectorAll("[data-edge]"),
+                ].find((el) => el.dataset.edge === edgeId);
+                setEdgeId(null);
+                el?.focus();
+              }}
             >
               ×
             </button>
@@ -442,7 +505,10 @@ export default function ConnectionsGraph({
             <button onClick={() => selectNode(selectedEdge.from)}>
               {items.find((x) => x.key === selectedEdge.from)?.label}
             </button>
-            <strong>{selectedEdge.type} →</strong>
+            <strong>
+              {selectedEdge.type}{" "}
+              {selectedEdge.type === "shares sources with" ? "↔" : "→"}
+            </strong>
             <button onClick={() => selectNode(selectedEdge.to)}>
               {items.find((x) => x.key === selectedEdge.to)?.label}
             </button>
@@ -450,19 +516,35 @@ export default function ConnectionsGraph({
           <Preview
             prose
             source={
+              selectedEdge.description ||
               selectedEdge.reason ||
               "No explanation recorded. Ask the Math Assistant to examine this relationship."
             }
           />
+          {selectedEdge.location && (
+            <p className="hint">Recorded location: {selectedEdge.location}</p>
+          )}
+          {selectedEdge.evidence?.length > 0 && (
+            <ul>
+              {selectedEdge.evidence.map((e, i) => (
+                <li key={i}>{e}</li>
+              ))}
+            </ul>
+          )}
+          {edgeActions?.(selectedEdge)}
           <p className="hint">
             {selectedEdge.origin === "assistant"
               ? "Assistant interpretation"
-              : "Recorded relationship"}{" "}
+              : selectedEdge.origin || "Recorded relationship"}{" "}
             · Requires evidence and scope review; not a certificate.
           </p>
         </section>
       ) : (
-        <details className="graphInspector" key={selected}>
+        <details
+          className="graphInspector"
+          key={selected}
+          open={catalog ? !!selected : undefined}
+        >
           <summary>
             Selected item ·{" "}
             {items.find((x) => x.key === selected)?.label || "Choose a node"}
@@ -470,12 +552,14 @@ export default function ConnectionsGraph({
           {context}
         </details>
       )}
-      <div className="graphAssistant">
-        <button onClick={onAsk}>
-          Ask Math Assistant to update connections
-        </button>
-        <small>Adds a draft message for you to send.</small>
-      </div>
+      {!catalog && (
+        <div className="graphAssistant">
+          <button onClick={onAsk}>
+            Ask Math Assistant to update connections
+          </button>
+          <small>Adds a draft message for you to send.</small>
+        </div>
+      )}
       <details className="graphRelationships">
         <summary>Relationships · {links.length}</summary>
         <p className="hint">
@@ -494,17 +578,19 @@ export default function ConnectionsGraph({
               {l.type}
             </button>{" "}
             {items.find((x) => x.key === l.to)?.label}
-            {l.reason && (
+            {(l.description || l.reason) && (
               <small className="connectionReason">
-                Assistant interpretation: {l.reason}
+                {l.origin || "Recorded interpretation"}:{" "}
+                {l.description || l.reason}
               </small>
             )}
           </p>
         ))}
         {!links.length && (
           <p>
-            Ask the Math Assistant to connect the sources as it develops the
-            argument.
+            {catalog
+              ? "Add an explained connection or import the same source into both libraries."
+              : "Ask the Math Assistant to connect the sources as it develops the argument."}
           </p>
         )}
       </details>

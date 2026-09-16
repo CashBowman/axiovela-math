@@ -1,3 +1,4 @@
+import ProjectNavigator from "./ProjectNavigator.jsx";
 import WorkspaceFeedback from "./WorkspaceFeedback.jsx";
 import { mergeSourceConnections } from "../shared/source-connections.mjs";
 import { addLibrarySources } from "../shared/library.mjs";
@@ -84,11 +85,29 @@ function App() {
       setDirty(true);
     }
   }
-  function openProject(id) {
+  async function openProject(id, runId) {
+    try {
+      await catalogApi("/api/project-catalog", {
+        method: "POST",
+        body: JSON.stringify({ action: "open", id }),
+      });
+    } catch (e) {
+      setError(e.message);
+      throw e;
+    }
     setClosedProjects((ids) => ids.filter((x) => x !== id));
     setState((s) => ({ ...s, activeProjectId: id }));
     setDirty(true);
     setModal("");
+    if (runId) {
+      setSourceRequest({
+        kind: "evidence",
+        id: runId,
+        projectId: id,
+        at: Date.now(),
+      });
+      setTab("Library");
+    }
   }
   const [initialFormat, setInitialFormat] = useState(defaultWriteupFormat),
     [editAnnotation, setEditAnnotation] = useState(null);
@@ -321,7 +340,8 @@ function App() {
         .catch((e) => setError(e.message));
       try {
         setFormat(
-          localStorage.getItem("axiovela-math-format:" + project.id) ||
+          project.manuscriptFormat ||
+            localStorage.getItem("axiovela-math-format:" + project.id) ||
             defaultWriteupFormat(),
         );
       } catch {}
@@ -531,7 +551,40 @@ function App() {
     );
     return () => clearTimeout(timer);
   }, [state, dirty]);
+  const catalogFlight = useRef(null);
+  async function catalogApi(url, options) {
+    if (!options?.method) return request(url);
+    await save();
+    const job = request(url, {
+      ...options,
+      body: JSON.stringify({
+        ...JSON.parse(options.body),
+        revision: latest.current.revision,
+      }),
+    });
+    catalogFlight.current = job;
+    try {
+      const result = await job;
+      const next = {
+        ...latest.current,
+        revision: result.revision,
+        projectConnections: result.projectConnections,
+        projects: latest.current.projects.map((p) => {
+          const saved = result.projects.find((x) => x.id === p.id);
+          return saved
+            ? { ...p, navigation: saved.navigation, folder: saved.folder }
+            : p;
+        }),
+      };
+      latest.current = next;
+      setState(next);
+      return result;
+    } finally {
+      catalogFlight.current = null;
+    }
+  }
   async function saveWorkspace() {
+    if (catalogFlight.current) await catalogFlight.current;
     if (saveInFlight.current) {
       await saveInFlight.current;
       if (dirtyRef.current) return saveWorkspace();
@@ -596,6 +649,7 @@ function App() {
         addLibrarySources(p, [
           {
             id: data.id,
+            contentHash: data.contentHash,
             title: file.name.replace(/\.pdf$/i, ""),
             notes: "",
             citationKey: "",
@@ -721,6 +775,7 @@ function App() {
     );
   }
   function changeFormat(f) {
+    update({ manuscriptFormat: f });
     setEditAnnotation(null);
     setFormat(f);
     localStorage.setItem("axiovela-math-format:" + project.id, f);
@@ -1054,6 +1109,18 @@ function App() {
             Axiovela <span>Math</span>
           </strong>
         </div>
+        <ProjectNavigator
+          current={project.id}
+          tabs={state.projects.filter((p) => !closedProjects.includes(p.id))}
+          busy={busy}
+          api={catalogApi}
+          onBrowse={() => {
+            setName("");
+            setError("");
+            setModal("new-project");
+          }}
+          onOpen={openProject}
+        />
         <div className="projectTabs" aria-label="Projects">
           {state.projects
             .filter((p) => !closedProjects.includes(p.id))
@@ -1064,7 +1131,12 @@ function App() {
                   "projectTab " + (project.id === p.id ? "active" : "")
                 }
               >
-                <button onClick={() => openProject(p.id)}>{p.name}</button>
+                <button
+                  title={p.folder || p.name}
+                  onClick={safe(() => openProject(p.id))}
+                >
+                  {p.name}
+                </button>
                 <button
                   className="tabClose"
                   aria-label={"Close " + p.name}
@@ -1237,6 +1309,8 @@ function App() {
             )}
             {tab === "Lean Certificates" && (
               <LeanWorkspace
+                manuscriptFormat={format}
+                renderedManuscript={pdf[project.id]}
                 key={project.id}
                 project={project}
                 resetKey={reset}
@@ -1383,7 +1457,7 @@ function App() {
               <h3>Recent projects</h3>
               <div className="projectPicker">
                 {state.projects.map((p) => (
-                  <button key={p.id} onClick={() => openProject(p.id)}>
+                  <button key={p.id} onClick={safe(() => openProject(p.id))}>
                     {p.name}
                     {closedProjects.includes(p.id) ? " · closed" : ""}
                   </button>

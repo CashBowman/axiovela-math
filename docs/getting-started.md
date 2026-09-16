@@ -55,3 +55,9 @@ Project PDFs saved into `papers/` and explicit web citations from saved assistan
 **Connections** shows a reference graph with typed colors, connected-node emphasis, pan/zoom and local connections. The graph follows the Library filter and includes every matching item. The relationship list provides exact labels. Edges are recorded relationships and experiment associations, not automatically inferred mathematical implications.
 
 Switching away from Library preserves its selected source, PDF canvas and reading position. Expanding the PDF reader fits it to the wider panel even after manual zoom. Markdown fullscreen uses a larger reading size and a limited text-column width.
+
+## Navigate projects and results
+
+**Projects** beside the tabs searches saved names, paths and questions. Pin frequently used projects or open **Connections & manage** to inspect shared sources and saved experiment membership. Add a manual connection with an explanation when the relationship needs your judgment. Missing folders can be relocated; removing an entry only hides it.
+
+Lean Certificates follows the chosen manuscript’s section order and stable result anchors. Markdown shows the paper’s visible heading numbers; LaTeX reads the actual compile labels. Results not included in the draft stay under **Working results**. [Numbering conventions and examples →](project-navigator.md#manuscript-result-numbering)

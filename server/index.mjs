@@ -11,6 +11,7 @@ import {fileURLToPath} from 'node:url';
 import {randomUUID,createHash} from 'node:crypto';
 import {Store} from './store.mjs';
 import os from 'node:os';
+import {ProjectCatalog} from './project-catalog.mjs';
 import {Projects} from './projects.mjs';
 import {ExperimentBridge} from './experiment-bridge.mjs';
 import {Chats} from './chat.mjs';
@@ -24,6 +25,7 @@ const data=path.resolve(process.env.AXIOVELA_MATH_DATA||path.join(root,'.workspa
 process.env.WORKBENCH_PROVIDER_SETTINGS_PATH ||= path.join(process.env.XDG_CONFIG_HOME||path.join(os.homedir(),'.config'),'axiovela-math','providers.json');
 const store=new Store(data);
 const projects=new Projects(data,store);await projects.init();
+const projectCatalog=new ProjectCatalog(store,projects);
 const bridge=new ExperimentBridge(data,projects,store);await bridge.init();
 const leanWorkspace=new LeanWorkspace(data,projects);
 const chats=new Chats(projects,store,bridge,leanWorkspace);
@@ -36,6 +38,8 @@ const server=http.createServer(async(req,res)=>{try{
   if(origin&&!new Set([`http://${host}:${port}`,`http://localhost:${port}`,'http://127.0.0.1:5174','http://localhost:5174']).has(origin))return json(res,403,{error:'Origin denied.'});
   const url=new URL(req.url,`http://${host}:${port}`);
   const bodyJson=async()=>JSON.parse((await readBody(req,8*1024*1024)).toString());
+  if(url.pathname==='/api/project-catalog'&&req.method==='GET')return json(res,200,await projectCatalog.snapshot({details:url.searchParams.get('graph')==='1'}));
+  if(url.pathname==='/api/project-catalog'&&req.method==='POST')return json(res,200,await projectCatalog.edit(await bodyJson()));
   if(url.pathname==='/api/activity'&&req.method==='GET')return json(res,200,{running:chats.controllers.size+leanWorkspace.active.size});
   if(url.pathname==='/api/projects/open'&&req.method==='POST')return json(res,200,await projects.openOrCreate(await bodyJson()));
   if(url.pathname==='/api/projects'&&req.method==='POST')return json(res,201,await projects.create(await bodyJson()));
@@ -79,7 +83,17 @@ const server=http.createServer(async(req,res)=>{try{
     if(chats.controllers.has(body.id)||chats.admissions.has(body.id))throw Error('Wait for this conversation to finish before saving its draft.');
     return json(res,200,await leanWorkspace.saveDraft(projectId,conversation,body.turnId));
   }
-  if(url.pathname==='/api/render'&&req.method==='POST'){const body=await bodyJson();return json(res,200,await compileLatex(await projects.root(projectId),body.source,body.bibliography));}
+  if(url.pathname==='/api/manuscript-labels'&&req.method==='GET'){
+    if(!/^[a-zA-Z0-9-]{1,64}$/.test(projectId||''))throw Error('Invalid project.');
+    try{return json(res,200,JSON.parse(await fs.readFile(path.join(data,'manuscript-labels',projectId+'.json'),'utf8')));}catch(e){if(e.code!=='ENOENT')throw e;return json(res,200,{});}
+  }
+  if(url.pathname==='/api/render'&&req.method==='POST'){
+    const body=await bodyJson(),result=await compileLatex(await projects.root(projectId),body.source,body.bibliography);
+    const dir=path.join(data,'manuscript-labels');await fs.mkdir(dir,{recursive:true});
+    const file=path.join(dir,projectId+'.json'),temporary=file+'.'+randomUUID()+'.tmp';
+    await fs.writeFile(temporary,JSON.stringify({source:body.source,labels:result.labels}),{mode:0o600});await fs.rename(temporary,file);
+    return json(res,200,result);
+  }
   if(url.pathname==='/api/rendered'&&req.method==='GET'){const id=url.searchParams.get('id');if(!/^[a-f0-9-]{36}$/.test(id))throw Error('Invalid document.');const file=await projectFile(await projects.root(projectId),`exports/${id}/main.pdf`);res.writeHead(200,{'Content-Type':'application/pdf'});return res.end(await fs.readFile(file));}
   if(url.pathname==='/api/state'&&req.method==='GET'){let state=await store.read();if(state.revision===0){try{state=await store.save(state,0);}catch(e){if(e.status!==409)throw e;state=await store.read();}}return json(res,200,state);}
   if(url.pathname==='/api/state'&&req.method==='PUT'){const value=JSON.parse((await readBody(req,8*1024*1024)).toString());return json(res,200,await store.save(value,Number(req.headers['if-match'])));}
@@ -102,7 +116,7 @@ const server=http.createServer(async(req,res)=>{try{
   }
   if(url.pathname==='/api/papers'&&req.method==='POST'){
     const body=await readBody(req);if(!body.subarray(0,5).equals(Buffer.from('%PDF-')))return json(res,400,{error:'A PDF file is required.'});
-    const id=randomUUID();await fs.mkdir(path.join(data,'papers'),{recursive:true});await fs.writeFile(path.join(data,'papers',id+'.pdf'),body,{flag:'wx'});return json(res,201,{id});
+    const id=randomUUID();await fs.mkdir(path.join(data,'papers'),{recursive:true});await fs.writeFile(path.join(data,'papers',id+'.pdf'),body,{flag:'wx'});return json(res,201,{id,contentHash:createHash('sha256').update(body).digest('hex')});
   }
   if(/^\/api\/papers\/[a-f0-9-]{36}\.pdf$/.test(url.pathname)&&req.method==='GET'){
     const body=await fs.readFile(path.join(data,'papers',path.basename(url.pathname)));res.writeHead(200,{'Content-Type':'application/pdf','Content-Disposition':'inline','X-Content-Type-Options':'nosniff','Content-Security-Policy':"sandbox; default-src 'none'"});return res.end(body);

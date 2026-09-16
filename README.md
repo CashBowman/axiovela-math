@@ -31,6 +31,8 @@ Consecutive turns within one conversation stay ordered. Provider limits and avai
 4. **Check.** Select a result in Lean Certificates to inspect its formalization and actual checker output. Keep conjectures, informal proofs, compiler success, and full certification distinct.
 5. **Write.** Develop independent Markdown and LaTeX drafts with citations, PDF previews, source navigation, and export. New projects start with empty drafts.
 
+Use **Projects** beside the tabs to reopen saved work, pin folders, or inspect explained connections between projects and imported experiments. The certificate outline follows the selected manuscript’s result numbers. [Projects and manuscript navigation →](docs/project-navigator.md)
+
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Connect Codex, Claude Code, Gemini CLI, OpenCode, Pi, or a supported API connection. [Connections and first session →](docs/getting-started.md)
 
 ## Start with the desktop app

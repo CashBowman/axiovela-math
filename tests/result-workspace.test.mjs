@@ -151,24 +151,17 @@ test("certificate outline orders supporting work, labels types, and preserves fo
   const input = certificateResults(project, {plan: {results: [{ref: "idea:main", declarations: ["main"]}]}});
   const links = [{from: "idea:main", to: "idea:helper", type: "depends on"}, {from: "paper:p", to: "idea:main", type: "supports"}];
   const outline = certificateOutline(input, links);
-  assert.deepEqual(outline.map(r => r.label), ["Claim 1", "Lemma 1", "Theorem 1"]);
+  assert.deepEqual(outline.map(r => r.label), ["Claim", "Lemma", "Theorem"]);
   assert.deepEqual(outline.at(-1).prerequisites, ["idea:helper"]);
   assert.equal(outline.at(-1).formal, input[1].formal);
   assert.deepEqual(certificateOutline(input).map(r => r.label).sort(), outline.map(r => r.label).sort());
   assert.equal(input[1].label, undefined);
 });
 
-test("existing manuscript numbering is preserved and fallback numbers avoid collisions", () => {
-  const input = [
-    {ref: "a", kind: "lemma", title: "First supporting fact"},
-    {ref: "b", kind: "lemma", title: "Lemma 1: Existing number"},
-    {ref: "c", kind: "theorem", title: "Proposition 3.1 — Terminal bound"},
-    {ref: "d", kind: "theorem", title: "Theorem 2.1 Continuity"},
-  ];
-  const outline = certificateOutline(input);
-  assert.deepEqual(outline.map(r => r.label), ["Lemma 2", "Lemma 1", "Proposition 3.1", "Theorem 2.1"]);
-  assert.equal(outline[2].displayTitle, "Terminal bound");
-  assert.equal(outline[2].title, input[2].title);
+test("legacy exact manuscript headings preserve existing numbers without numbering working results", () => {
+  const input = [{ref:"a",kind:"lemma",title:"First supporting fact"}, {ref:"c",kind:"theorem",title:"Proposition 3.1 — Terminal bound"}];
+  const outline=certificateOutline(input,[],{source:"## 3. Results\n### Proposition 3.1 — Terminal bound"});
+  assert.equal(outline[0].label,"Proposition 3.1");assert.equal(outline[0].displayTitle,"Terminal bound");assert.equal(outline[1].label,"Lemma");
 });
 
 test("cyclic and dangling connections never hide results or imply certification", () => {

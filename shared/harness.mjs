@@ -1,3 +1,4 @@
+import {manuscriptNumberingInstructions} from "./manuscript-results.mjs";
 import { promptRecipes } from "./research.mjs";
 
 const allowed = {
@@ -56,7 +57,7 @@ export function taskInstructions(role, task = "general") {
   const guidance = recipe
     ? `${recipe.title}: ${recipe.instruction}`
     : `Follow the user's request.\n\n${adaptiveGuidance}\n\nAvailable methods for this assistant (apply as needed, not as a mandatory sequence):\n\n${methods}`;
-  return `${guidance}\n\n${role === "research" || role === "lean" ? formalizationInstructions + "\n\n" + researchResultInstructions : ""}\n\nFor substantial research, preserve the original target and identify the decisive unresolved step. Use actual tool feedback to check progress. Separate numerical observations, exact witnesses, informal arguments and formal certificates. Save useful partial results and blockers before stopping. Do not start parallel workers without an explicit user request. No dollar ceiling is enforced by this prompt; never describe a suggested budget as a runtime guarantee. An audit in this conversation is a self-review, not independent validation. Suggest a fresh review of the frozen artifact when appropriate.`;
+  return `${guidance}\n\n${manuscriptNumberingInstructions}\n\n${role === "research" || role === "lean" ? formalizationInstructions + "\n\n" + researchResultInstructions : ""}\n\nFor substantial research, preserve the original target and identify the decisive unresolved step. Use actual tool feedback to check progress. Separate numerical observations, exact witnesses, informal arguments and formal certificates. Save useful partial results and blockers before stopping. Do not start parallel workers without an explicit user request. No dollar ceiling is enforced by this prompt; never describe a suggested budget as a runtime guarantee. An audit in this conversation is a self-review, not independent validation. Suggest a fresh review of the frozen artifact when appropriate.`;
 }
 
 export function libraryContext(project, context) {

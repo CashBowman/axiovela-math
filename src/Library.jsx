@@ -162,8 +162,8 @@ export default function Library({
     }
   }
   useEffect(() => {
-    if (sourceRequest) {
-      setSelected("paper:" + sourceRequest.id);
+    if (sourceRequest && (!sourceRequest.projectId || sourceRequest.projectId===project.id)) {
+      setSelected((sourceRequest.kind === "evidence" ? "evidence:" : "paper:") + sourceRequest.id);
       setView("reader");
       if (sourceRequest.annotationId) {
         setEditAnnotation({ id: sourceRequest.annotationId, at: Date.now() });

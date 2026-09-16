@@ -1,3 +1,4 @@
+import {ProjectCatalog} from "../server/project-catalog.mjs";
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -66,6 +67,13 @@ test('independent research, publication and project chats run concurrently; publ
   await chats.send('second',other.id,'FIXTURE_HANG');await chats.send(id,sibling.id,'FIXTURE_PROMPT');
   for(let n=0;n<100&&writing.turns.at(-1).status==='running';n++)await new Promise(r=>setTimeout(r,30));
   assert.equal(writing.turns.at(-1).status,'complete');assert.equal(first.turns.at(-1).status,'running');assert.equal(other.turns.at(-1).status,'running');
+  const catalog=new ProjectCatalog(store,projects),beforeThreads=JSON.stringify((await chats.load(id)).map(c=>({id:c.id,sessionId:c.sessionId,queue:c.queue})));
+  await catalog.snapshot({details:true});
+  await catalog.edit({action:'pin',id:'second',pinned:true,revision:(await store.read()).revision});
+  await catalog.edit({action:'link',from:'project:'+id,to:'project:second',type:'related-to',description:'An explicitly entered test relationship.',revision:(await store.read()).revision});
+  assert.equal(first.turns.at(-1).status,'running');assert.equal(other.turns.at(-1).status,'running');
+  assert.equal(JSON.stringify((await chats.load(id)).map(c=>({id:c.id,sessionId:c.sessionId,queue:c.queue}))),beforeThreads);
+
   const root=await projects.root(id);assert.match((await manuscriptSnapshot(root,'markdown')).text,/# Recovered complete paper/);
   await readResearchArtifacts(root);assert.match((await readResearchArtifacts(root)).markdown.text,/Recovered complete paper/);
   for(let n=0;n<100&&sibling.turns.at(-1).status==='running';n++)await new Promise(r=>setTimeout(r,30));

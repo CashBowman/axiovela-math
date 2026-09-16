@@ -74,3 +74,7 @@ Certificates presents selectable result cards and a central statement/status vie
 The reader uses a compact title/action row and PDF navigation row. Open original shares the title row; there is no redundant PAPER READER label or standalone link row. Fullscreen tests measure total chrome height (at most 100 CSS px at 1680×1050, below 115 at 1000×720) while retaining readable controls and the PDF's page position.
 
 `npm run test:results` checks fixture-authored result artifacts, lemma filtering, clickable/keyboard edge explanations, independent result states, annotation Enter/Shift+Enter/composition behavior, and real-PDF fullscreen geometry. Fixtures validate software behavior, not real model performance. Existing Lean and annotation suites remain required.
+
+## Project navigation and paper numbering
+
+See [Projects and manuscript navigation](project-navigator.md) for the revisioned catalog, exact-source graph rules, stable result anchors and local acceptance commands. Keep navigation overlays temporary, preserve underlying drafts and selection on dismissal, and reserve manuscript numbers for results actually linked to the chosen draft.

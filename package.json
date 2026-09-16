@@ -1,6 +1,6 @@
 {
   "name": "axiovela-math",
-  "version": "0.1.14-dev.2",
+  "version": "0.1.15-dev.1",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -37,7 +37,8 @@
     "desktop:package:windows": "npm run build && node scripts/package-desktop.mjs win32-x64",
     "desktop:package:mac": "npm run build && node scripts/package-desktop.mjs mac",
     "desktop:package:mac:intel": "npm run build && node scripts/package-desktop.mjs darwin-x64",
-    "desktop:package:windows:container": "bash scripts/package-windows-container.sh"
+    "desktop:package:windows:container": "bash scripts/package-windows-container.sh",
+    "test:projects": "node scripts/project-navigator-smoke.mjs"
   },
   "dependencies": {
     "@citation-js/core": "0.7.21",

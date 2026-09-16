@@ -10,11 +10,14 @@ export function validateState(s) {
     s.projects.length > 100
   )
     throw new Error("Expected 1–100 projects.");
+  if (s.projectConnections !== undefined && (!Array.isArray(s.projectConnections) || s.projectConnections.length>1000 || s.projectConnections.some(l=>!l || typeof l.id!=="string" || typeof l.from!=="string" || typeof l.to!=="string" || l.from===l.to || !["related-to","extends","supports","contradicts","uses","tests","motivates"].includes(l.type) || typeof l.description!=="string" || !l.description.trim() || l.description.length>4000))) throw Error("Invalid project connections.");
   const ids = new Set();
   for (const p of s.projects) {
     if (!/^[a-zA-Z0-9-]{1,64}$/.test(p.id) || ids.has(p.id))
       throw new Error("Invalid or duplicate project ID.");
     ids.add(p.id);
+    if (p.folder !== undefined && (typeof p.folder!=="string" || !path.isAbsolute(p.folder) || p.folder.includes("\0"))) throw Error("Invalid project folder.");
+    if (p.navigation !== undefined && (!p.navigation || typeof p.navigation!=="object" || Array.isArray(p.navigation) || (p.navigation.lastOpened!==undefined&&typeof p.navigation.lastOpened!=="string"))) throw Error("Invalid project navigation metadata.");
     for (const field of [
       "name",
       "question",

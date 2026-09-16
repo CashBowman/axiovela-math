@@ -31,3 +31,5 @@ docs/assets/*
 !docs/assets/downloads/
 docs/assets/downloads/*
 !docs/assets/downloads/*.svg
+
+!docs/project-navigator.md
