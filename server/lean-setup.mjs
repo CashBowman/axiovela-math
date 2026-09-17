@@ -5,12 +5,13 @@ import {createRequire} from 'node:module';
 import {projectFile} from './axiovela/assistant-api.mjs';
 const {leanSetupCommand,launchTerminal}=createRequire(import.meta.url)('../desktop/provider-setup.cjs');
 const stages={launching:'Opening setup terminal…',prerequisites:'Checking prerequisites…',installing:'Downloading Lean and Lake…',dependencies:'Preparing mathematical libraries…',checking:'Compiling the setup test…'};
+const automaticPlatform=()=>['linux','darwin'].includes(process.platform);
 export class LeanSetup {
  constructor(data,projects){this.data=data;this.projects=projects;this.launches=new Set();}
  directory(id){return path.join(this.data,'lean-setup',id);}
  async info(id){
   const root=await this.projects.root(id),directory=await projectFile(root,'certificates',true),statusDir=this.directory(id);
-  return {root,directory,statusDir,command:process.platform==='linux'?leanSetupCommand(directory,statusDir):null};
+  return {root,directory,statusDir,command:automaticPlatform()?leanSetupCommand(directory,statusDir):null};
  }
  async status(id){
   const {root,directory,statusDir,command}=await this.info(id);
@@ -41,10 +42,10 @@ export class LeanSetup {
    }catch{state='needs-setup';detail='The toolchain or dependencies changed or are missing. Run setup again to check this environment.';}
   }
   if(state==='failed')detail='Setup failed. Read the terminal output or setup details, fix the reported issue, then retry.';
-  return {state,busy,automaticSetup:process.platform==='linux',message:process.platform!=='linux'?'Automatic Lean setup is currently available on Linux. Install Elan using the Lean installation guide, prepare this project’s pinned dependencies, then run a Lean check.':stages[state]||detail,command,toolchain:await read('toolchain'),log:(['failed','interrupted'].includes(state)?await read('output.log'):'').slice(-6000)};
+  return {state,busy,automaticSetup:automaticPlatform(),message:!automaticPlatform()?'Automatic Lean setup is currently available on Linux and macOS. Install Elan using the Lean installation guide, prepare this project’s pinned dependencies, then run a Lean check.':stages[state]||detail,command,toolchain:await read('toolchain'),log:(['failed','interrupted'].includes(state)?await read('output.log'):'').slice(-6000)};
  }
  async start(id){
-  if(process.platform!=='linux')throw Error('One-click project setup is currently available on Linux.');
+  if(!automaticPlatform())throw Error('One-click project setup is currently available on Linux and macOS.');
   if(this.launches.has(id))throw Error('Lean setup is already running for this project.');
   this.launches.add(id);
   try{

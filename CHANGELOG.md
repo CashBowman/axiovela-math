@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.16-beta.2 — 2026-09-16
+
+Private macOS repair release. The Apple silicon app is assembled and ad-hoc signed on macOS, its resource seal is verified before packaging, and the native DMG is exercised with launch/relaunch storage smoke tests. macOS now uses its native folder chooser and supports the same guarded one-click Lean/Mathlib setup as Linux, including the built-in `shasum` checksum utility.
+
+The DMG is not Developer ID signed or notarized. Gatekeeper-ready public distribution still requires Apple signing credentials and notarization.
+
 ## 0.1.15-beta.1 — 2026-09-16
 
 Private preview. Linux x64 has local native acceptance. Windows x64 and Mac Apple silicon/Intel downloads are unsigned cross-builds; native signing and launch validation remain pending. Mac downloads are app ZIPs, not finished DMG installers.

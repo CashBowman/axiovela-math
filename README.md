@@ -10,7 +10,7 @@ Axiovela Math keeps your sources, mathematical arguments, formal checks, and wri
 
 The mathematics companion to [Axiovela](https://github.com/CashBowman/axiovela), built around the same research and writing workflow.
 
-**Private development.** This repository and its downloads require access. Linux x64 is validated; Windows and macOS preview downloads are available with native acceptance still pending. A public product release has not been approved.
+**Private development.** This repository and its downloads require access. Linux x64 and macOS Apple silicon are locally validated; Windows and macOS Intel previews still await native acceptance. A public product release has not been approved.
 
 ## Keep research moving in parallel
 
@@ -36,11 +36,11 @@ Use **Projects** beside the tabs to reopen saved work, pin folders, or inspect e
 
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Connect Codex, Claude Code, Gemini CLI, OpenCode, Pi, or a supported API connection. [Connections and first session →](docs/getting-started.md)
 
-Version **0.1.15-beta.1** adds automatic checks of linked Lean proofs and their axioms, clearer progress labels, repaired PDF titles and source deduplication, smoother annotation placement, and more responsive typing in long mathematical conversations. It also preserves project navigation, manuscript result numbering, and background proof-attempt memory. [Release notes →](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.15-beta.1)
+Version **0.1.16-beta.2** adds a native Apple silicon DMG, valid ad-hoc resource sealing, native launch/relaunch validation, a macOS folder chooser, and automatic Lean setup on macOS. It preserves the research, proof, reading, and manuscript improvements from 0.1.15-beta.1. [Release notes →](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.2)
 
 ## Start with the desktop app
 
-**Download 0.1.15-beta.1 · Private preview**
+**Downloads · Private preview**
 
 The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node.js and npm are not required. Sign in to GitHub with repository access to download. All builds were produced locally; no GitHub build jobs were used.
 
@@ -50,12 +50,11 @@ The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node
 
 [Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-win32-x64-unsigned.zip). Cross-built on Linux; unsigned and not yet launch-tested on Windows.
 
-**macOS · Development app bundles**
+**macOS · Apple silicon installer**
 
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-darwin-arm64-unsigned.zip"><img src="docs/assets/downloads/mac-arm.svg" alt="Download Mac Apple silicon unsigned development app ZIP" width="320" height="88" /></a>
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-darwin-x64-unsigned.zip"><img src="docs/assets/downloads/mac-intel.svg" alt="Download Mac Intel unsigned development app ZIP" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.2/Axiovela-Math-0.1.16-beta.2-darwin-arm64-adhoc.dmg"><img src="docs/assets/downloads/mac-arm.svg" alt="Download Mac Apple silicon DMG installer" width="320" height="88" /></a>
 
-These are cross-built, unsigned app ZIPs for development, not finished Mac installers. Native signing, notarization, DMGs, and launch testing require a Mac and remain pending. [Mac build instructions →](docs/desktop-platforms.md#build-commands)
+The Apple silicon DMG is built and launch-tested on macOS. It is ad-hoc signed for private development, not Developer ID signed or notarized. [Mac build and trust details →](docs/desktop-platforms.md#build-commands)
 
 **Linux · Validated x64 packages**
 
@@ -65,7 +64,7 @@ These are cross-built, unsigned app ZIPs for development, not finished Mac insta
 
 [Installation and first session](docs/getting-started.md) · [Platform status and local packaging](docs/desktop-platforms.md) · [Update details](docs/updates.md)
 
-First LaTeX rendering may download TeX resources. On Linux, **Lean Certificates → Set up Lean** installs the compiler and project libraries, then runs a small installation test. Allow internet access and several GB for mathlib. Lean setup on Windows and Mac is currently manual.
+First LaTeX rendering may download TeX resources. On Linux and macOS, **Lean Certificates → Set up Lean** installs the compiler and project libraries, then runs a small installation test. Allow internet access and several GB for mathlib. Lean setup on Windows is currently manual.
 
 **Help → Check for updates** explains private distribution; it does not authenticate to GitHub or fetch private downloads. Obtain updates from the release page. Close the app before installing an update; projects and app data remain separate from application files.
 

@@ -19,7 +19,7 @@ The repository remains private until explicitly approved for public release. Git
 
 GUI checks require a desktop session or a configured virtual display and the OS libraries required by Electron/Chromium. Tests produce ignored local evidence. `lean-setup-acceptance.mjs` additionally requires an explicitly provisioned disposable Lean/mathlib environment; it runs real compilers, not model calls. It is not run by default CI.
 
-GitHub CI runs the unit/integration suite and frontend build. Passing CI does not establish acceptance on every Linux distribution or validate paid provider accounts. macOS/Windows builds and unattended installation are not implemented. Direct APIs have permission-gated project tools; prompts cannot guarantee mathematical success or enforce a dollar ceiling.
+GitHub CI runs the unit/integration suite and frontend build. Passing CI does not establish acceptance on every Linux distribution or validate paid provider accounts. The Apple silicon DMG is built and tested locally; Windows, Mac Intel, and unattended installation remain unvalidated. Direct APIs have permission-gated project tools; prompts cannot guarantee mathematical success or enforce a dollar ceiling.
 
 Keep credentials, research projects, private reports and release signing keys outside tracked source. Use isolated profiles for validation. Before a release, validate the packaged app, preserve earlier binaries, scan the exact tracked snapshot and distributables, then sign the exact artifacts. [Release/update procedure](updates.md).
 

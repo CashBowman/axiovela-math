@@ -11,7 +11,8 @@ const packaged=process.argv.includes('--packaged'),image=process.argv.includes('
 const pkg=JSON.parse(await fs.readFile('package.json','utf8'));
 const installed=process.argv.includes('--installed');
 const receipt=installed?JSON.parse(await fs.readFile('docs/linux-installation.json','utf8')):null;
-const executable=installed?path.join(receipt.installed,'axiovela-math'):image?path.resolve(`out/installers/Axiovela-Math-${pkg.version}-linux-${process.arch}.AppImage`):packaged?path.resolve('out/Axiovela Math-linux-'+process.arch+'/axiovela-math'):electron;
+const packagedBinary=process.platform==='darwin'?path.resolve(`out/Axiovela Math-darwin-${process.arch}/Axiovela Math.app/Contents/MacOS/axiovela-math`):path.resolve(`out/Axiovela Math-${process.platform}-${process.arch}/axiovela-math${process.platform==='win32'?'.exe':''}`);
+const executable=process.env.AXIOVELA_MATH_TEST_BINARY||(installed?path.join(receipt.installed,'axiovela-math'):image?path.resolve(`out/installers/Axiovela-Math-${pkg.version}-linux-${process.arch}.AppImage`):packaged?packagedBinary:electron);
 const suffix=installed?'installed':image?(process.argv.includes('--mounted')?'appimage-mounted':'appimage'):packaged?'packaged':'source';
 async function launch(reopen){
  let output='';const child=spawn(executable,image?(process.argv.includes('--mounted')?[]:['--appimage-extract-and-run']):(packaged||installed)?[]:['.'],{env:{...env,...(reopen?{AXIOVELA_MATH_SMOKE_REOPEN:'1'}:{})},stdio:'pipe'});
@@ -25,7 +26,7 @@ async function launch(reopen){
 }
 try{
  const first=await launch(false),second=await launch(true);assert.equal(second.origin,first.origin);
- await fs.mkdir('.local/qa',{recursive:true});await fs.copyFile(path.join(profile,'desktop-smoke.png'),`.local/qa/desktop-linux-${suffix}.png`);
- await fs.writeFile(`docs/desktop-${suffix}-validation.json`,JSON.stringify({platform:process.platform,arch:process.arch,appLaunched:true,kind:suffix,stableOrigin:true,storageSurvivesRelaunch:true,isolatedChromiumProfile:true,backendShutdown:true,screenshot:`.local/qa/desktop-linux-${suffix}.png`,liveCredentialsUsed:false,checkedAt:new Date().toISOString()},null,2)+'\n');
- console.log(`Linux ${suffix} passed: two launches, retained storage, isolated profile and clean backend shutdown.`);
+ const evidence=`.local/qa/desktop-${process.platform}-${suffix}.png`;await fs.mkdir('.local/qa',{recursive:true});await fs.copyFile(path.join(profile,'desktop-smoke.png'),evidence);
+ await fs.writeFile(`docs/desktop-${process.platform}-${suffix}-validation.json`,JSON.stringify({platform:process.platform,arch:process.arch,appLaunched:true,kind:suffix,stableOrigin:true,storageSurvivesRelaunch:true,isolatedChromiumProfile:true,backendShutdown:true,screenshot:evidence,liveCredentialsUsed:false,checkedAt:new Date().toISOString()},null,2)+'\n');
+ console.log(`${process.platform} ${suffix} passed: two launches, retained storage, isolated profile and clean backend shutdown.`);
 }finally{await fs.rm(profile,{recursive:true,force:true});}
