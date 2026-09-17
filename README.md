@@ -8,6 +8,10 @@
 
 Axiovela Math keeps your sources, mathematical arguments, formal checks, and writing together in ordinary project files on your computer. Connect your AI provider, guide the work, and review the evidence at each step.
 
+<p align="center"><a href="docs/demo/axiovela-math-demo.webm"><img src="docs/demo/axiovela-math-demo.jpg" width="960" alt="Axiovela Math research workspace showing a research brief, mathematical proof, and AI assistant" /></a></p>
+
+<p align="center"><a href="docs/demo/axiovela-math-demo.webm"><strong>Watch the 43-second product tour</strong></a></p>
+
 The mathematics companion to [Axiovela](https://github.com/CashBowman/axiovela), built around the same research and writing workflow.
 
 **Private development.** This repository and its downloads require access. Linux x64 is validated; Windows and macOS preview downloads are available with native acceptance still pending. A public product release has not been approved.

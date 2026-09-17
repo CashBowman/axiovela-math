@@ -33,6 +33,12 @@ docs/assets/*
 docs/assets/downloads/*
 !docs/assets/downloads/*.svg
 
+# README product tour.
+!docs/demo/
+docs/demo/*
+!docs/demo/axiovela-math-demo.webm
+!docs/demo/axiovela-math-demo.jpg
+
 !docs/project-navigator.md
 
 !docs/conversation-history.md
