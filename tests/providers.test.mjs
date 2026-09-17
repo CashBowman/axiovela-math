@@ -84,6 +84,17 @@ test('new requests ignore legacy task settings; paused legacy queue preserves it
  assert.equal(c.turns.at(-1).task,'literature');assert.match(JSON.parse(c.turns.at(-1).output).prompt,/Search primary literature/);
  assert.equal(c.queue.length,0);
  const w=await chats.newConversation(id,'writing');await chats.send(id,w.id,'FIXTURE_PROMPT',{format:'latex'});await wait();assert.match(JSON.parse(w.turns[0].output).prompt,/Selected manuscript format: latex/);
+ const writingPrompt=JSON.parse(w.turns[0].output).prompt;
+ assert.match(writingPrompt,/assessments and explanations directly in chat/);
+ assert.match(writingPrompt,/file-only delivery overrides this default/);
+ assert.match(writingPrompt,/Create separate reports or Markdown files only on explicit request/);
+ assert.doesNotMatch(writingPrompt,/do not substitute a long manuscript in chat|do not stop at a chat-only proof/);
+ await chats.send(id,w.id,'FIXTURE_PROMPT save a markdown assessment in writeups/novelty.md',{format:'latex'});await wait();
+ assert.equal(w.turns.at(-1).manuscript,undefined);assert.equal(w.turns.at(-1).artifactError,undefined);
+ assert.match(JSON.parse(w.turns.at(-1).output).prompt,/writeups\/novelty.md/);
+ await chats.send(id,w.id,'FIXTURE_PROMPT write a markdown draft in chat, no files',{format:'markdown'});await wait();
+ assert.equal(w.turns.at(-1).manuscript,undefined);assert.equal(w.turns.at(-1).artifactError,undefined);
+
 }));
 
 test('concurrent first loads and conversation creation retain both histories',async()=>fixture(async dir=>{

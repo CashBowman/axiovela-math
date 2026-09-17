@@ -179,6 +179,28 @@ try {
   await page
     .getByRole("button", { name: /Theorem Main result Main additive identity/ })
     .click();
+  const cards = page.locator('.resultCard');
+  await page.keyboard.press('ArrowUp');
+  await page.getByRole('heading', {name: 'Supporting identity', exact: true}).waitFor();
+  assert.equal(await cards.first().evaluate(el => el === document.activeElement), true);
+  await page.keyboard.press('ArrowUp');
+  assert.equal(await cards.first().getAttribute('aria-pressed'), 'true');
+  await page.keyboard.press('ArrowDown');
+  await page.getByRole('heading', {name: 'Main additive identity', exact: true}).waitFor();
+  assert.equal(await cards.last().evaluate(el => el === document.activeElement), true);
+  await page.keyboard.press('ArrowDown');
+  assert.equal(await cards.last().getAttribute('aria-pressed'), 'true');
+  await page.keyboard.press('Home');
+  assert.equal(await cards.first().getAttribute('aria-pressed'), 'true');
+  await page.keyboard.press('End');
+  assert.equal(await cards.last().getAttribute('aria-pressed'), 'true');
+  assert.equal(await page.locator('.resultCard[tabindex="0"]').count(), 1);
+  const composer = page.getByLabel('research message');
+  await composer.focus();
+  await page.keyboard.press('ArrowUp');
+  assert.equal(await cards.last().getAttribute('aria-pressed'), 'true');
+  assert.equal(await composer.evaluate(el => el === document.activeElement), true);
+  checks.push('Up/Down and Home/End select and focus results, stop at list boundaries, and leave chat arrow keys alone');
   await page.screenshot({ path: ".local/qa/result-certificates.png" });
   checks.push(
     "selectable result cards, explicit per-result mappings, unformalized lemma stays unverified",

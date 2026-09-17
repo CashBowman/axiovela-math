@@ -34,3 +34,5 @@ docs/assets/downloads/*
 !docs/assets/downloads/*.svg
 
 !docs/project-navigator.md
+
+!docs/conversation-history.md

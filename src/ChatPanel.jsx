@@ -1,3 +1,4 @@
+import ConversationHistory from './ConversationHistory.jsx';
 import { defaultWriteupFormat } from "./WriteupFormatMenu.jsx";
 import AnnotationChips from "./AnnotationChips.jsx";
 import React, { useEffect, useRef, useState, useImperativeHandle } from "react";
@@ -5,6 +6,7 @@ import { Send, Square, Plus, Copy, RefreshCw, ArrowDown } from "lucide-react";
 import ModelPicker from "./ModelPicker.jsx";
 import { Panel, Preview, request } from "./ui.jsx";
 const capabilityCache = new Map();
+const recentFirst = (a,b) => Number(b.pinned)-Number(a.pinned)||String(b.turns.at(-1)?.startedAt||b.createdAt||" ").localeCompare(String(a.turns.at(-1)?.startedAt||a.createdAt||" "));
 const names = {
   research: "Math Assistant",
   writing: "Publication Assistant",
@@ -26,6 +28,7 @@ export default function ChatPanel({
   onEditAnnotation,
 }) {
   const key = `axiovela-math-chat:${project.id}:${role}`;
+  const [historyOpen, setHistoryOpen] = useState(false);
   const initialSelected = localStorage.getItem(key) || "";
   const [list, setList] = useState([]),
     [selected, setSelected] = useState(() => localStorage.getItem(key) || ""),
@@ -63,7 +66,7 @@ export default function ChatPanel({
       options,
     );
   const chat =
-    list.find((c) => c.id === selected) || list.find((c) => c.role === role);
+    list.find((c) => c.id === selected) || list.find((c) => c.role === role && !c.archived);
   const current = chat?.turns.at(-1);
   const running =
     !!current && ["running", "canceling"].includes(current.status);
@@ -76,7 +79,7 @@ export default function ChatPanel({
       setList(value.conversations);
     }
     if (!selectedRef.current) {
-      const existing = value.conversations.find((c) => c.role === role);
+      const existing = value.conversations.filter((c) => c.role === role && !c.archived).sort(recentFirst)[0];
       if (existing) {
         setSelected(existing.id);
         setDraft(
@@ -178,6 +181,11 @@ export default function ChatPanel({
     effort: "",
     profileId: "general",
   };
+  useEffect(()=>{
+    const select=event=>{const c=event.detail;if(c.projectId!==project.id||c.role!==role)return;setSelected(c.id);setDraft(localStorage.getItem(key+':draft:'+c.id)||'');refresh().catch(e=>setError(e.message));};
+    window.addEventListener('axiovela-conversation-selected',select);
+    return()=>window.removeEventListener('axiovela-conversation-selected',select);
+  },[project.id,role]);
   async function ensure() {
     if (chat) return chat;
     const c = await api("/api/conversations", {
@@ -363,12 +371,14 @@ export default function ChatPanel({
       label={selection.adapterId.toUpperCase()}
       className="chatPanel"
       action={
+        <div className="row"><button onClick={()=>setHistoryOpen(true)} aria-label={`History for ${role}`}>History</button>
         <button aria-label={`New ${role} conversation`} onClick={newChat}>
           <Plus size={13} />
           New chat
-        </button>
+        </button></div>
       }
     >
+      {historyOpen && <ConversationHistory project={project} onClose={()=>setHistoryOpen(false)} onChanged={()=>refresh().catch(e=>setError(e.message))}/>}
       <div className="conversationToolbar">
         <label>
           Conversation
@@ -391,11 +401,13 @@ export default function ChatPanel({
               New conversation
             </option>
             {list
-              .filter((c) => c.role === role)
+              .filter((c) => c.role === role && (!c.archived || c.id === chat?.id))
+              .sort(recentFirst)
+              .filter((c,i)=>i<20 || c.id===chat?.id)
               .map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.previousRole === "lean" ? "Earlier Lean chat · " : ""}
-                  {c.title}
+                  {c.pinned ? "★ " : ""}{c.title} · {c.id.slice(-6)}{c.archived ? " · archived" : ""}
                   {c.turns.at(-1)?.status === "running" ? " · working" : ""}
                 </option>
               ))}
@@ -508,7 +520,7 @@ export default function ChatPanel({
                       </button>
                     )}
                   {t.status === "complete" &&
-                    role !== "lean" &&
+                    (role === "research" || t.review) &&
                     workspace !== "lean" && (
                       <button
                         onClick={() =>
@@ -519,9 +531,7 @@ export default function ChatPanel({
                       >
                         {t.review
                           ? "Review proposed revision"
-                          : role === "writing"
-                            ? "Use in manuscript"
-                            : "Use as working proof"}
+                          : "Use as working proof"}
                       </button>
                     )}
                 </div>
@@ -531,6 +541,9 @@ export default function ChatPanel({
               <p className="reviewRequestHint">
                 Annotation feedback · proposed changes await your review
               </p>
+            )}
+            {t.proofMemoryResult?.unlinked > 0 && (
+              <p className="hint">Research memory saved. A reference to an earlier attempt could not be confirmed and was kept as unresolved.</p>
             )}
             {t.artifactError && (
               <p className="inlineError" role="alert">

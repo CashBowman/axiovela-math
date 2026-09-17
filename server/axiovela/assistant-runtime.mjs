@@ -151,8 +151,21 @@ export async function validateSelection(selection, cwd) {
   return {selection: {adapterId, modelId, effort, profileId: selectedProfile}, runtime, model};
 }
 
+// Archiving preserves the persisted native rollout and keeps completed Math work
+// out of Codex Recents. Never use ephemeral sessions or delete provider history.
+export async function archiveCompletedMathThread(rpc, threadId) {
+  const {thread} = await rpc.request('thread/read', {threadId, includeTurns:false}, 2000);
+  if (!thread || thread.id !== threadId || thread.isPinned || !['idle','notLoaded'].includes(thread.status?.type)) return false;
+  // Archive can include descendants. If this connection still has any other
+  // loaded thread (including a worker), leave the whole tree alone.
+  const loaded = await rpc.request('thread/loaded/list', {limit:2}, 2000);
+  if (!Array.isArray(loaded.data) || loaded.nextCursor || loaded.data.some(id=>id!==threadId)) return false;
+  await rpc.request('thread/archive', {threadId}, 2000);
+  return true;
+}
+
 export async function runAssistant(options) {
-  const {selection, mode, cwd, prompt, sessionId, env, onSession, onEvent, onOutput, onEffective, signal} = options;
+  const {selection, mode, cwd, prompt, sessionId, conversationTitle, env, onSession, onEvent, onOutput, onEffective, signal} = options;
   const {runtime, model} = await validateSelection(selection, cwd);
   if (!runtime.modes.includes(mode)) throw new Error(`This connection supports these access modes: ${runtime.modes.join(', ')}. Choose a supported mode explicitly.`);
   if (signal.aborted) throw new Error('Task canceled.');
@@ -160,7 +173,7 @@ export async function runAssistant(options) {
   if (cliProviders[selection.adapterId]) return runCli(options, model);
   const rpc = await connect(selection.adapterId, cwd, sessionId, mode, env);
   const effort = selection.effort || (selection.modelId ? model?.defaultEffort : runtime.defaultEffort) || null;
-  let turnId, threadId, settled = false;
+  let turnId, threadId, settled = false, nativeCompleted = false;
   let resolveDone, rejectDone;
   const done = new Promise((resolve, reject) => { resolveDone = resolve; rejectDone = reject; });
   done.catch(() => {});
@@ -191,6 +204,7 @@ export async function runAssistant(options) {
         onEvent({kind: 'tool', label: labels[item.type] || 'Working on the task', status: event.method === 'item/completed' ? 'complete' : 'running'});
       }
       if (event.method === 'turn/completed') {
+        nativeCompleted = true;
         settled = true;
         if (p.turn?.status === 'completed') resolveDone(output);
         else rejectDone(new Error(p.turn?.error?.message || `Assistant turn ${p.turn?.status || 'failed'}.`));
@@ -229,6 +243,10 @@ export async function runAssistant(options) {
       }
       threadId = thread.thread.id;
       await onSession(threadId);
+      if (conversationTitle) {
+        try { await rpc.request('thread/name/set', {threadId, name: conversationTitle}, 2000); }
+        catch { onEvent({kind:'connection',label:'The provider could not update its title. The saved Axiovela title is unchanged.',status:'complete'}); }
+      }
       onEffective({modelId: thread.model || model?.id || null, effort: effort || thread.reasoningEffort || null, provider: thread.modelProvider || 'openai'});
       onEvent({kind: 'connection', label: sessionId ? 'Conversation resumed' : 'New conversation started', status: 'complete'});
       const startTurn = () => rpc.request('turn/start', {threadId, input: [{type: 'text', text: prompt}], ...(effort ? {effort} : {})});
@@ -244,5 +262,13 @@ export async function runAssistant(options) {
       for (const event of pendingEvents.splice(0)) handleEvent(event);
     }
     return await done;
-  } finally { settled = true; signal.removeEventListener('abort', abort); await rpc.close(); }
+  } finally {
+    settled = true;
+    if (options.archiveAfterTurn && nativeCompleted && !signal.aborted) {
+      try { await archiveCompletedMathThread(rpc, threadId); }
+      catch { onEvent({kind:'connection',label:'Codex sidebar cleanup was unavailable. Conversation history is preserved.',status:'complete'}); }
+    }
+    signal.removeEventListener('abort', abort);
+    await rpc.close();
+  }
 }

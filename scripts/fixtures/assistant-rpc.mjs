@@ -21,13 +21,26 @@ for await (const line of readline.createInterface({input: process.stdin})) {
       if (method === 'thread/fork') {
         if (session.forkFails) throw new Error('Fixture fork unavailable');
         if (p.deferGoalContinuation !== true) throw new Error('Automatic goal continuation must be deferred');
-        session = {...session, id: randomUUID(), forkedFrom: session.id, writerLocked: false};
+        session = {...session, id: randomUUID(), forkedFrom: session.id, writerLocked: false, archived: false};
       }
       if (session.archived) throw new Error(`session ${session.id} is archived. Run codex unarchive first.`);
       Object.assign(session, {model: p.model, effort: p.config?.model_reasoning_effort, sandbox: p.sandbox, approvalPolicy: p.approvalPolicy, approvalsReviewer: p.approvalsReviewer});
       // A started session must survive cancellation before its first turn.
       await writeFile(store(session.id), JSON.stringify(session));
       result = {thread: {id: session.id}, model: session.model, reasoningEffort: session.effort, modelProvider: 'openai'};
+    }
+    if (method === 'thread/read') result = {thread:{id:session.id,status:{type:session.busyAfterTurn?'active':'idle'},isPinned:!!session.pinned}};
+    if (method === 'thread/loaded/list') result = {data:session.loadedWorker?[session.id,'worker']: [session.id],nextCursor:null};
+    if (method === 'thread/archive') {
+      if (session.archiveFails) throw Error('Archive unavailable');
+      session.archived = true;
+      await writeFile(store(session.id),JSON.stringify(session));
+    }
+    if (method === 'thread/name/set') {
+      if (session.nameFails) throw Error('Method not supported');
+      if (p.threadId !== session.id || typeof p.name !== 'string') throw Error('Invalid name request');
+      session.name = p.name;
+      await writeFile(store(session.id), JSON.stringify(session));
     }
     if (method === 'thread/unarchive') {
       session = JSON.parse(await readFile(store(p.threadId), 'utf8'));

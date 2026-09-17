@@ -45,6 +45,10 @@ const server=http.createServer(async(req,res)=>{try{
   if(url.pathname==='/api/projects/open'&&req.method==='POST')return json(res,200,await projects.openOrCreate(await bodyJson()));
   if(url.pathname==='/api/projects'&&req.method==='POST')return json(res,201,await projects.create(await bodyJson()));
   const projectId=url.searchParams.get('project');
+  if(url.pathname==='/api/conversation-history/open'&&req.method==='GET'){const rows=await chats.history.read(projectId);const c=rows.find(c=>c.id===url.searchParams.get('id'));if(!c)throw Error('Conversation not found in the saved project.');return json(res,200,{id:c.id});}
+  if(url.pathname==='/api/conversation-history'&&req.method==='GET')return json(res,200,await chats.history.search({projectId:projectId||'',query:url.searchParams.get('q')||'',archived:url.searchParams.get('archived')==='1',offset:url.searchParams.get('offset')}));
+  if(url.pathname==='/api/conversation-history'&&req.method==='PUT'){const b=await bodyJson();if(typeof b.id!=='string'||!b.id)throw Error('Conversation ID is required.');return json(res,200,await chats.history.update(projectId,b.id,{...(b.title!==undefined?{title:b.title}:{}),...(b.pinned!==undefined?{pinned:b.pinned}:{}),...(b.archived!==undefined?{archived:b.archived}:{})}));}
+
   if(url.pathname==='/api/proof-attempts'&&req.method==='GET'){
     const project=(await store.read()).projects.find(p=>p.id===projectId);
     if(!project)throw Error('Project not found.');
@@ -60,7 +64,7 @@ const server=http.createServer(async(req,res)=>{try{
   if(url.pathname==='/api/bridge/asset'&&req.method==='GET'){const asset=await bridge.asset(projectId,url.searchParams.get('id'),url.searchParams.get('key'));res.writeHead(200,{'Content-Type':asset.type,'Content-Security-Policy':"sandbox; default-src 'none'",'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});return res.end(asset.bytes);}
   if(url.pathname==='/api/capabilities'&&req.method==='GET')return json(res,200,await chats.capabilities(projectId,url.searchParams.get('connection'),url.searchParams.get('refresh')==='1'));
   if(url.pathname==='/api/providers'&&req.method==='PUT'){const body=await bodyJson();return json(res,200,await chats.configure(body.id,body));}
-  if(url.pathname==='/api/conversations'&&req.method==='GET')return json(res,200,{conversations:await chats.load(projectId)});
+  if(url.pathname==='/api/conversations'&&req.method==='GET')return json(res,200,{conversations:await chats.history.decorate(projectId,await chats.load(projectId))});
   if(url.pathname==='/api/conversations'&&req.method==='POST'){const body=await bodyJson();return json(res,201,await chats.newConversation(projectId,body.role));}
   if(url.pathname==='/api/conversation'&&req.method==='PUT'){const body=await bodyJson();return json(res,200,await chats.patch(projectId,body.id,body));}
   if(url.pathname==='/api/messages'&&req.method==='POST'){const body=await bodyJson();return json(res,202,await chats.send(projectId,body.id,body.message,{context:body.context,format:body.format,workspace:body.workspace,review:body.review,annotations:body.annotations}));}

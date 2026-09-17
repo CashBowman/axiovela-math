@@ -1,0 +1,29 @@
+# Conversation history
+
+**History** beside New chat browses the current project or all explicitly saved Math projects. Search covers saved titles and user-visible requests/answers, with matching excerpts, project names and last activity. Results are paginated in groups of 30; the chat selector keeps 20 recent/pinned conversations plus the selected conversation. Identical titles retain separate IDs, shown as short suffixes.
+
+Rename, Pin/Unpin and Archive/Unarchive persist independently of the conversation transcript. Archiving hides an item from the active list, without stopping a turn, deleting anything or discarding queued prompts. A selected archived conversation remains usable. Choose Archived in History to reopen or restore it. Opening a cross-project result uses the existing project catalog and conversation, preserving the current workspace through its normal save path.
+
+Initial titles come from the first saved user request, never the generated runtime prompt. Recognizable system/handoff/document headers receive a neutral fallback when the request cannot be reliably recovered. Existing custom titles are retained; manual renames take precedence over all subsequent requests. Only New chat creates another logical conversation after the initial conversation. Model changes, native restarts and rejected-resume handoffs continue under that conversation ID. Existing fresh-native-session rules, including read-only manuscript review, still apply.
+
+## Storage and migration
+
+Projects and `assistant/conversations.json` remain authoritative. Organization lives in a version-1 sidecar, `assistant/conversation-history.json`, keyed by existing conversation IDs. It stores titles and their origin, pin/archive flags, original creation timestamps, and known native session IDs with provider/model/turn provenance. Historical session IDs absent from existing records cannot be reconstructed and are not invented.
+
+Before first sidecar creation, the exact original conversations file is copied to `assistant/history-backups/original-conversations-<sha256>.json`. Before each changed sidecar replacement, its exact previous bytes are copied to `assistant/history-backups/metadata-v1-<sha256>.json`. Writes are serialized per project and use unique temporary files with atomic rename. Identical migrations do not write again. Unknown fields and original records remain intact. Corrupt, duplicate-ID, unsupported-version or oversized files produce an error/warning, not an empty replacement.
+
+The history migration never rewrites transcripts, research, results, experiments, manuscripts, figures or attachments. Legacy Lean-role normalization and old proof-memory recovery retain their existing backups and now apply transcript presentation changes in memory during loading; an explicit subsequent chat action persists normal chat state. Legacy proof-memory recovery retains its existing idempotent attempt-store behavior.
+
+Search itself performs no migration or writes, creates no missing project folders, launches no provider and changes no permissions. It uses the existing saved-project registry/location resolver without the initializing project-root method. It does not inject search results into model context. Bounds: 100 saved projects, 32 MB per transcript file, 8 MB per metadata file, 64 MB aggregate read budget, 10,000 conversations per project, and the latest 5,000 turns per conversation. Partial results include warnings; narrowing to one project permits searching a project outside the all-project limit. Missing folders and unsafe symlinks are reported, never repaired by search.
+
+## Provider and external-sidebar limits
+
+The cluttered Projects/Recents list in the supplied screenshot belongs to Codex, not Axiovela Math. Math cannot supply its project grouping or merge native session entries into that external UI.
+
+Codex title synchronization uses the documented [`thread/name/set`](https://learn.chatgpt.com/docs/app-server) request, `{threadId, name}`, verified against the installed Codex CLI 0.153.4's generated JSON schema. After start/resume (including a writer-conflict fork), Math sends the saved title. Failure or a two-second timeout is nonfatal. Manual renames synchronize on the next start/resume, not immediately while idle or mid-turn. Existing native history is neither deleted nor reorganized. Old sessions not resumed retain their old external titles. Math now archives its completed native Codex sessions from Recents using the supported `thread/archive` interface; the persisted rollout remains available and follow-ups unarchive/resume that same ID. This is independent of the Archive control inside Math. Cleanup is bounded and nonfatal, and skips canceled/unfinished turns, pinned or non-idle roots, and any connection with other loaded threads (including workers). Active sessions may appear temporarily in Codex. Cleanup failures leave the session visible instead of blocking a turn. Other provider interfaces are left unchanged; Math titles work locally without claiming external title/grouping support.
+
+## Verification
+
+`npm test` includes byte-preserving/idempotent migration, exact backups, serialized metadata changes, restart persistence, scoped and bounded search, duplicate names, corrupt data, native session handoff/model changes, nonfatal provider title errors, archiving active work, and retained cancellation queues. Existing concurrent-chat and permission tests remain in the suite.
+
+`npm run test:history` uses 96 conversations in two disposable projects to verify pagination, excerpts, rename/pin/archive/reload, cross-project reopening and unchanged transcript bytes. `npm run test:desktop:acceptance` also exercises History in the packaged Linux app. All use isolated temporary data and fixture providers, never live account credentials or real research projects.

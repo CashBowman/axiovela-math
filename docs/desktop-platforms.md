@@ -1,8 +1,8 @@
 # Private desktop builds
 
-The repository is private. The 0.1.15-beta.1 downloads are an authorized private preview. Keep the repository private; no public release or GitHub Actions builds are authorized. CI has manual triggers only; the commands below run locally and disable publishing.
+The repository is private. Version 0.1.16-beta.1 is a private testing candidate, prepared as a draft release. Keep the repository private; no public release or GitHub Actions builds are authorized. CI has manual triggers only; the commands below run locally and disable publishing.
 
-Download the current [private preview](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.15-beta.1): Linux x64 AppImage/archive, Windows x64 EXE/ZIP, and Mac Apple silicon/Intel app ZIPs. Linux has native acceptance; Windows/Mac are cross-built, unsigned, and awaiting native acceptance. Mac DMGs are not available.
+After publication, download the [private preview](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.1): Linux x64 AppImage/archive, Windows x64 EXE/ZIP, and Mac Apple silicon/Intel app ZIPs. Linux has native acceptance; Windows/Mac are cross-built, unsigned, and awaiting native acceptance. Mac DMGs are not available.
 
 ## Build commands
 

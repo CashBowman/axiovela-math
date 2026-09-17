@@ -138,6 +138,10 @@ try {
     .getByRole("dialog")
     .getByRole("button", { name: "Untitled mathematics project", exact: true })
     .click();
+  // Both projects have an empty editor: wait for the actual project switch,
+  // not merely the old editor's already-empty value.
+  await page.locator('.projectTab.active').filter({hasText: 'Untitled mathematics project'}).waitFor();
+  await until(async () => (await state()).activeProjectId === id);
   await page.waitForFunction(() =>
     document
       .querySelector('[aria-label="Manuscript source"]')

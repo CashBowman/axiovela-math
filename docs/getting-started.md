@@ -1,6 +1,6 @@
 # Getting started
 
-Sign in to GitHub with repository access and open the [0.1.15-beta.1 downloads](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.15-beta.1). Linux x64 is validated. Windows has an unsigned preview installer; Mac downloads are unsigned development app ZIPs awaiting native signing and testing. See [platform status](desktop-platforms.md).
+After the testing candidate is published, sign in to GitHub with repository access and open the [0.1.16-beta.1 downloads](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.1). Linux x64 is validated. Windows has an unsigned preview installer; Mac downloads are unsigned development app ZIPs awaiting native signing and testing. See [platform status](desktop-platforms.md).
 
 On Linux, download the x64 AppImage. Allow execution in file properties if required, then open it. The portable archive is an alternative: extract it and open `axiovela-math`. Node.js is included in the desktop download.
 
@@ -69,3 +69,9 @@ Lean Certificates follows the chosen manuscript’s section order and stable res
 **Proof checks pending** means saved work still needs a check; **Checking proofs** means a check is running. **Proofs verified** means the linked formal theorems passed proof and axiom checks. **Proof incomplete**, **Uses extra assumptions**, and missing-theorem labels identify work for the assistant to resolve. **Recheck needed** means source files changed after verification. The existing blue, green, and amber colors accompany these text labels.
 
 Lean checks formal statements. The assistant separately assesses their match to your mathematical claims, so a verified formal proof is not a guarantee of that translation or of novelty. Routine code repair and statement assessment belong to the assistant workflow.
+
+## Answers and requested files
+
+The Write-up assistant answers questions, reviews and literature assessments in chat. Requested manuscript edits go into the selected manuscript; a separate Markdown report, addendum or review packet requires an explicit request. You can override the default, for example: “Save this assessment as writeups/novelty.md.” The final answer should contain the substantive findings, not just a list of saved files. The old **Use in manuscript** shortcut is removed; annotation proposals still use **Review proposed revision** and explicit application.
+
+Open **History** beside New chat to search the current project's conversations or **All conversations** across saved projects. Rename or pin useful conversations; archive old ones without deleting their messages or queued work. Use **Archived** to restore them. Opening a result switches to its existing project and conversation. [Conversation history](conversation-history.md) explains backups and external provider-sidebar limitations.

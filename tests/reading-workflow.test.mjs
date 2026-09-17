@@ -67,6 +67,10 @@ test('independent research, publication and project chats run concurrently; publ
   await chats.send('second',other.id,'FIXTURE_HANG');await chats.send(id,sibling.id,'FIXTURE_PROMPT');
   for(let n=0;n<100&&writing.turns.at(-1).status==='running';n++)await new Promise(r=>setTimeout(r,30));
   assert.equal(writing.turns.at(-1).status,'complete');assert.equal(first.turns.at(-1).status,'running');assert.equal(other.turns.at(-1).status,'running');
+  // Wait for independent native-session admissions before testing that catalog
+  // operations leave their IDs untouched; provider startup runs asynchronously.
+  for(let n=0;n<100&&[first,writing,other,sibling].some(c=>!c.sessionId);n++)await new Promise(r=>setTimeout(r,30));
+  assert.ok([first,writing,other,sibling].every(c=>c.sessionId));
   const catalog=new ProjectCatalog(store,projects),beforeThreads=JSON.stringify((await chats.load(id)).map(c=>({id:c.id,sessionId:c.sessionId,queue:c.queue})));
   await catalog.snapshot({details:true});
   await catalog.edit({action:'pin',id:'second',pinned:true,revision:(await store.read()).revision});

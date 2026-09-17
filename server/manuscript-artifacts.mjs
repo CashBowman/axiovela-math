@@ -28,6 +28,11 @@ export async function saveManuscript(root,kind,text,expectedHash) {
   } finally {active.delete(file);}
 }
 export function requestedManuscript(message) {
+  if (/\b(?:in|into) (?:the )?chat\b|\bchat[- ]only\b|\bno (?:new )?files\b/i.test(message)) return false;
+  // A named side document is not authorization to import chat into main.*.
+  const paths = [...message.matchAll(/(?:[\w.-]+\/)*[\w.-]+\.(?:md|tex)\b/gi)].map(m => m[0]);
+  if (paths.some(p => !['writeups/main.md', 'writeups/main.tex', 'main.md', 'main.tex'].includes(p.toLowerCase()))) return false;
+  if (/\b(?:report|assessment|review packet|search log)\b/i.test(message) && !/\b(?:revise|rewrite|edit|update)\b.{0,40}\b(?:manuscript|paper|draft)\b/i.test(message)) return false;
   return !/\b(?:do not|don't|without)\s+(?:write|save|edit|change|revise)/i.test(message) && /\b(?:write|draft|rewrite|revise|reoutput|create|prepare|update|generate|save|produce|make)\b/i.test(message) && /\b(?:manuscript|paper|write[ -]?up|draft|latex|markdown)\b/i.test(message);
 }
 // A full, unambiguous draft may be recovered from chat only for an authorized

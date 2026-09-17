@@ -17,6 +17,7 @@ import { EvidenceReader } from "./ExperimentEvidence.jsx";
 import { Panel, Preview, request } from "./ui.jsx";
 import ChatPanel from "./ChatPanel.jsx";
 import Resizable from "./Resizable.jsx";
+const libraryKinds = ["paper", "evidence", "claim", "theorem", "lemma", "proof"];
 export default function Library({
   sourceRequest,
   active = true,
@@ -255,6 +256,8 @@ export default function Library({
         .toLowerCase()
         .includes(filter.toLowerCase()),
   );
+  const visibleItems = libraryKinds.flatMap(kind => filteredItems.filter(x => x.kind === kind));
+  const keyboardEntry = visibleItems.find(x => x.key === item?.key) || visibleItems[0];
   const manualLinks = project.links || [];
   const links = [
     ...manualLinks,
@@ -447,7 +450,8 @@ export default function Library({
         )}
       </div>
       <div className="libraryList">
-        {["paper", "evidence", "claim", "theorem", "lemma", "proof"]
+        {!!visibleItems.length && <p className="hint">↑ ↓ to navigate sources and results</p>}
+        {libraryKinds
           .filter((kind) => filteredItems.some((x) => x.kind === kind))
           .map((kind) => (
             <div key={kind}>
@@ -488,7 +492,25 @@ export default function Library({
                     )}
                     <button
                       className={item?.key === x.key ? "chosen" : ""}
+                      aria-pressed={item?.key === x.key}
+                      tabIndex={keyboardEntry?.key === x.key ? 0 : -1}
                       onClick={() => setSelected(x.key)}
+                      onKeyDown={(event) => {
+                        if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+                        const index = visibleItems.findIndex(row => row.key === x.key);
+                        const next = {
+                          ArrowDown: Math.min(index + 1, visibleItems.length - 1),
+                          ArrowUp: Math.max(index - 1, 0),
+                          Home: 0,
+                          End: visibleItems.length - 1,
+                        }[event.key];
+                        if (next === undefined) return;
+                        event.preventDefault();
+                        setSelected(visibleItems[next].key);
+                        const button = event.currentTarget.closest('.libraryList').querySelectorAll('.libraryItem > button')[next];
+                        button.focus({ preventScroll: true });
+                        button.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                      }}
                     >
                       {kind === "paper" ? (
                         <BookOpen size={15} />

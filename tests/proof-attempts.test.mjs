@@ -81,8 +81,7 @@ test('invalid statuses, unknown targets, duplicate ids and malformed files are r
 test('revisits require a real prior record and a reason, and never overwrite history', () => sandbox(async root => {
   const first = await checkpoint(root); await captureProofAttempts(root, first);
   const id = first.id + '/diagonal';
-  for (const row of [attempt({revisitOf: id}), attempt({revisitOf: randomUUID() + '/unknown', revisitReason: 'Different assumption'})])
-    await assert.rejects(captureProofAttempts(root, await checkpoint(root, project(), [row])));
+  await assert.rejects(captureProofAttempts(root, await checkpoint(root, project(), [attempt({revisitOf: id})])));
   const next = await checkpoint(root, project(), [attempt({status: 'partial-result', revisitOf: id, revisitReason: 'Added trace normalization.'})]);
   await captureProofAttempts(root, next);
   assert.equal((await readProofAttempts(root)).attempts.length, 2);
@@ -153,4 +152,32 @@ test('failed native turns capture checkpoints and interrupted persisted turns re
   const record = (await restored.load(id)).find(x => x.id === c.id).turns.at(-1);
   assert.equal(record.status, 'interrupted'); assert.equal(record.proofMemoryResult.saved, 1);
   assert.ok((await readProofAttempts(cwd)).attempts.some(a => a.turnStatus === 'interrupted'));
+}));
+
+test('unknown revisit preserves checkpoint and original reference without forging lineage', () => sandbox(async root => {
+  const missing = randomUUID() + '/unknown';
+  const turn = await checkpoint(root, project(), [attempt({revisitOf: missing, revisitReason: 'New premise'})]);
+  const input = await fs.readFile(path.join(root, turn.proofMemory.inputPath), 'utf8');
+  const saved = await captureProofAttempts(root, turn);
+  assert.equal(saved.saved, 1); assert.equal(saved.unlinked, 1);
+  const [row] = (await readProofAttempts(root)).attempts;
+  assert.equal(row.revisitOf, ''); assert.equal(row.unresolvedRevisitOf, missing);
+  assert.equal(row.revisitReason, 'New premise');
+  assert.equal((await queryProofAttempts(root, project())).attempts[0].unresolvedRevisitOf, missing);
+  assert.equal(await fs.readFile(path.join(root, turn.proofMemory.inputPath), 'utf8'), input);
+  assert.deepEqual(await captureProofAttempts(root, turn), saved);
+}));
+test('reload recovers old missing-revisit errors without replaying or erasing unrelated errors', () => sandbox(async root => {
+  const {chats, store, projects, id, cwd} = await chatFixture(root);
+  const c = await chats.newConversation(id, 'research');
+  const turn = await checkpoint(cwd, project(), [attempt({revisitOf: randomUUID() + '/missing', revisitReason: 'New evidence'})]);
+  turn.output = 'Preserved answer';
+  turn.proofMemoryResult = {status:'error', saved:0, error:'Revisited attempt does not exist; submission preserved for correction.'};
+  turn.artifactError = 'Other artifact error\nProof-attempt memory: ' + turn.proofMemoryResult.error;
+  c.turns.push(turn); await chats.persist(id);
+  const restored = new Chats(projects, store);
+  const result = (await restored.load(id)).find(x => x.id === c.id).turns[0];
+  assert.equal(result.proofMemoryResult.saved, 1); assert.equal(result.proofMemoryResult.unlinked, 1);
+  assert.equal(result.artifactError, 'Other artifact error'); assert.equal(result.output, 'Preserved answer');
+  assert.equal(result.status, 'complete'); assert.equal(restored.controllers.size, 0);
 }));

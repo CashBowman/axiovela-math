@@ -74,6 +74,22 @@ function App() {
       JSON.stringify(closedProjects),
     );
   }, [closedProjects]);
+  useEffect(()=>{
+    const open=async event=>{
+      const {projectId,id,role,resolve,reject}=event.detail;
+      try {
+        await request('/api/conversation-history/open?'+new URLSearchParams({project:projectId,id}));
+        await save();
+        localStorage.setItem(`axiovela-math-chat:${projectId}:${role}`,id);
+        await openProject(projectId);
+        setTab(role==='writing'?'Write-up':'Research');
+        window.dispatchEvent(new CustomEvent('axiovela-conversation-selected',{detail:{projectId,id,role}}));
+        resolve();
+      }catch(e){reject(e);}
+    };
+    window.addEventListener('axiovela-open-conversation',open);
+    return()=>window.removeEventListener('axiovela-open-conversation',open);
+  });
   async function closeProject(id) {
     await save();
     setClosedProjects((ids) => [...ids, id]);

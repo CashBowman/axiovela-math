@@ -154,6 +154,7 @@ export default function LeanWorkspace({
             {manuscriptFormat === "latex"
               ? "LaTeX manuscript order"
               : "Markdown manuscript order"}
+            {" · ↑ ↓ to navigate"}
           </p>
         )}
         <div className="resultCards" aria-label="Research results">
@@ -168,7 +169,23 @@ export default function LeanWorkspace({
                   key={r.ref}
                   className="resultCard"
                   aria-pressed={selected?.ref === r.ref}
+                  tabIndex={selected?.ref === r.ref ? 0 : -1}
                   onClick={() => setSelectedRef(r.ref)}
+                  onKeyDown={(event) => {
+                    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+                    const next = {
+                      ArrowDown: Math.min(index + 1, results.length - 1),
+                      ArrowUp: Math.max(index - 1, 0),
+                      Home: 0,
+                      End: results.length - 1,
+                    }[event.key];
+                    if (next === undefined) return;
+                    event.preventDefault();
+                    setSelectedRef(results[next].ref);
+                    const card = event.currentTarget.parentElement.querySelectorAll('.resultCard')[next];
+                    card.focus({ preventScroll: true });
+                    card.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                  }}
                 >
                   <span className="resultCardMeta">
                     <span>{r.label}</span>

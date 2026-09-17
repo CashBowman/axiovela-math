@@ -84,3 +84,11 @@ See [Projects and manuscript navigation](project-navigator.md) for the revisione
 The private preview includes named-theorem Lean audits, concise status labels, automatic checks after project-editing turns, source title repair and consolidation, safe recovery from Codex session writer conflicts, and shorter executive summaries. Annotation capture supplies its initial viewport position before display. Markdown/KaTeX rendering is memoized, unchanged chat polling snapshots are skipped, idle elapsed timers stop, and annotation text projections are reused.
 
 Run `npm test`, `npm run build`, `npm run test:ui`, `npm run test:lean`, `npm run test:results`, and `npm run test:annotations`. `PERF_LABEL=current PERF_ASSERT=1 node scripts/interaction-perf-smoke.mjs` profiles isolated long mathematical chat/document fixtures; timings are machine-specific. Native Linux acceptance and launch/relaunch checks are separate from cross-building Windows and Mac archives. The repository stays private and all builds run locally.
+
+## 0.1.16-beta.1 testing candidate
+
+Project-based History reuses existing project and conversation IDs, adds bounded search and persistent titles/pins/archives, and preserves transcripts through versioned sidecar metadata and exact migration backups. Completed Math-managed Codex sessions are archived from Recents and restored on follow-up, without deleting native history. See [conversation history](conversation-history.md).
+
+Library and Lean navigation support arrow keys. Write-up assessments stay in chat unless separate files are requested. Missing proof-attempt revisit references are preserved for recovery. The local fixture suite includes migration preservation, session handoffs, sidebar cleanup, concurrent chats and queued follow-ups. Run `npm test`, `npm run test:history`, `npm run test:ui`, and packaged Linux acceptance.
+
+The release branch prepares installer buttons and draft assets; main retains the previous published download links until this candidate is approved. All packages are built locally. Windows x64 and Mac arm64/x64 native acceptance is pending owner testing; Linux x64 is tested on the build host. No GitHub Actions dispatch or public repository visibility change is part of this release preparation.
