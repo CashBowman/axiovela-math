@@ -8,12 +8,7 @@
 
 Axiovela Math keeps your sources, mathematical arguments, formal checks, and writing together in ordinary project files on your computer. Connect your AI provider, guide the work, and review the evidence at each step.
 
-<div align="center">
-  <video width="960" controls muted playsinline poster="docs/demo/axiovela-math-demo.jpg">
-    <source src="docs/demo/axiovela-math-demo.webm" type="video/webm" />
-    <a href="docs/demo/axiovela-math-demo.webm">Watch the 43-second Axiovela Math product tour</a>
-  </video>
-</div>
+https://github.com/user-attachments/assets/2105326e-ed8c-4836-b552-6bf168f2a9eb
 
 <p align="center"><a href="docs/demo/axiovela-math-demo.webm"><strong>Open the 43-second product tour directly</strong></a></p>
 
