@@ -12,6 +12,7 @@ const mediaTypes={'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.
 export function folderChooser(platform=process.platform){
  if(platform==='darwin')return {command:'osascript',args:['-e','POSIX path of (choose folder with prompt "Choose your Axiovela project")']};
  if(platform==='linux')return {command:'zenity',args:['--file-selection','--directory','--title=Choose your Axiovela project']};
+ if(platform==='win32')return {command:'powershell.exe',args:['-NoProfile','-NonInteractive','-STA','-Command',"Add-Type -AssemblyName System.Windows.Forms; $dialog = New-Object System.Windows.Forms.FolderBrowserDialog; $dialog.Description = 'Choose your Axiovela project'; if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::Out.Write($dialog.SelectedPath); exit 0 }; exit 1"]};
  throw Error('The browser folder chooser is unavailable on this platform. Use the desktop app or enter a location under More options.');
 }
 function relative(value){if(typeof value!=='string'||!value||value.includes('\\')||path.isAbsolute(value)||value.split('/').some(s=>!s||s.startsWith('.'))||value.includes('\0'))throw Error('That file is outside the experiment’s shareable results.');return value;}

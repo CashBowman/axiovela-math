@@ -25,6 +25,7 @@ docs/*
 *.key
 
 !docs/desktop-platforms.md
+!docs/windows-package-validation.json
 
 # README installation buttons.
 !docs/assets/

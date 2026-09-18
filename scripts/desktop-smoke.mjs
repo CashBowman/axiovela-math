@@ -15,7 +15,12 @@ const packagedBinary=process.platform==='darwin'?path.resolve(`out/Axiovela Math
 const executable=process.env.AXIOVELA_MATH_TEST_BINARY||(installed?path.join(receipt.installed,'axiovela-math'):image?path.resolve(`out/installers/Axiovela-Math-${pkg.version}-linux-${process.arch}.AppImage`):packaged?packagedBinary:electron);
 const suffix=installed?'installed':image?(process.argv.includes('--mounted')?'appimage-mounted':'appimage'):packaged?'packaged':'source';
 async function launch(reopen){
- let output='';const child=spawn(executable,image?(process.argv.includes('--mounted')?[]:['--appimage-extract-and-run']):(packaged||installed)?[]:['.'],{env:{...env,...(reopen?{AXIOVELA_MATH_SMOKE_REOPEN:'1'}:{})},stdio:'pipe'});
+ let output='';const args=image?(process.argv.includes('--mounted')?[]:['--appimage-extract-and-run']):(packaged||installed)?[]:['.'];
+ // Windows screen capture can fail in headless/RDP sessions when Chromium uses
+ // the hardware compositor. Software rendering keeps smoke-test evidence stable
+ // without changing normal application launches.
+ if(process.platform==='win32')args.unshift('--disable-gpu');
+ const child=spawn(executable,args,{env:{...env,...(reopen?{AXIOVELA_MATH_SMOKE_REOPEN:'1'}:{})},stdio:'pipe'});
  for(const stream of [child.stdout,child.stderr])stream.on('data',x=>output+=x);
  const timeout=setTimeout(()=>child.kill('SIGKILL'),35000);
  try{const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('exit',resolve);});if(code!==0||!output.includes('AXIOVELA_MATH_DESKTOP_READY'))throw Error(output||'Desktop failed to reach ready state.');}finally{clearTimeout(timeout);}

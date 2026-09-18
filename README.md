@@ -10,7 +10,7 @@ Axiovela Math keeps your sources, mathematical arguments, formal checks, and wri
 
 The mathematics companion to [Axiovela](https://github.com/CashBowman/axiovela), built around the same research and writing workflow.
 
-**Private development.** This repository and its downloads require access. Linux x64 and macOS Apple silicon are locally validated; Windows and macOS Intel previews still await native acceptance. A public product release has not been approved.
+**Private development.** This repository and its downloads require access. Linux x64, Windows x64, and macOS Apple silicon are locally validated; the macOS Intel preview still awaits native acceptance. A public product release has not been approved.
 
 ## Keep research moving in parallel
 
@@ -48,7 +48,7 @@ The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node
 
 <a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-win32-x64-unsigned.exe"><img src="docs/assets/downloads/windows.svg" alt="Download Windows x64 unsigned preview installer" width="320" height="88" /></a>
 
-[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-win32-x64-unsigned.zip). Cross-built on Linux; unsigned and not yet launch-tested on Windows.
+[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-win32-x64-unsigned.zip). The linked 0.1.15 preview was cross-built on Linux and remains unsigned. The current 0.1.16-beta.2 source builds have been natively packaged, installed, launched, relaunched, and uninstalled on Windows x64; those newer artifacts have not been uploaded to a release.
 
 **macOS · Apple silicon installer**
 
