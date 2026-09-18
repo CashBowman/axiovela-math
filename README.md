@@ -52,7 +52,7 @@ Version **0.1.16-beta.3** adds a Windows-native installer build, install/uninsta
 
 **Downloads · Public beta**
 
-The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node.js and npm are not required. All builds were produced and validated locally; no GitHub build jobs were used.
+The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node.js and npm are not required. Every downloadable package was produced and validated locally; no GitHub job built or published a release artifact.
 
 **Windows · x64 installer**
 
