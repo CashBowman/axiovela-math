@@ -64,7 +64,7 @@ The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node
 
 <a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.2/Axiovela-Math-0.1.16-beta.2-darwin-arm64-adhoc.dmg"><img src="docs/assets/downloads/mac-arm.svg" alt="Download Mac Apple silicon DMG installer" width="320" height="88" /></a>
 
-The Apple silicon DMG is built and launch-tested on macOS. It is ad-hoc signed, not Developer ID signed or notarized, so macOS may require an explicit first-open confirmation. [Mac build and trust details →](docs/desktop-platforms.md#build-commands)
+The Apple silicon DMG is built and launch-tested on macOS. It is ad-hoc signed, macOS may require an explicit first-open confirmation. [Mac build and trust details →](docs/desktop-platforms.md#build-commands)
 
 **Linux · Validated x64 packages**
 
