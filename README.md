@@ -4,13 +4,23 @@
 
 <p align="center"><strong>The AI mathematics research workbench.</strong><br />Turn a question into connected sources, precise claims, proofs, and a manuscript.</p>
 
+<p align="center">
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-29333E" /></a>
+  <a href="https://github.com/CashBowman/axiovela-math/releases"><img alt="Public beta releases" src="https://img.shields.io/badge/release-public%20beta-CFA345" /></a>
+  <img alt="Windows, macOS, and Linux" src="https://img.shields.io/badge/platforms-Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-4D7898" />
+</p>
+
 <p align="center"><a href="#start-with-the-desktop-app">Install</a> · <a href="docs/getting-started.md">Get started</a> · <a href="#from-question-to-manuscript">Features</a> · <a href="docs/math-harness.md">Math harness</a> · <a href="docs/development.md">Documentation</a></p>
 
 Axiovela Math keeps your sources, mathematical arguments, formal checks, and writing together in ordinary project files on your computer. Connect your AI provider, guide the work, and review the evidence at each step.
 
+https://github.com/user-attachments/assets/2105326e-ed8c-4836-b552-6bf168f2a9eb
+
+<p align="center"><a href="docs/demo/axiovela-math-demo.webm"><strong>Open the 43-second product tour directly</strong></a></p>
+
 The mathematics companion to [Axiovela](https://github.com/CashBowman/axiovela), built around the same research and writing workflow.
 
-**Private development.** This repository and its downloads require access. Linux x64, Windows x64, and macOS Apple silicon are locally validated; the macOS Intel preview still awaits native acceptance. A public product release has not been approved.
+**Public beta.** Linux x64, Windows x64, and macOS Apple silicon have native launch validation. Windows is unsigned, and the Apple silicon build is ad-hoc signed but not notarized. Review the platform notes before installing. macOS Intel is not currently offered as a public download.
 
 ## Keep research moving in parallel
 
@@ -40,21 +50,21 @@ Version **0.1.16-beta.3** adds a Windows-native installer build, install/uninsta
 
 ## Start with the desktop app
 
-**Downloads · Private preview**
+**Downloads · Public beta**
 
-The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node.js and npm are not required. Sign in to GitHub with repository access to download. All builds were produced locally; no GitHub build jobs were used.
+The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node.js and npm are not required. All builds were produced and validated locally; no GitHub build jobs were used.
 
 **Windows · x64 installer**
 
 <a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.3/Axiovela-Math-0.1.16-beta.3-win32-x64-unsigned.exe"><img src="docs/assets/downloads/windows.svg" alt="Download Windows x64 unsigned preview installer" width="320" height="88" /></a>
 
-[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.3/Axiovela-Math-0.1.16-beta.3-win32-x64-unsigned.zip). Built, installed, launched, relaunched, and uninstalled on Windows x64. This private preview is unsigned, so Windows may warn that its publisher is unknown.
+[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.3/Axiovela-Math-0.1.16-beta.3-win32-x64-unsigned.zip). Built, installed, launched, relaunched, and uninstalled on Windows x64. This beta is not Authenticode signed, so Windows may warn that its publisher is unknown.
 
 **macOS · Apple silicon installer**
 
 <a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.2/Axiovela-Math-0.1.16-beta.2-darwin-arm64-adhoc.dmg"><img src="docs/assets/downloads/mac-arm.svg" alt="Download Mac Apple silicon DMG installer" width="320" height="88" /></a>
 
-The Apple silicon DMG is built and launch-tested on macOS. It is ad-hoc signed for private development, not Developer ID signed or notarized. [Mac build and trust details →](docs/desktop-platforms.md#build-commands)
+The Apple silicon DMG is built and launch-tested on macOS. It is ad-hoc signed, not Developer ID signed or notarized, so macOS may require an explicit first-open confirmation. [Mac build and trust details →](docs/desktop-platforms.md#build-commands)
 
 **Linux · Validated x64 packages**
 
@@ -66,11 +76,11 @@ The Apple silicon DMG is built and launch-tested on macOS. It is ad-hoc signed f
 
 First LaTeX rendering may download TeX resources. On Linux and macOS, **Lean Certificates → Set up Lean** installs the compiler and project libraries, then runs a small installation test. Allow internet access and several GB for mathlib. Lean setup on Windows is currently manual.
 
-**Help → Check for updates** explains private distribution; it does not authenticate to GitHub or fetch private downloads. Obtain updates from the release page. Close the app before installing an update; projects and app data remain separate from application files.
+The current beta installers use manual updates from the release page. Close the app before replacing it; projects and app data remain separate from application files. Future builds can use the signed guided-download path described in [Update details](docs/updates.md).
 
 ## Prefer to run from source?
 
-With repository access, install Git and **Node.js 22.13+**, then run:
+Install Git and **Node.js 22.13+**, then run:
 
 ```sh
 git clone https://github.com/CashBowman/axiovela-math.git
@@ -81,7 +91,7 @@ npm run desktop:start
 
 For the browser development view, run `npm run dev` and open **http://127.0.0.1:5174**. For a production browser build, run `npm run build` followed by `npm start` and open **http://127.0.0.1:8791**. Keep the terminal running; **Ctrl+C** stops the service.
 
-[Development and validation](docs/development.md) covers local packaging and isolated tests. GitHub builds must not run during this development phase. Tests use provider fixtures and make no paid model calls.
+[Development and validation](docs/development.md) covers local packaging and isolated tests. The repository's workflow is manual-only; release artifacts are never built or published by GitHub Actions. Tests use provider fixtures and make no paid model calls.
 
 ## Keep the mathematics under your control
 
@@ -93,6 +103,6 @@ For the browser development view, run `npm run dev` and open **http://127.0.0.1:
 
 Repository source and installer packages exclude development workspaces, conversations, private reports, credentials, and signing keys.
 
-[Prompt playbook](prompts/README.md) · [Third-party notices](docs/third-party.md) · [Report an issue](https://github.com/CashBowman/axiovela-math/issues)
+[Prompt playbook](prompts/README.md) · [Third-party notices](docs/third-party.md) · [Security policy](SECURITY.md) · [Contributing](CONTRIBUTING.md) · [Report an issue](https://github.com/CashBowman/axiovela-math/issues)
 
 MIT licensed; see [LICENSE](LICENSE).

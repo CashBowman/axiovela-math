@@ -1,6 +1,6 @@
 # Getting started
 
-Sign in to GitHub with repository access and open the [0.1.16-beta.2 Apple silicon download](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.2). Open the DMG and drag Axiovela Math to Applications. The private build is ad-hoc signed and launch-tested, but not Developer ID signed or notarized. Linux x64 remains validated in the prior release; Windows has an unsigned preview installer. See [platform status](desktop-platforms.md).
+Choose the download for your system from the [public releases](https://github.com/CashBowman/axiovela-math/releases). On Apple silicon, open the 0.1.16-beta.2 DMG and drag Axiovela Math to Applications. That build is ad-hoc signed and launch-tested, but not Developer ID signed or notarized. Windows x64 has a natively validated but unsigned installer, and Linux x64 has a validated AppImage and portable archive. See [platform status](desktop-platforms.md) before installing.
 
 On Linux, download the x64 AppImage. Allow execution in file properties if required, then open it. The portable archive is an alternative: extract it and open `axiovela-math`. Node.js is included in the desktop download.
 
@@ -16,7 +16,7 @@ Library can import selected Axiovela experiments as evidence snapshots and conne
 
 The setup-tested Lean/mathlib baseline is v4.19.0. Existing projects can use another pinned official release. Missing basic Linux utilities may require your administrator password; macOS uses Apple Command Line Tools and its built-in checksum utility. Lean installs per user. The first setup needs internet and several GB of disk space. Source, compiler status, statement correspondence and full certification are separate states.
 
-During private development, download updates from the release page. **Help → Check for updates** explains this manual workflow. Finish current work and close the app before replacing application files. Profiles and project folders stay separate from application files. Keep the previous app until the new one works. The app does not perform automatic replacement or downgrade.
+The current beta installers update manually from the release page. Finish current work and close the app before replacing application files. Profiles and project folders stay separate from application files. Keep the previous app until the new one works. The app does not perform automatic replacement or downgrade.
 
 ## Library and project tabs
 

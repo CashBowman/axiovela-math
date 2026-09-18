@@ -9,7 +9,7 @@ reports/evidence/
 .lavish/qa-*.png
 out/
 
-# Private development context and research are not release source.
+# Local development context and research are not release source.
 AGENTS.md
 .lavish/
 reports/
@@ -25,7 +25,6 @@ docs/*
 *.key
 
 !docs/desktop-platforms.md
-!docs/windows-package-validation.json
 
 # README installation buttons.
 !docs/assets/
@@ -35,3 +34,9 @@ docs/assets/downloads/*
 !docs/assets/downloads/*.svg
 
 !docs/project-navigator.md
+
+# README product tour.
+!docs/demo/
+docs/demo/*
+!docs/demo/axiovela-math-demo.webm
+!docs/demo/axiovela-math-demo.jpg
