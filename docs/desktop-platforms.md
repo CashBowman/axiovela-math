@@ -2,7 +2,7 @@
 
 The repository is private. The 0.1.16-beta.2 Apple silicon download is an authorized private preview. Keep the repository private; no public release or GitHub Actions builds are authorized. CI has manual triggers only; the commands below run locally and disable publishing.
 
-Download the current [Apple silicon private preview](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.2). Its DMG is built, resource-seal verified, and launch-tested on macOS. Linux x64 remains validated in the prior release. Windows x64 has now been natively built, installed, launched, relaunched, and uninstalled; Mac Intel still awaits native acceptance.
+Download the current [Windows x64 private preview](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.3) or [Apple silicon private preview](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.2). The Windows installer is natively built, installed, launched, relaunched, and uninstalled. The Apple silicon DMG is resource-seal verified and launch-tested on macOS. Linux x64 remains validated in the prior release; Mac Intel still awaits native acceptance.
 
 ## Build commands
 
@@ -33,7 +33,7 @@ The clean packaging, platform tool pins and ad-hoc Mac signing approach follow A
 
 ## Current limitations and native acceptance
 
-Windows and Mac packages are private development artifacts. The Windows x64 automated acceptance covers an install path containing spaces, two launches of both the packaged and installed executable, stable local origin and Chromium storage, isolated app data, backend shutdown, and silent uninstall. The exact build evidence is recorded in [`windows-package-validation.json`](windows-package-validation.json). Upgrade-over-install, non-ASCII install paths, live provider credentials, real LaTeX download/rendering, interactive menus and dialogs, and publisher trust remain manual acceptance work.
+Windows and Mac packages are private development artifacts. The Windows x64 automated acceptance covers an install path containing spaces and non-ASCII characters, two launches of both the packaged and installed executable, stable local origin and Chromium storage, isolated app data, backend shutdown, real LaTeX rendering, in-place upgrade from 0.1.15-beta.1 with retained profile data, and silent uninstall that preserves the profile. The exact build evidence is recorded in [`windows-package-validation.json`](windows-package-validation.json). Live provider credentials, interactive menus and dialogs, and publisher trust remain manual acceptance work.
 
 Before calling either platform fully supported, complete the remaining checks on the target OS and architecture:
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.16-beta.3 — 2026-09-17
+
+Private Windows x64 validation release. The unsigned NSIS installer and portable ZIP are now built on Windows with the pinned Tectonic compiler, and the packaged and installed apps pass native launch/relaunch storage and backend-shutdown smoke tests. Silent install and uninstall are verified from a path containing spaces. Browser-mode Axiovela project selection now uses a fixed native Windows folder chooser.
+
+Windows test fixtures no longer assume POSIX executable scripts or automatic Lean setup. Chromium smoke-test screenshots use software rendering on Windows to avoid compositor-only capture failures without changing normal application launches.
+
+The installer is not Authenticode signed. Windows publisher trust and distribution beyond approved testers still require a protected code-signing certificate and a separately reviewed signed build.
+
 ## 0.1.16-beta.2 — 2026-09-16
 
 Private macOS repair release. The Apple silicon app is assembled and ad-hoc signed on macOS, its resource seal is verified before packaging, and the native DMG is exercised with launch/relaunch storage smoke tests. macOS now uses its native folder chooser and supports the same guarded one-click Lean/Mathlib setup as Linux, including the built-in `shasum` checksum utility.

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.16-beta.2",
+  "version": "0.1.16-beta.3",
   "platform": "win32",
   "arch": "x64",
   "buildHost": "win32-x64",
@@ -8,14 +8,14 @@
   "signing": "unsigned; native signing required",
   "artifacts": [
     {
-      "name": "Axiovela-Math-0.1.16-beta.2-win32-x64-unsigned.exe",
-      "bytes": 151157568,
-      "sha256": "7c2a89f69f84424a5b7aae126bc474df8c7f6e149aa79f51826a7cad73d27357"
+      "name": "Axiovela-Math-0.1.16-beta.3-win32-x64-unsigned.exe",
+      "bytes": 151157520,
+      "sha256": "144fe4c277d2399fc73a4f5572ec29e0f5a34e75d06196d436a9020661bc5c77"
     },
     {
-      "name": "Axiovela-Math-0.1.16-beta.2-win32-x64-unsigned.zip",
+      "name": "Axiovela-Math-0.1.16-beta.3-win32-x64-unsigned.zip",
       "bytes": 202089850,
-      "sha256": "e545158086ae0c8632225e804edfbac9f40b709142d7941b31442609ee957251"
+      "sha256": "595aa81c2ca9df5ee70143a56b52057d0d4f6f416f088f1d04a7d777132d494b"
     }
   ],
   "tectonic": {
@@ -28,15 +28,22 @@
     "packagedLaunches": 2,
     "installedLaunches": 2,
     "installPathContainsSpaces": true,
+    "installPathContainsNonAscii": true,
     "stableOrigin": true,
     "storageSurvivesRelaunch": true,
     "isolatedChromiumProfile": true,
     "backendShutdown": true,
     "silentInstall": true,
+    "upgradedFrom": "0.1.15-beta.1",
+    "inPlaceUpgradePassed": true,
+    "profileSurvivesUpgrade": true,
     "silentUninstall": true,
     "installedApplicationRemoved": true,
+    "profileSurvivesUninstall": true,
+    "realLatexRenderPassed": true,
+    "renderedPdfBytes": 8772,
     "liveCredentialsUsed": false
   },
-  "builtAt": "2026-09-17T23:58:13.865Z",
-  "checkedAt": "2026-09-18T00:03:16.524Z"
+  "builtAt": "2026-09-18T00:16:16.190Z",
+  "checkedAt": "2026-09-18T00:38:25.727Z"
 }

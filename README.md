@@ -36,7 +36,7 @@ Use **Projects** beside the tabs to reopen saved work, pin folders, or inspect e
 
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Connect Codex, Claude Code, Gemini CLI, OpenCode, Pi, or a supported API connection. [Connections and first session →](docs/getting-started.md)
 
-Version **0.1.16-beta.2** adds a native Apple silicon DMG, valid ad-hoc resource sealing, native launch/relaunch validation, a macOS folder chooser, and automatic Lean setup on macOS. It preserves the research, proof, reading, and manuscript improvements from 0.1.15-beta.1. [Release notes →](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.2)
+Version **0.1.16-beta.3** adds a Windows-native installer build, install/uninstall and launch/relaunch acceptance, and a native Windows folder chooser. It retains the validated Apple silicon DMG and the research, proof, reading, and manuscript improvements from earlier 0.1.16 previews. [Release notes →](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.3)
 
 ## Start with the desktop app
 
@@ -46,9 +46,9 @@ The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node
 
 **Windows · x64 installer**
 
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-win32-x64-unsigned.exe"><img src="docs/assets/downloads/windows.svg" alt="Download Windows x64 unsigned preview installer" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.3/Axiovela-Math-0.1.16-beta.3-win32-x64-unsigned.exe"><img src="docs/assets/downloads/windows.svg" alt="Download Windows x64 unsigned preview installer" width="320" height="88" /></a>
 
-[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.15-beta.1/Axiovela-Math-0.1.15-beta.1-win32-x64-unsigned.zip). The linked 0.1.15 preview was cross-built on Linux and remains unsigned. The current 0.1.16-beta.2 source builds have been natively packaged, installed, launched, relaunched, and uninstalled on Windows x64; those newer artifacts have not been uploaded to a release.
+[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.3/Axiovela-Math-0.1.16-beta.3-win32-x64-unsigned.zip). Built, installed, launched, relaunched, and uninstalled on Windows x64. This private preview is unsigned, so Windows may warn that its publisher is unknown.
 
 **macOS · Apple silicon installer**
 
