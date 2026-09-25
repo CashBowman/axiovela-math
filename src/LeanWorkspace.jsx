@@ -230,7 +230,7 @@ export default function LeanWorkspace({
     >
       <div className="scrollBody panelBody">
         {selected && (
-          <section className="selectedResult" aria-label="Selected result">
+          <section data-feedback-panel="Selected result" className="selectedResult" aria-label="Selected result">
             <div className="resultCardMeta">
               <span>{selected.label}</span>
               {selected.mainResult && (

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ManuscriptReview from "./ManuscriptReview.jsx";
 import {
+  feedbackExcluded,
   capturePassage,
   textProjection,
   rangeFromAnchor,
@@ -28,11 +29,11 @@ export default function WorkspaceFeedback({ project, update, role }) {
       if (event.button != null && event.button !== 0) return;
       if (
         event.target.closest(
-          "[data-reading-review],[data-annotation-ui],input,textarea,select,button,a,summary,.inactiveWorkspace",
+          "[data-reading-review],a," + feedbackExcluded,
         )
       )
         return;
-      const panel = event.target.closest(".panel"),
+      const panel = event.target.closest("[data-feedback-panel]"),
         selected = window.getSelection();
       if (
         !panel ||
@@ -66,7 +67,7 @@ export default function WorkspaceFeedback({ project, update, role }) {
         target: {
           kind: "panel",
           id: crypto.randomUUID(),
-          title: panel.querySelector("h2")?.textContent || "Workspace",
+          title: panel.dataset.feedbackPanel,
           source,
           role,
         },
@@ -74,9 +75,11 @@ export default function WorkspaceFeedback({ project, update, role }) {
     };
     const keyboard = (e) => {
       if (e.altKey && e.key.toLowerCase() === "m") {
-        e.preventDefault();
         const target = window.getSelection()?.anchorNode?.parentElement;
-        if (target) capture({ target, type: "keydown" });
+        if (target?.closest("[data-feedback-panel]") && !target.closest("[data-reading-review]," + feedbackExcluded)) {
+          e.preventDefault();
+          capture({ target, type: "keydown" });
+        }
       }
     };
     document.addEventListener("mouseup", capture);

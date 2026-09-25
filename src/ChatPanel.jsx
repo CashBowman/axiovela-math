@@ -12,7 +12,10 @@ const names = {
   writing: "Publication Assistant",
   lean: "Formalization Assistant",
 };
-export default function ChatPanel({
+export default function ChatPanel(props) {
+  return <ProjectChat key={`${props.project.id}:${props.role}`} {...props}/>;
+}
+function ProjectChat({
   project,
   role,
   beforeSend,
@@ -66,7 +69,7 @@ export default function ChatPanel({
       options,
     );
   const chat =
-    list.find((c) => c.id === selected) || list.find((c) => c.role === role && !c.archived);
+    list.find((c) => c.id === selected && c.role === role) || list.find((c) => c.role === role && !c.archived);
   const current = chat?.turns.at(-1);
   const running =
     !!current && ["running", "canceling"].includes(current.status);

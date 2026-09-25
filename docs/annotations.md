@@ -1,3 +1,5 @@
+Feedback is available only in designated research content, document previews and readers. Chat, source editors, navigation, controls and configuration are excluded. Selections must remain within readable content.
+
 # Annotating manuscripts and sources
 
 Annotations are always available in the write-up preview, executive summary, proof write-ups and paper reader. There is no mode switch. Click a sentence or drag across a passage, then type feedback in the small popover and choose **Add to message**. Selection expands to complete sentences, including across Markdown paragraphs. Display equations and inserted Markdown figures can also receive notes. With a keyboard text selection inside the preview, Alt+M opens a note; Enter in the feedback field adds it to the unsent message, Shift+Enter inserts a new line, Ctrl/Cmd+Enter also adds it, and Escape cancels it. Composition keystrokes do not submit.

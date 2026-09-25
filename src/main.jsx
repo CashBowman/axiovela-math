@@ -864,7 +864,7 @@ function App() {
     <Panel title="Executive summary" label="RESEARCH BRIEF" className="fill">
       <div className="scrollBody">
         <div className="panelBody">
-          <h3>{project.question || "Start with a mathematical question"}</h3>
+          <h3 data-feedback-panel={project.question ? "Research question" : undefined}>{project.question || "Start with a mathematical question"}</h3>
           <p className="hint">
             {project.claims.length} claims · {project.papers.length} sources
           </p>
@@ -888,7 +888,7 @@ function App() {
         {project.notes && (
           <div className="panelBody">
             <h3>Working notes</h3>
-            <Preview prose source={project.notes} />
+            <div data-feedback-panel="Working notes"><Preview prose source={project.notes} /></div>
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  feedbackExcluded,
   capturePassage,
   textProjection,
   rangeFromAnchor,
@@ -109,7 +110,7 @@ export default function AnnotationSurface({
     if (
       !annotating ||
       event.target.closest(
-        "[data-annotation-ui],button,a,input,textarea,select,summary",
+        feedbackExcluded + ",a",
       )
     )
       return;

@@ -1,5 +1,7 @@
 import { sentenceBounds, quoteAnchor } from "../shared/annotations.mjs";
 
+export const feedbackExcluded = '[data-annotation-ui],[data-feedback-exclude],button,input,textarea,select,option,label,form,summary,[contenteditable]:not([contenteditable="false"]),[role="button"],[role="menu"],[role="toolbar"],[role="tablist"],[inert],.inactiveWorkspace,.hiddenLibraryView,.paneHead,.panelHead,.paneHint,.emptyResearch';
+
 // Keep overlays out of the text tree. The projection is rebuilt after reflow,
 // and synthetic block separators never become DOM offsets.
 export function textProjection(root) {
@@ -10,7 +12,7 @@ export function textProjection(root) {
     acceptNode(node) {
       return !node.textContent ||
         node.parentElement?.closest(
-          ".katex-mathml,script,style,button,[data-annotation-ui]",
+          ".katex-mathml,script,style," + feedbackExcluded,
         )
         ? NodeFilter.FILTER_REJECT
         : NodeFilter.FILTER_ACCEPT;
@@ -69,6 +71,15 @@ export function capturePassage(root, event, { exact = false, projection: existin
   if (!projection.text.trim()) return null;
   const selection = window.getSelection();
   let range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+  // A selection must stay wholly inside readable content. In particular,
+  // releasing a drag over content must not capture text from chat or controls.
+  const excludedNode = node => (node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement)?.closest(feedbackExcluded);
+  if (excludedNode(event?.target)) return null;
+  if (range && !range.collapsed && (
+    !root.contains(range.startContainer) || !root.contains(range.endContainer) ||
+    excludedNode(range.startContainer) || excludedNode(range.endContainer) ||
+    [...root.querySelectorAll(feedbackExcluded)].some(node => range.intersectsNode(node))
+  )) return null;
   const clickedBlock = event?.target?.closest(".katex-display,pre");
   if (
     clickedBlock &&
@@ -112,6 +123,7 @@ export function capturePassage(root, event, { exact = false, projection: existin
     !root.contains(range.endContainer)
   )
     return null;
+  if (excludedNode(range.startContainer) || excludedNode(range.endContainer)) return null;
   let start = offset(projection, range.startContainer, range.startOffset),
     end = offset(projection, range.endContainer, range.endOffset);
   if (start === undefined || end === undefined) return null;

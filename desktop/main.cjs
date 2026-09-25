@@ -45,7 +45,7 @@ function nativeMenu(){
   {label:'File',submenu:[{label:'New project…',accelerator:'CmdOrCtrl+N',click:()=>win?.webContents.send('math:command','new-project')},{label:'Open project…',accelerator:'CmdOrCtrl+O',click:()=>win?.webContents.send('math:command','open-project')},{type:'separator'},{label:'Export workspace JSON',click:()=>win?.webContents.send('math:command','export-workspace')},{label:'Export recovery draft',click:()=>win?.webContents.send('math:command','export-recovery')},{label:'Research version history',click:()=>win?.webContents.send('math:command','history')},{type:'separator'},{label:'Open app data folder',click:()=>openFolder(userDir)},{type:'separator'},{label:'Quit',accelerator:'CmdOrCtrl+Q',click:()=>win?.close()}]},
   {role:'editMenu'},
   {label:'View',submenu:[{label:'Actual size / fit PDF',accelerator:'CmdOrCtrl+0',click:()=>win?.webContents.send('math:zoom','reset')},{label:'Zoom in',accelerator:'CmdOrCtrl+=',click:()=>win?.webContents.send('math:zoom','in')},{label:'Zoom out',accelerator:'CmdOrCtrl+-',click:()=>win?.webContents.send('math:zoom','out')},{type:'separator'},{role:'togglefullscreen'}]},
-  {label:'Help',submenu:[{label:'Check for updates…',click:()=>{win?.webContents.send('math:update-open');void updates?.check();}},{label:'GitHub repository',click:()=>shell.openExternal('https://github.com/CashBowman/axiovela-math')},{label:'Downloads and release notes',click:()=>shell.openExternal(releaseRoot)},{label:'About Axiovela Math',click:()=>dialog.showMessageBox(win,{type:'info',title:'Axiovela Math',message:'Axiovela Math '+app.getVersion(),detail:'Private development build\n\nResearch, evidence, Lean checks and publication writing.\n\nInstallers are distributed privately during development. Your projects and app data stay in their own folders.'})}]},
+  {label:'Help',submenu:[{label:'Check for updates…',click:()=>{win?.webContents.send('math:update-open');void updates?.check();}},{label:'GitHub repository',click:()=>shell.openExternal('https://github.com/CashBowman/axiovela-math')},{label:'Downloads and release notes',click:()=>shell.openExternal(releaseRoot)},{label:'About Axiovela Math',click:()=>dialog.showMessageBox(win,{type:'info',title:'Axiovela Math',message:'Axiovela Math '+app.getVersion(),detail:'Research, evidence, Lean checks and publication writing.\n\nYour projects and app data stay in their own folders.'})}]},
  ]));
 }
 app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.show();win.focus();}});
@@ -79,7 +79,7 @@ else app.whenReady().then(async()=>{
   await new Promise(r=>setTimeout(r,100));
  }
  if(!ready)throw Error('The local research service did not start. '+(startupError||backendLog.slice(-1500)));
- updates=new Updates({profile:userDir,currentVersion:app.getVersion(),privateDistribution:true});
+ updates=new Updates({profile:userDir,currentVersion:app.getVersion(),privateDistribution:false});
  await updates.initialize().catch(()=>updates.set({status:'error',error:'Update storage is unavailable. Your workspace can still be used.'}));
  updates.on('change',state=>{if(win&&!win.isDestroyed())win.webContents.send('math:update-state',state);});
  ipcMain.handle('math:zoom-app',(e,direction)=>{trusted(e);if(!['in','out','reset'].includes(direction))throw Error('Unknown zoom action.');const wc=win.webContents;wc.setZoomFactor(direction==='reset'?1:Math.max(.5,Math.min(3,wc.getZoomFactor()*(direction==='in'?1.15:1/1.15))));});

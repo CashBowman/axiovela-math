@@ -729,7 +729,7 @@ export default function Library({
           />
         </>
       ) : item ? (
-        <div className="scrollBody">
+        <div data-feedback-panel="Research argument" className="scrollBody">
           <Preview
             source={`## ${item.id}\n\n${item.statement || item.text || ""}\n\n### Argument and obligations\n\n${item.reviewNote || "No proof or supporting evidence has been recorded."}`}
           />
