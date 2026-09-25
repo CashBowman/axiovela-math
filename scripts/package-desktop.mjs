@@ -1,6 +1,7 @@
 import {packager} from '@electron/packager';
 import {build, Platform, Arch} from 'electron-builder';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
@@ -72,6 +73,9 @@ await fs.rm(path.join(stage, 'package-lock.json'));
 const allFiles = await fs.readdir(path.join(stage, 'node_modules'), {recursive: true});
 if (allFiles.some(name => /\.(node|dll|so|dylib)$/.test(name))) throw Error('Native runtime dependency found. Review cross-compilation before packaging.');
 const nativeMac = process.platform === 'darwin' && target.platform === 'darwin';
+// File Provider-managed folders can immediately reattach Finder metadata that
+// invalidates a signed bundle. Assemble native Mac apps on the system volume.
+const packageOutput = nativeMac ? await fs.mkdtemp(path.join(os.tmpdir(), 'axiovela-math-packaged-')) : 'out';
 // Packager cleans its temporary root. Different targets must never share it.
 const temporary = path.resolve('.local', `packager-${target.name}`);
 await fs.mkdir(temporary, {recursive: true});
@@ -79,9 +83,7 @@ const [appDir] = await packager({
   dir: stage, name: pkg.productName, executableName: 'axiovela-math',
   platform: target.platform, arch: target.arch, electronVersion: pkg.devDependencies.electron,
   appBundleId: 'org.axiovela.math', appVersion: pkg.version, appCopyright: 'Copyright © Cash Bowman',
-  icon: path.resolve(`desktop/icons/math.${target.platform === 'win32' ? 'ico' : 'icns'}`), tmpdir: temporary, out: 'out', overwrite: true, prune: false, asar: false,
-  // Final resources must be signed on macOS. Fail closed if signing fails.
-  ...(nativeMac ? {osxSign: {identity: '-', identityValidation: false, continueOnError: false, preAutoEntitlements: false, preEmbedProvisioningProfile: false, optionsForFile: () => ({hardenedRuntime: false, timestamp: 'none', entitlements: path.resolve('desktop/entitlements.mac.plist')})}} : {}),
+  icon: path.resolve(`desktop/icons/math.${target.platform === 'win32' ? 'ico' : 'icns'}`), tmpdir: temporary, out: packageOutput, overwrite: true, prune: false, asar: false,
 });
 // Failed builds must not leave a partial installer among deliverable artifacts.
 const destination = path.resolve('out/installers', target.name);
@@ -98,22 +100,48 @@ if (target.platform === 'win32') {
   }});
 } else {
   const app = path.join(appDir, `${pkg.productName}.app`);
-  if (nativeMac) await run('codesign', ['--verify', '--deep', '--strict', app]);
+  // Cross-built bundles contain linker signatures that do not seal resources.
+  // Replace them only after the complete native bundle has been assembled.
+  if (nativeMac) {
+    // Browser-downloaded source archives may carry Finder/provenance metadata.
+    // Such extended attributes are not app resources and codesign rejects them.
+    await run('xattr', ['-cr', app]);
+    await run('codesign', ['--force', '--deep', '--sign', '-', '--timestamp=none', '--entitlements', path.resolve('desktop/entitlements.mac.plist'), app]);
+    await run('codesign', ['--verify', '--deep', '--strict', '--verbose=2', app]);
+  }
   const zip = path.join(installers, `${stem}-${nativeMac ? 'adhoc' : 'unsigned'}.zip`);
   if (nativeMac) await run('ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', app, zip]);
   else await run('zip', ['-qry', zip, path.basename(app)], {cwd: appDir});
-  if (dmg) await build({prepackaged: appDir, targets: Platform.MAC.createTarget(['dmg'], target.arch === 'arm64' ? Arch.arm64 : Arch.x64), publish: 'never', config: {
-    appId: 'org.axiovela.math', productName: pkg.productName, directories: {output: installers},
-    mac: {identity: null, notarize: false, artifactName: stem + '-adhoc.${ext}'}, dmg: {sign: false, title: pkg.productName},
-  }});
+  if (dmg) {
+    const dmgRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'axiovela-math-dmg-'));
+    try {
+      await run('ditto', [app, path.join(dmgRoot, `${pkg.productName}.app`)]);
+      await fs.symlink('/Applications', path.join(dmgRoot, 'Applications'));
+      await run('hdiutil', ['create', '-volname', pkg.productName, '-srcfolder', dmgRoot, '-ov', '-format', 'UDZO', path.join(installers, `${stem}-adhoc.dmg`)]);
+    } finally { await fs.rm(dmgRoot, {recursive: true, force: true}); }
+  }
 }
 const artifacts = (await fs.readdir(installers)).filter(name => /\.(exe|zip|dmg)$/.test(name));
+if (nativeMac && dmg) {
+  const image = path.join(installers, artifacts.find(name => name.endsWith('.dmg')) || 'missing.dmg');
+  const mount = await fs.mkdtemp(path.resolve('.local', 'verify-dmg-'));
+  try {
+    await run('hdiutil', ['attach', '-readonly', '-nobrowse', '-noverify', '-mountpoint', mount, image]);
+    const mountedApp = path.join(mount, `${pkg.productName}.app`);
+    await fs.access(path.join(mountedApp, 'Contents/Info.plist'));
+    await fs.access(path.join(mountedApp, `${pkg.productName}.app`)).then(() => { throw Error('DMG contains a nested app bundle.'); }, error => { if (error.code !== 'ENOENT') throw error; });
+    await run('codesign', ['--verify', '--deep', '--strict', '--verbose=2', mountedApp]);
+  } finally {
+    await run('hdiutil', ['detach', mount]).catch(() => {});
+    await fs.rm(mount, {recursive: true, force: true});
+  }
+}
 let sums = '';
 for (const name of artifacts) sums += `${sha256(await fs.readFile(path.join(installers, name)))}  ${name}\n`;
 await fs.writeFile(path.join(installers, 'SHA256SUMS'), sums);
-const report = {version: pkg.version, target: target.name, buildHost: `${process.platform}-${process.arch}`, appDir, artifacts, tool, sourceFiles, privateDevelopmentBuild: true, publishing: false, nativeLaunchTested: false, signing: nativeMac ? 'ad-hoc; not notarized' : 'unsigned; native signing required', builtAt: new Date().toISOString()};
+const report = {version: pkg.version, target: target.name, buildHost: `${process.platform}-${process.arch}`, appDir, artifacts, tool, sourceFiles, distribution: 'public-beta', publishing: false, nativeLaunchTested: false, signing: nativeMac ? 'ad-hoc; resource seal verified; not notarized' : 'unsigned; native signing required', builtAt: new Date().toISOString()};
 await fs.writeFile(path.join(installers, 'build-report.json'), JSON.stringify(report, null, 2) + '\n');
-await fs.writeFile(path.join(installers, 'START-HERE.txt'), `Axiovela Math ${pkg.version} — private development build\nTarget: ${target.name}\n\n${target.platform === 'win32' ? 'Run the unsigned EXE for a per-user install, or extract the ZIP and run axiovela-math.exe. Windows may warn about the unrecognized publisher.' : nativeMac ? 'This app is locally ad-hoc signed, not notarized. Native launch and Gatekeeper acceptance still need testing.' : 'This ZIP contains a cross-built app bundle, not a finished Mac installer. On a Mac, rebuild with npm run desktop:package:mac -- --dmg to sign locally and create a DMG. Do not bypass Gatekeeper to test this unsigned archive.'}\n\nNo Windows or macOS launch tests were run by this build script. Node.js and Tectonic are bundled. First LaTeX rendering needs internet for TeX resources. Lean setup is currently manual on Windows/macOS; install Elan and prepare project dependencies, then use Run Lean check. Provider CLIs are installed separately.\n\nProjects and credentials stay outside the app. Do not delete the application-data folder during an upgrade. Updates are distributed privately; no GitHub credentials are embedded.\n`);
+await fs.writeFile(path.join(installers, 'START-HERE.txt'), `Axiovela Math ${pkg.version} — public beta\nTarget: ${target.name}\n\n${target.platform === 'win32' ? 'Run the unsigned EXE for a per-user install, or extract the ZIP and run axiovela-math.exe. Windows may warn about the unrecognized publisher.' : nativeMac ? 'Drag Axiovela Math to Applications. This app is locally ad-hoc signed and resource-seal verified, but it is not Developer ID signed or notarized.' : 'This ZIP contains a cross-built app bundle, not a finished Mac installer. On a Mac, rebuild with npm run desktop:package:mac -- --dmg to sign locally and create a DMG. Do not bypass Gatekeeper to test this unsigned archive.'}\n\nNode.js and Tectonic are bundled. First LaTeX rendering needs internet for TeX resources. Lean setup is automatic on Linux and macOS; it installs Elan per user, preserves project pins, and validates the compiler and imports. Provider CLIs are installed separately.\n\nProjects and credentials stay outside the app. Do not delete the application-data folder during an upgrade. Obtain releases from https://github.com/CashBowman/axiovela-math/releases. No GitHub credentials are embedded.\n`);
 await fs.mkdir(path.dirname(destination), {recursive: true});
 await fs.rm(destination, {recursive: true, force: true});
 await fs.rename(installers, destination);

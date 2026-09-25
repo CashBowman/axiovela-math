@@ -1,14 +1,14 @@
 # Updates and releases
 
-**Private development:** Current builds show private distribution in Help and do not contact the public release API. The repository must remain private until Cash explicitly approves a public product release. Version 0.1.16-beta.1 is prepared as a draft for owner testing; publication remains pending. Do not run GitHub Actions or change repository visibility. The public-release mechanism below is retained for future use, not currently enabled. See [local platform builds](desktop-platforms.md).
+**Public beta:** Downloads are available from GitHub Releases. Release artifacts are built, tested and uploaded locally; GitHub Actions is not used to build or publish them. See [platform status](desktop-platforms.md).
 
-Once published, download **0.1.16-beta.1** from the [private release page](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.1), using a GitHub account with repository access. The README buttons link directly to those assets. Linux x64 packages are validated locally; Windows x64 and Mac arm64/x64 packages are unsigned cross-builds awaiting native acceptance. Mac downloads are development app ZIPs, not DMG installers.
+Download the **0.1.16-beta.3 Windows x64 installer** from its [release page](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.3). It is built and install/launch/uninstall tested on Windows, but remains unsigned. The 0.1.16-beta.2 Apple silicon DMG is resource-seal verified and launch-tested on macOS, but is not Developer ID signed or notarized. Linux x64 packages remain validated in 0.1.15-beta.1. Mac Intel remains unvalidated and is not offered publicly.
 
-Save work, finish active assistants and exports, and close the app before upgrading. On Windows, run the new per-user installer. On Linux, open the new AppImage or extract the archive into a new application folder. Keep the previous copy until the new one works. Update shortcuts that still point to an older copy. Preserve application data and separately stored project folders. Mac development builds require native signing and testing before normal installation.
+Save work, finish active assistants and exports, and close the app before upgrading. On macOS, open the DMG and drag Axiovela Math to Applications. On Windows, run the per-user installer. On Linux, open the AppImage or extract the archive into a new application folder. Keep the previous copy until the new one works. Preserve application data and separately stored project folders.
 
-**Help → Check for updates** explains private distribution and does not contact GitHub's public release API. No GitHub account token is embedded in the app. Private downloads require the browser/release page; authenticated in-app updating is not implemented.
+The downloadable 0.1.16 beta installers predate the repository's public release and retain a manual-update Help panel. They contain no GitHub account token. Obtain replacements from the public release page.
 
-The retained public-distribution updater can download assets and verify their signed size and SHA-256 before offering **Show downloaded update**. It never replaces the running application automatically. This path is disabled in current private builds.
+New public-source builds can discover eligible releases, download assets and verify their Ed25519-signed size and SHA-256 before offering **Show downloaded update**. The updater never replaces the running application automatically. A release without the signed metadata remains a manual download.
 
 No update operation writes project files, changes credentials, executes a downloaded installer, stops an assistant or bypasses unsaved-work protection. Cancellation, network errors and corrupt downloads remove only the current partial download. A fresh launch does not execute a cached artifact. Ordinary updates preserve workspace schema 1; data migrations require their own backup/compatibility design.
 
@@ -18,7 +18,7 @@ No update operation writes project files, changes credentials, executes a downlo
 
 Release manifests are immutable and normally have no expiration, so a legitimate published download does not break after a month. If a manifest explicitly includes an expiry, it is enforced. Signed metadata authenticates a release, not the freshness of GitHub's release listing; this is not a full TUF update repository or a guarantee against a compromised publisher. Future key rotation requires shipping the new public key in a trusted release. No signing key or GitHub token is embedded in the app.
 
-## Future public-release procedure (requires explicit approval)
+## Maintainer release procedure
 
 1. Update the package version, validate source and package with `npm run desktop:package:linux`.
 2. Run packaged desktop and update acceptance. Scan the exact public source and release contents for secrets/private data.
@@ -27,4 +27,4 @@ Release manifests are immutable and normally have no expiration, so a legitimate
 5. Run `node scripts/publish-update.mjs /absolute/release.json /private/update-ed25519.pem --upload-draft`. The signer verifies that the private key matches the pinned public key, hashes the actual assets, writes signed metadata, and uploads only to a matching draft. It will not replace an existing signed file or release asset.
 6. Upload `SHA256SUMS`, review the complete draft, then explicitly publish it. Confirm unauthenticated release discovery, signature validation and downloading through an older-version updater probe.
 
-Keep the private signing key in separate protected storage and back it up securely. Public GitHub CI has no signing key and never publishes releases automatically. This candidate's signed update metadata authenticates the hashes and sizes of all six downloads. It does not code-sign the Windows x64 EXE/ZIP or Mac arm64/x64 ZIPs; those remain unsigned cross-builds with native acceptance pending. No authenticated private-release updater is implemented.
+Keep the private signing key in separate protected storage and back it up securely. GitHub Actions has no signing key and never publishes releases automatically. Signed update metadata currently covers the Linux x64 AppImage and archive assets. The Apple silicon DMG and Windows x64 installer are public beta downloads with explicit platform-trust warnings; Mac Intel is not publicly distributed. The application never embeds a GitHub credential.

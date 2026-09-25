@@ -14,12 +14,6 @@ try{
  await page.getByRole('button',{name:'Choose research model and provider'}).click();await page.getByRole('button',{name:'Use model',exact:true}).click();await page.getByRole('dialog').waitFor({state:'hidden'});
  await page.getByLabel('research message').fill('FIXTURE_HANG');await page.getByRole('button',{name:'Send message',exact:true}).click();await page.getByRole('button',{name:'Stop conversation',exact:true}).waitFor();await page.getByLabel('research message').fill('Keep my unsent research question');
  await page.getByRole('button',{name:'Write-up',exact:true}).click();await page.getByLabel('Manuscript source').fill('# Keep my unsaved manuscript');
- await app.evaluate(({Menu})=>Menu.getApplicationMenu().items.find(i=>i.label==='Help').submenu.items.find(i=>i.label==='Check for updates…').click());
- await page.getByText('Updates are distributed privately during development. Request a new installer from the project owner.',{exact:true}).waitFor();
- assert.equal(await page.getByLabel('Release channel').count(),0);
- assert.equal((await page.evaluate(()=>window.methodflowDesktop.update('state'))).status,'private');
- await page.getByRole('button',{name:'Close update details',exact:true}).click();
- checks.push('private distribution explains manual updates without offering public downloads');
  // Test debugger injection, no production trust override or renderer key input.
  await app.evaluate(({app})=>{
   const require=process.getBuiltinModule('node:module').createRequire(process.getBuiltinModule('node:path').join(app.getAppPath(),'package.json'));

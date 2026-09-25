@@ -1,8 +1,8 @@
-# Private desktop builds
+# Desktop platforms and trust
 
-The repository is private. Version 0.1.16-beta.1 is a private testing candidate, prepared as a draft release. Keep the repository private; no public release or GitHub Actions builds are authorized. CI has manual triggers only; the commands below run locally and disable publishing.
+The public beta provides native-validated downloads for Windows x64, macOS Apple silicon and Linux x64. Release packages are built locally; the repository's GitHub Actions workflow is manual-only and does not publish. The commands below also disable publishing.
 
-After publication, download the [private preview](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.1): Linux x64 AppImage/archive, Windows x64 EXE/ZIP, and Mac Apple silicon/Intel app ZIPs. Linux has native acceptance; Windows/Mac are cross-built, unsigned, and awaiting native acceptance. Mac DMGs are not available.
+Download the current [Windows x64 beta](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.3), [Apple silicon beta](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.2), or [Linux x64 beta](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.15-beta.1). The Windows installer is natively built, installed, launched, relaunched, upgraded and uninstalled. The Apple silicon DMG is resource-seal verified and launch-tested on macOS. Linux x64 passed packaged and AppImage acceptance. Mac Intel still awaits native acceptance and has no public download.
 
 ## Build commands
 
@@ -18,7 +18,7 @@ On Linux without Wine, install Podman and run `npm run desktop:package:windows:c
 
 - Windows: unsigned x64 NSIS installer and portable ZIP. The installer defaults to the current user, allows choosing a directory, does not launch automatically, and preserves application data on uninstall. Windows ARM is not a validated target.
 - Mac: Apple silicon by default on Linux; on a Mac the default matches the host architecture. The Intel command always selects x64. A Linux build produces an **unsigned app ZIP for development**, not a completed Mac installer. Framework signing and launch acceptance remain pending.
-- On a Mac, `npm run desktop:package:mac -- --dmg` or `npm run desktop:package:mac:intel -- --dmg` signs the final app ad hoc, verifies its signature, and creates a DMG and ZIP. These builds are not notarized or signed with a Developer ID. Product distribution will require a separate, explicitly authorized signing/notarization step and Gatekeeper testing. No signing credentials are read by these scripts.
+- On a Mac, `npm run desktop:package:mac -- --dmg` or `npm run desktop:package:mac:intel -- --dmg` replaces incomplete linker signatures only after assembly, signs the final app ad hoc, verifies the complete resource seal, and creates a DMG and ZIP. These builds are not notarized or signed with a Developer ID. A trusted production channel still requires a protected Apple signing identity, notarization and Gatekeeper acceptance. No signing credentials are read by these scripts.
 - Linux: `npm run desktop:package:linux` retains the existing AppImage and archive workflow.
 
 The output is under `out/installers/<platform>-<arch>/`, with `SHA256SUMS`, `START-HERE.txt` and `build-report.json`. Outputs are ignored by Git. Never interpret a successful cross-build as a successful native launch.
@@ -33,13 +33,15 @@ The clean packaging, platform tool pins and ad-hoc Mac signing approach follow A
 
 ## Current limitations and native acceptance
 
-Windows and Mac packages are private development artifacts. Before calling either platform supported, test on the target OS and architecture:
+The Windows x64 automated acceptance covers an install path containing spaces and non-ASCII characters, two launches of both the packaged and installed executable, stable local origin and Chromium storage, isolated app data, backend shutdown, real LaTeX rendering, in-place upgrade from 0.1.15-beta.1 with retained profile data, and silent uninstall that preserves the profile. The release includes a checksum and build report without credentials or personal paths. Live provider credentials, interactive menus and dialogs, and publisher trust remain manual acceptance work.
+
+Before calling either platform fully supported, complete the remaining checks on the target OS and architecture:
 
 1. Install, launch, close, relaunch and upgrade over a previous build. Verify the stable profile, single-instance lock and project persistence, including paths containing spaces and non-ASCII characters. Test uninstall without deleting user data.
 2. Verify native menus, clipboard, file dialogs, full-screen PDF zoom and annotation feedback. Exercise unsaved-edit and running-assistant close protection.
 3. Render a real LaTeX document with bundled Tectonic. Confirm independent Markdown/LaTeX drafts and source navigation.
 4. Connect a provider using an isolated test account. Check CLI lookup, API-key encryption with the OS credential store, simultaneous conversations and cancellation. No live accounts are used by automated fixtures.
-5. Install Elan manually using the [Lean installation guide](https://lean-lang.org/install/), preserve the project's pinned toolchain and dependencies, and run an actual Lean check. One-click setup remains Linux-only. Compiler success remains distinct from full mathematical certification.
-6. Verify Windows publisher/signature handling or Mac signing, notarization and Gatekeeper handling before distribution beyond approved testers.
+5. On Linux or macOS, use **Lean Certificates → Set up Lean** and run an actual Lean check. The installer preserves existing project pins, uses the platform checksum utility, and validates the compiler and imports. Compiler success remains distinct from full mathematical certification.
+6. Verify Windows publisher/signature handling or Mac Developer ID signing, notarization and Gatekeeper handling before calling those downloads trusted, warning-free installers.
 
-During private development, Help → Check for updates explains private distribution and performs no public release request. The app never contains a GitHub token. This change cannot retroactively recall earlier public downloads or forks.
+The current downloadable betas use manual replacement from the release page and contain no GitHub token. Public-source builds use the signed guided-download path for eligible future releases; they still never execute an installer or replace the running application automatically.

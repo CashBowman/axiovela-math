@@ -126,7 +126,7 @@ test("manual links preserve stable ids, reject invalid endpoints, relocate, hide
     /identity/,
   );
   await edit({ action: "locate", id: a.id, path: moved });
-  assert.equal(await projects.root(a.id), moved);
+  assert.equal(await projects.root(a.id), await fs.realpath(moved));
   await edit({ action: "forget", id: b.id });
   assert.equal((await catalog.snapshot({ details: true })).links.length, 0);
   assert.equal((await store.read()).projectConnections.length, 1);
@@ -139,7 +139,7 @@ test("manual links preserve stable ids, reject invalid endpoints, relocate, hide
   assert.equal((await catalog.snapshot({ details: true })).links.length, 0);
   const second = new Projects(dir, store);
   await second.init();
-  assert.equal(await second.root(a.id), moved);
+  assert.equal(await second.root(a.id), await fs.realpath(moved));
 });
 test("catalog only reads bounded safe captures, and never overwrites corrupt state or registry", async (t) => {
   const { dir, store, projects, catalog, edit, create } = await fixture(t),
