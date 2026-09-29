@@ -12,7 +12,7 @@ export function desktopTarget(name) {
 // Package reviewed runtime files only. Tools and icon containers are supplied
 // separately for each target; no working-tree data, credentials or docs enter.
 export function runtimeFile(file) {
-  if (file.split('/').some(p => p.startsWith('.') || p === 'node_modules')) return false;
+  if (file.split('/').some(p => p.startsWith('.') || ['node_modules', 'reports', 'workspaces', 'keys', 'secrets', 'providers.json', 'credentials.json', 'auth.json'].includes(p.toLowerCase()))) return false;
   if (file === 'LICENSE' || file === 'public/workbench-mark.png') return true;
   if (/^server\/axiovela\/research-skills\/(math-statistics|data-science|biology)\/SKILL\.md$/.test(file)) return true;
   if (/^(server|shared)\/.*\.(mjs|cjs|json)$/.test(file)) return true;

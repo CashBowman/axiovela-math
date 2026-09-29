@@ -11,6 +11,15 @@ const executablePath=path.resolve('out/Axiovela Math-linux-x64/axiovela-math');
 async function launch(){app=await electron.launch({executablePath,args:[],env,timeout:30000});page=await app.firstWindow();page.on('dialog',()=>{});await page.getByRole('heading',{name:'Executive summary'}).waitFor();}
 try{
  await launch();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ // Exercise the actual desktop IPC refusal path with an isolated fixture key.
+ await app.evaluate(({safeStorage})=>{globalThis.originalStorage={available:safeStorage.isEncryptionAvailable,backend:safeStorage.getSelectedStorageBackend};safeStorage.isEncryptionAvailable=()=>false;});
+ const saveFixtureKey=()=>page.evaluate(async()=>{const r=await fetch('/api/providers',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'openai-api',apiKey:'isolated-storage-fixture'})});return {status:r.status,body:await r.json()};});
+ assert.match((await saveFixtureKey()).body.error,/OS credential encryption is unavailable/);
+ await app.evaluate(({safeStorage})=>{safeStorage.isEncryptionAvailable=()=>true;safeStorage.getSelectedStorageBackend=()=>'basic_text';});
+ assert.match((await saveFixtureKey()).body.error,/OS credential encryption is unavailable/);
+ await assert.rejects(fs.stat(path.join(profile,'providers.enc')),{code:'ENOENT'});
+ await app.evaluate(({safeStorage})=>{safeStorage.isEncryptionAvailable=globalThis.originalStorage.available;safeStorage.getSelectedStorageBackend=globalThis.originalStorage.backend;});
+ checks.push('desktop IPC rejects unavailable encryption and Linux basic_text without writing a key');
  assert.equal(await page.evaluate(()=>typeof window.methodflowDesktop.chooseExperimentProject),'function');
  assert.deepEqual(await app.evaluate(({Menu})=>Menu.getApplicationMenu().items.map(i=>i.label)),['File','Edit','View','Help']);
  const selected=path.join(profile,'chosen-project');await fs.mkdir(selected);
@@ -24,6 +33,7 @@ try{
  const shared=await page.getByLabel('research conversation',{exact:true}).inputValue();await page.getByRole('button',{name:'Lean Certificates',exact:true}).click();await page.waitForFunction(id=>document.querySelector('[aria-label="research conversation"]')?.value===id,shared);
  await page.getByLabel('research message').fill('FIXTURE_LEAN_ARTIFACT');await page.getByRole('button',{name:'Send message',exact:true}).click();await page.getByRole('heading',{name:'Formal source saved',exact:true}).waitFor();await page.getByRole('heading',{name:'Addition of zero',exact:true}).waitFor();await page.getByRole('button',{name:'Set up Lean',exact:true}).waitFor();checks.push('shared native Research/Lean conversation saves formal source and renders certificate notes');
  await page.getByRole('button',{name:'Research',exact:true}).click();
+ await page.waitForFunction(id=>document.querySelector('[aria-label="research conversation"]')?.value===id,shared);
  const historyId=await page.getByLabel('research conversation',{exact:true}).inputValue();
  await page.getByRole('button',{name:'History for research',exact:true}).click();await page.locator('.historyCard').first().waitFor();
  await page.locator('.historyCard').first().getByRole('button',{name:'Rename',exact:true}).click();await page.getByLabel('Conversation title').fill('Desktop history fixture');await page.getByRole('button',{name:'Save title',exact:true}).click();await page.getByText('Desktop history fixture',{exact:true}).waitFor();

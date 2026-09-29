@@ -18,7 +18,7 @@ test('private builds never request public release metadata', async () => {
 
 test('cross-platform staging excludes private data, tools from another platform and development files', () => {
   for (const file of ['server/index.mjs', 'shared/harness.mjs', 'desktop/main.cjs', 'desktop/licenses/tectonic.txt', 'LICENSE', 'public/workbench-mark.png']) assert.ok(runtimeFile(file), file);
-  for (const file of ['.env', 'server/.env.json', 'server/.workspace/state.json', 'desktop/tools/tectonic', 'desktop/icons/math.ico', 'AGENTS.md', 'docs/notes.md', 'reports/report.json', 'desktop/keys/private.pem', 'server/credentials.enc', 'server/node_modules/pkg/index.mjs']) assert.equal(runtimeFile(file), false, file);
+  for (const file of ['.env', 'server/.env.json', 'server/.workspace/state.json', 'desktop/tools/tectonic', 'desktop/icons/math.ico', 'AGENTS.md', 'docs/notes.md', 'reports/report.json', 'desktop/keys/private.pem', 'server/credentials.enc', 'server/providers.json', 'server/credentials.json', 'desktop/auth.json', 'server/secrets/private.json', 'server/node_modules/pkg/index.mjs']) assert.equal(runtimeFile(file), false, file);
   assert.throws(() => desktopTarget('../../linux'), /Unsupported/);
   assert.throws(() => desktopTarget('win32-arm64'), /Unsupported/);
   for (const target of ['win32-x64', 'darwin-x64', 'darwin-arm64']) assert.match(desktopTarget(target).sha256, /^[a-f0-9]{64}$/);

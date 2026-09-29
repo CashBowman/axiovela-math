@@ -24,7 +24,7 @@ export default function ModelPicker({role, selection, capabilities, busy, loadin
   const model = connection?.models.find(m => m.id === (draft.modelId || connection.defaultModelId));
   useEffect(() => { if (dialog.current?.open) dialog.current.close(); }, [role]);
   const show = () => { setSetupOpen(!active?.available); onRefresh(selection.adapterId); setDraft(selection); setApiKey(''); setEndpoint(active?.endpoint || ''); setSaveError(''); dialog.current.showModal(); };
-  const useApi = () => { setDraft({...selection, adapterId: 'openai-api', modelId: '', effort: ''}); setApiKey(''); setSaveError(''); setEndpoint(''); if (!dialog.current.open) dialog.current.showModal(); };
+  const useApi = () => { const adapterId = ({claude: 'anthropic-api', gemini: 'gemini-api'})[draft.adapterId] || 'openai-api'; setDraft({...selection, adapterId, modelId: '', effort: ''}); onRefresh(adapterId); setApiKey(''); setSaveError(''); setEndpoint(''); if (!dialog.current.open) dialog.current.showModal(); };
   useEffect(() => { if (connectionRequest) { useApi(); onConnectionOpened(); } }, [connectionRequest]);
   const configure = async (clearKey = false) => {
     setSaving(true); setSaveError('');

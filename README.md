@@ -14,7 +14,7 @@ https://github.com/user-attachments/assets/2105326e-ed8c-4836-b552-6bf168f2a9eb
 
 The mathematics companion to [Axiovela](https://github.com/CashBowman/axiovela), built around the same research and writing workflow.
 
-**Private development.** This repository and its downloads require access. Linux x64 is validated; Windows and macOS preview downloads are available with native acceptance still pending. A public product release has not been approved.
+**Public downloads.** Linux x64 is validated locally. Windows and macOS packages are cross-built; native acceptance of this release remains pending.
 
 ## Keep research moving in parallel
 
@@ -40,44 +40,44 @@ Use **Projects** beside the tabs to reopen saved work, pin folders, or inspect e
 
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Connect Codex, Claude Code, Gemini CLI, OpenCode, Pi, or a supported API connection. [Connections and first session →](docs/getting-started.md)
 
-Version **0.1.16-beta.1** adds project-based conversation History with search, persistent titles, pinning and archiving; preserves logical conversations across provider sessions; and keeps completed Math sessions out of Codex Recents without deleting history. Library and Lean results support keyboard navigation, and write-up questions and assessments stay in chat unless files are requested. [Conversation history →](docs/conversation-history.md) · [Release notes →](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.1)
+Version **0.1.18** fixes provider credential-save races, stale connection discovery, provider-specific API shortcuts, Windows CLI resolution and API access validation. Subscription and access-mode descriptions now explain their actual limits.
 
 ## Start with the desktop app
 
-**Download 0.1.16-beta.1 · Private testing candidate**
+**Download 0.1.18 · Provider bug fixes**
 
-This candidate is prepared as a draft release for owner testing. The buttons below become available after that release is published; the previous private preview remains available from [Releases](https://github.com/CashBowman/axiovela-math/releases).
+This release is recommended for all users, especially users of non-Codex providers.
 
-The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node.js and npm are not required. Sign in to GitHub with repository access to download. All builds were produced locally; no GitHub build jobs were used.
+The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node.js and npm are not required. All builds were produced locally; no GitHub build jobs were used.
 
 **Windows · x64 installer**
 
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.1/Axiovela-Math-0.1.16-beta.1-win32-x64-unsigned.exe"><img src="docs/assets/downloads/windows.svg" alt="Download Windows x64 unsigned preview installer" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.18/Axiovela-Math-0.1.18-win32-x64-unsigned.exe"><img src="docs/assets/downloads/windows.svg" alt="Download Windows x64 unsigned preview installer" width="320" height="88" /></a>
 
-[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.1/Axiovela-Math-0.1.16-beta.1-win32-x64-unsigned.zip). Cross-built on Linux; unsigned and not yet launch-tested on Windows.
+[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.18/Axiovela-Math-0.1.18-win32-x64-unsigned.zip). Cross-built on Linux; unsigned and not yet launch-tested on Windows.
 
-**macOS · Development app bundles**
+**macOS · Unnotarized app bundles**
 
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.1/Axiovela-Math-0.1.16-beta.1-darwin-arm64-unsigned.zip"><img src="docs/assets/downloads/mac-arm.svg" alt="Download Mac Apple silicon unsigned development app ZIP" width="320" height="88" /></a>
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.1/Axiovela-Math-0.1.16-beta.1-darwin-x64-unsigned.zip"><img src="docs/assets/downloads/mac-intel.svg" alt="Download Mac Intel unsigned development app ZIP" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.18/Axiovela-Math-0.1.18-darwin-arm64-adhoc.dmg"><img src="docs/assets/downloads/mac-arm.svg" alt="Download Mac Apple silicon unnotarized DMG" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.18/Axiovela-Math-0.1.18-darwin-x64-adhoc.dmg"><img src="docs/assets/downloads/mac-intel.svg" alt="Download Mac Intel unnotarized DMG" width="320" height="88" /></a>
 
-These are cross-built, unsigned app ZIPs for development, not finished Mac installers. Native signing, notarization, DMGs, and launch testing require a Mac and remain pending. [Mac build instructions →](docs/desktop-platforms.md#build-commands)
+These locally cross-built DMGs are freshly ad-hoc signed for bundle integrity, without Developer ID signing or Apple notarization. Native Mac launch and installation checks remain pending. Portable ZIPs are also available on the release page. [Mac build instructions →](docs/desktop-platforms.md#build-commands)
 
 **Linux · Validated x64 packages**
 
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.1/Axiovela-Math-0.1.16-beta.1-linux-x64.AppImage"><img src="docs/assets/downloads/linux.svg" alt="Download Linux x64 AppImage" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.18/Axiovela-Math-0.1.18-linux-x64.AppImage"><img src="docs/assets/downloads/linux.svg" alt="Download Linux x64 AppImage" width="320" height="88" /></a>
 
-[Linux x64 · portable archive](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.16-beta.1/Axiovela-Math-0.1.16-beta.1-linux-x64.tar.gz) · [Release notes and SHA-256 checksums](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.16-beta.1)
+[Linux x64 · portable archive](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.18/Axiovela-Math-0.1.18-linux-x64.tar.gz) · [Release notes and SHA-256 checksums](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.18)
 
 [Installation and first session](docs/getting-started.md) · [Platform status and local packaging](docs/desktop-platforms.md) · [Update details](docs/updates.md)
 
 First LaTeX rendering may download TeX resources. On Linux, **Lean Certificates → Set up Lean** installs the compiler and project libraries, then runs a small installation test. Allow internet access and several GB for mathlib. Lean setup on Windows and Mac is currently manual.
 
-**Help → Check for updates** explains private distribution; it does not authenticate to GitHub or fetch private downloads. Obtain updates from the release page. Close the app before installing an update; projects and app data remain separate from application files.
+**Help → Check for updates** checks signed release metadata and guides a manual download. Automatic application replacement is not implemented. Close the app before installing an update; projects and app data remain separate from application files.
 
 ## Prefer to run from source?
 
-With repository access, install Git and **Node.js 22.13+**, then run:
+Install Git and **Node.js 22.13+**, then run:
 
 ```sh
 git clone https://github.com/CashBowman/axiovela-math.git

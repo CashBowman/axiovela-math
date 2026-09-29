@@ -18,7 +18,12 @@ export async function discoverApi(id) {
     let models = [], cursor;
     for (let page = 0; page < 10; page++) {
       const query = cursor ? `?${provider.wire === 'gemini' ? 'pageToken' : 'after_id'}=${encodeURIComponent(cursor)}` : '';
-      const result = await providerRequest(provider, `models${query}`);
+      let result;
+      try { result = await providerRequest(provider, `models${query}`); }
+      catch (error) {
+        if (id !== 'compatible-api' || ![404, 405].includes(error.providerStatus)) throw error;
+        return {...base, ...publicConfig, available: true, catalogStatus: 'Model listing is unavailable; enter an exact custom model ID. Generation and account access are not verified.'};
+      }
       const entries = provider.wire === 'gemini' ? result.models || [] : result.data || [];
       models.push(...entries.filter(m => provider.wire === 'gemini' ? m.supportedGenerationMethods?.includes('generateContent') : provider.wire === 'openai' ? /^(gpt-|o[134])/.test(m.id) && !/(image|audio|realtime|transcrib|search|tts)/.test(m.id) : true).map(m => {
         const modelId = (m.id || m.name).replace(/^models\//, '');
@@ -49,7 +54,10 @@ export const researchTools = [
 ];
 export async function executeResearchTool(name, args, {cwd, mode, signal, compileDocument, queryProofAttempts}) {
   if (signal.aborted) throw new Error('Task canceled.');
-  if (!researchTools.some(t => t.name === name)) throw new Error('Unknown research tool.');
+  if (!['ask', 'auto', 'full'].includes(mode)) throw new Error('Unknown access mode.');
+  const tool = researchTools.find(t => t.name === name);
+  if (!tool) throw new Error('Unknown research tool.');
+  if (!args || typeof args !== 'object' || Array.isArray(args) || tool.parameters.required.some(key => typeof args[key] !== 'string') || Object.keys(args).some(key => !Object.hasOwn(tool.parameters.properties, key))) throw new Error('Invalid research tool arguments.');
   if (mode === 'ask' && !['read_file', 'list_files', 'read_dataset', 'query_proof_attempts'].includes(name)) throw new Error('Ask mode does not permit changes or commands.');
   if (name === 'query_proof_attempts') {
     if (!queryProofAttempts) throw new Error('Proof-attempt retrieval is unavailable in this conversation.');
@@ -94,6 +102,8 @@ export async function executeResearchTool(name, args, {cwd, mode, signal, compil
 
 export async function runApi(options, model) {
   const {selection, cwd, prompt, mode, signal, onSession, onEvent, onEffective, onOutput} = options;
+  if (!['ask', 'auto', 'full'].includes(mode)) throw new Error('Unknown access mode.');
+  if (signal.aborted) throw new Error('Task canceled.');
   const provider = await getProvider(selection.adapterId);
   const sessionId = options.sessionId || randomUUID();
   if (!/^[a-f0-9-]{36}$/i.test(sessionId)) throw new Error('Invalid API conversation ID. Start a new conversation.');
@@ -116,7 +126,7 @@ export async function runApi(options, model) {
   const messages = [...retained.map(m => ({...m, content: m.content.slice(-32000)})), {role: 'user', content: prompt}];
   let input = messages.map(m => ({role: m.role, content: m.content}));
   let contents = messages.map(m => ({role: m.role === 'assistant' ? 'model' : 'user', parts: [{text: m.content}]}));
-  const availableTools = researchTools.filter(t => (t.name !== 'query_proof_attempts' || options.queryProofAttempts) && (mode !== 'ask' || ['read_file', 'list_files', 'read_dataset', 'query_proof_attempts'].includes(t.name)));
+  const availableTools = researchTools.filter(t => (t.name !== 'query_proof_attempts' || options.queryProofAttempts) && (mode === 'full' || t.name !== 'run_command') && (mode !== 'ask' || ['read_file', 'list_files', 'read_dataset', 'query_proof_attempts'].includes(t.name)));
   for (let step = 0; step < 40; step++) {
     if (signal.aborted) throw new Error('Task canceled.');
     onEvent({kind: 'connection', label: `Waiting for ${provider.name}`, status: 'running'});
@@ -144,7 +154,7 @@ export async function runApi(options, model) {
     } else {
       response = await providerRequest(provider, 'chat/completions', {signal, body: {model: model.id, messages: input, tools: availableTools.map(t => ({type: 'function', function: t}))}});
       const choice = response.choices?.[0];
-      if (!choice?.message || choice.finish_reason === 'length') throw new Error('Compatible API returned an incomplete response.');
+      if (!choice?.message || (choice.finish_reason && !['stop', 'tool_calls'].includes(choice.finish_reason))) throw new Error('Compatible API returned a blocked or incomplete response.');
       input.push(choice.message);
       calls = (choice.message.tool_calls || []).map(p => ({id: p.id, name: p.function.name, args: JSON.parse(p.function.arguments)}));
       output = choice.message.content || '';

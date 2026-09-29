@@ -3,16 +3,19 @@ import {build,Platform,Arch} from 'electron-builder';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
-import {spawn} from 'node:child_process';
+import {spawn,execFileSync} from 'node:child_process';
+import {runtimeFile} from './desktop-targets.mjs';
 if(process.platform!=='linux'||process.arch!=='x64')throw Error('This release currently supports Linux x64, matching the bundled Tectonic binary.');
 const pkg=JSON.parse(await fs.readFile('package.json','utf8'));
 const tool=JSON.parse(await fs.readFile('desktop/tools/build.json','utf8'));
 if(createHash('sha256').update(await fs.readFile('desktop/tools/tectonic')).digest('hex')!==tool.binarySha256)throw Error('Bundled Tectonic does not match its reviewed hash.');
 // A clean staging tree keeps personal files and development tools out of releases.
 const stage=path.resolve('.local/linux-stage');await fs.rm(stage,{recursive:true,force:true});await fs.mkdir(stage,{recursive:true});
-for(const folder of ['dist','server','shared','desktop'])await fs.cp(folder,path.join(stage,folder),{recursive:true});
-await fs.mkdir(path.join(stage,'public'));await fs.copyFile('public/workbench-mark.png',path.join(stage,'public/workbench-mark.png'));
-await fs.copyFile('LICENSE',path.join(stage,'LICENSE'));
+const sourceFiles=execFileSync('git',['ls-files','-z','--cached'],{encoding:'utf8'}).split('\0').filter(runtimeFile);
+for(const name of sourceFiles){await fs.mkdir(path.dirname(path.join(stage,name)),{recursive:true});await fs.copyFile(name,path.join(stage,name));}
+await fs.cp('dist',path.join(stage,'dist'),{recursive:true});
+await fs.mkdir(path.join(stage,'desktop/tools'),{recursive:true});
+for(const name of ['tectonic','build.json'])await fs.copyFile(path.join('desktop/tools',name),path.join(stage,'desktop/tools',name));
 const runtimePkg={name:pkg.name,version:pkg.version,description:pkg.description,productName:pkg.productName,desktopName:pkg.desktopName,author:pkg.author,license:pkg.license,type:'module',main:pkg.main,dependencies:pkg.dependencies};
 await fs.writeFile(path.join(stage,'package.json'),JSON.stringify(runtimePkg,null,2));
 await fs.copyFile('package-lock.json',path.join(stage,'package-lock.json'));
