@@ -1,6 +1,6 @@
 # Desktop builds
 
-Version **0.1.18** is published from local builds. GitHub Actions remain disabled. [Downloads](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.18) include Linux x64 AppImage/archive, Windows x64 EXE/ZIP, and Mac Apple silicon/Intel DMG/ZIP. Linux is validated locally; native Windows/Mac acceptance remains pending. Windows is unsigned; Mac bundles are freshly ad-hoc signed without Developer ID signing or notarization.
+Version **0.1.19** is published from local builds. GitHub Actions remain disabled. [Downloads](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.19) include Linux x64 AppImage/archive, Windows x64 EXE/ZIP, and Mac Apple silicon/Intel DMG/ZIP. Linux is validated locally; native Windows/Mac acceptance remains pending. Windows is unsigned; Mac bundles are freshly ad-hoc signed without Developer ID signing or notarization.
 
 ## Build commands
 

@@ -1,6 +1,6 @@
 # Getting started
 
-Choose the download for your system from the [0.1.18 release](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.18). Mac DMGs are freshly ad-hoc signed without Developer ID signing or notarization. Windows installers are unsigned. Linux x64 is validated locally; native acceptance of these rebuilt Windows and Mac packages remains pending. See [platform status](desktop-platforms.md) before installing.
+Choose the download for your system from the [0.1.19 release](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.19). Mac DMGs are freshly ad-hoc signed without Developer ID signing or notarization. Windows installers are unsigned. Linux x64 is validated locally; native acceptance of these rebuilt Windows and Mac packages remains pending. See [platform status](desktop-platforms.md) before installing.
 
 On Linux, download the x64 AppImage. Allow execution in file properties if required, then open it. The portable archive is an alternative: extract it and open `axiovela-math`. Node.js is included in the desktop download.
 
