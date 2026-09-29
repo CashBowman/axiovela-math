@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.18 — 2026-09-29
+
+- Preserve all concurrent provider credential saves and invalidate stale model discovery after settings changes.
+- Route Claude and Gemini API shortcuts correctly; clarify CLI subscription, billing and permission limits.
+- Resolve current and legacy Windows CLI launchers without a shell.
+- Reject invalid access modes and malformed tool arguments, hide unavailable shell tools, and handle incomplete compatible-API responses safely.
+- Allow explicitly selected compatible models when the server has no model-list endpoint; retain authentication and rate-limit errors.
+- Exclude nested credentials and private development files from installer payloads.
+- Built locally without GitHub build jobs. Windows unsigned; Mac freshly ad-hoc signed without notarization. Native acceptance of these rebuilt Windows/Mac packages remains pending.
+
+
 ## Unreleased
 
 - Publish the audited source under the MIT license with public-beta installation guidance, a product tour, security and contribution policies, and manual-only release operations.
