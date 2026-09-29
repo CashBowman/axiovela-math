@@ -1,3 +1,9 @@
+## 0.1.20
+
+- Saved connections are detected automatically when opening a chat, without opening the connection picker. New chats reuse the last saved connection/model for their role while retaining the standard Project editing default.
+- The usage meter sits beside Access in the same row. Last reported context remains visible as a follow-up begins, scoped to the same provider/model/native session. Measured usage persists across restart; unsupported measurements remain explicitly unavailable.
+- All eight desktop installers/archives built locally. Windows unsigned; Macs ad-hoc signed and unnotarized. Native Windows/macOS launch acceptance remains pending. No GitHub builds.
+
 ## 0.1.19
 
 Compact chat context and remaining usage details. See the matching release notes.

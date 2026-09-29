@@ -163,12 +163,13 @@ export class Chats {
     if (!roles.includes(role)) throw Error("Unknown assistant role.");
     if (role === "lean") role = "research";
     const list = await this.load(projectId);
+    const previous = list.filter(c => c.role === role && !c.archived).sort((a,b) => String(b.connectionUpdatedAt || b.createdAt).localeCompare(String(a.connectionUpdatedAt || a.createdAt)))[0];
     const c = {
       id: randomUUID(),
       role,
       title: "New conversation",
       createdAt: new Date().toISOString(),
-      selection: {
+      selection: previous ? {...previous.selection} : {
         adapterId: "codex",
         modelId: "",
         effort: "",
@@ -230,6 +231,7 @@ export class Chats {
       )
         c.sessionId = null;
       c.selection = { ...body.selection, profileId: "general" };
+      c.connectionUpdatedAt = new Date().toISOString();
     }
     if (body.mode) {
       if (!["ask", "auto", "full"].includes(body.mode))
@@ -442,6 +444,7 @@ export class Chats {
             },
             onUsage: (value) => {
               turn.usage = value;
+              persist();
             },
             compileDocument: async (format, source) => {
               if (review)

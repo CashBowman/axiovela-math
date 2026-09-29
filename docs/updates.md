@@ -28,3 +28,7 @@ Keep the private signing key in separate protected storage and back it up secure
 ## 0.1.19: conversation context and usage
 
 The compact Usage button next to Access shows provider-reported context and account allowance, including quota window reset times. Codex reports root-conversation context and account limits; Pi reports context when available. Missing data is shown as unavailable. Measurements are timestamped turn snapshots, not continuously polled account balances. Changing the selected model/provider hides measurements from the old selection.
+
+## 0.1.20: saved connections and compact usage
+
+Connections are discovered automatically on opening chats; model and reasoning choices persist. New chats reuse their role’s last saved connection without inheriting Full access or a native session. The usage meter stays beside Access and retains the last same-session measurement during a pending follow-up.

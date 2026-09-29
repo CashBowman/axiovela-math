@@ -122,3 +122,21 @@ test('a writer-locked resume copies history once, preserves permissions and resu
  await assert.rejects(runAssistant({...options,sessionId:originalId}),/Your chat and files are preserved/);
  assert.equal(sessionId,copyId);
 }));
+
+test('saved connection and measured usage survive restart; new chats inherit connection only', async()=>fixture(async dir=>{
+ process.env.WORKBENCH_CODEX_PATH=path.resolve('scripts/fixtures/assistant-rpc.mjs');
+ const store=new Store(dir), s=await store.save(await store.read(),0), id=s.activeProjectId;
+ const projects=new Projects(dir,store);await projects.init();const chats=new Chats(projects,store);
+ const c=await chats.newConversation(id,'research');
+ const selection={adapterId:'codex',modelId:'fixture-reasoner',effort:'',profileId:'general'};
+ const runtime=await chats.capabilities(id,'codex',true);selection.modelId=runtime.models[0].id;
+ await chats.patch(id,c.id,{selection,mode:'full'});
+ await chats.send(id,c.id,'FIXTURE_STATE');
+ for(let i=0;i<200&&chats.controllers.size;i++)await new Promise(r=>setTimeout(r,25));
+ assert.equal(chats.controllers.size,0);await chats.persist(id);
+ const restored=new Chats(projects,store), saved=await restored.get(id,c.id);
+ assert.deepEqual(saved.selection,selection);assert.equal(saved.mode,'full');
+ assert.equal(saved.turns.at(-1).usage.contextUsage.tokens,2000);
+ const next=await restored.newConversation(id,'research');assert.deepEqual(next.selection,selection);assert.equal(next.mode,'auto');assert.equal(next.sessionId,undefined);assert.deepEqual(next.turns,[]);
+ const writing=await restored.newConversation(id,'writing');assert.equal(writing.selection.modelId,'');
+}));

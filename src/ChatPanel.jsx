@@ -1,4 +1,5 @@
 import UsageMeter from './UsageMeter.jsx';
+import {conversationUsage} from './usage-state.mjs';
 import ConversationHistory from './ConversationHistory.jsx';
 import { defaultWriteupFormat } from "./WriteupFormatMenu.jsx";
 import AnnotationChips from "./AnnotationChips.jsx";
@@ -218,18 +219,28 @@ function ProjectChat({
       setError(e.message);
     }
   }
+  const attemptedConnections = useRef(new Set());
+  const discoveryRequests = useRef(new Map());
+  useEffect(() => {
+    if (!caps.connections.length || attemptedConnections.current.has(selection.adapterId)) return;
+    attemptedConnections.current.add(selection.adapterId);
+    discover(selection.adapterId);
+  }, [selection.adapterId, caps.connections.length]);
   async function discover(id = selection.adapterId) {
+    const sequence = (discoveryRequests.current.get(id) || 0) + 1;
+    discoveryRequests.current.set(id, sequence);
     setLoading(true);
     setError("");
     try {
       const found = await api(
         "/api/capabilities?connection=" + encodeURIComponent(id) + "&refresh=1",
       );
+      if (!alive.current || discoveryRequests.current.get(id) !== sequence) return;
       setCaps((c) => {
         const next = {
           ...c,
           connections: c.connections.map((x) =>
-            x.id === found.id ? found : x,
+            x.id === found.id ? {...found, checked: true} : x,
           ),
         };
         capabilityCache.set(project.id, next);
@@ -768,7 +779,7 @@ function ProjectChat({
             ))}
           </select>
         </label>
-        <UsageMeter key={chat?.id} label={active?.name || "Provider"} usage={current?.selection?.adapterId === chat?.selection?.adapterId && current?.selection?.modelId === chat?.selection?.modelId ? current?.usage : null}/>
+        <UsageMeter key={chat?.id} label={active?.name || "Provider"} usage={conversationUsage(chat)}/>
       </div>
     </Panel>
   );

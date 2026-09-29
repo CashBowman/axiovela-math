@@ -181,3 +181,12 @@ button,input,select,textarea{font-size:14px}
 .resultOutlineLinks button{padding:4px 9px;font-size:12px}
 
 .resultSection { font-size:14px; color:var(--blue); margin:14px 4px 2px; }
+
+/* Keep connection, access and usage together even in the narrow chat pane. */
+.chatControls{grid-template-columns:minmax(0,1fr) 110px auto!important;gap:6px!important}
+.chatControls .connectionName{flex-shrink:1;min-width:0}
+.chatControls .connectionModel{flex:1 1 0}
+.chatControls .modelPickerButton{padding-inline:7px!important}
+.chatControls .usageMeter{height:38px}
+.chatControls .usageMeterButton{min-height:32px;padding-inline:5px!important}
+.chatControls .accessLabel{min-width:0}
