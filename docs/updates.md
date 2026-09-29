@@ -24,3 +24,7 @@ Release manifests are immutable and normally have no expiration, so a legitimate
 6. Upload `SHA256SUMS`, review the complete draft, then explicitly publish it. Confirm unauthenticated release discovery, signature validation and downloading through an older-version updater probe.
 
 Keep the private signing key in separate protected storage and back it up securely. Signed update metadata authenticates the exact release files; it does not provide Windows publisher trust or Apple notarization. Never reuse an old signature for changed binaries. No signing key or GitHub token may enter a package.
+
+## 0.1.19: conversation context and usage
+
+The compact Usage button next to Access shows provider-reported context and account allowance, including quota window reset times. Codex reports root-conversation context and account limits; Pi reports context when available. Missing data is shown as unavailable. Measurements are timestamped turn snapshots, not continuously polled account balances. Changing the selected model/provider hides measurements from the old selection.

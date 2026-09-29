@@ -1,3 +1,4 @@
+import UsageMeter from './UsageMeter.jsx';
 import ConversationHistory from './ConversationHistory.jsx';
 import { defaultWriteupFormat } from "./WriteupFormatMenu.jsx";
 import AnnotationChips from "./AnnotationChips.jsx";
@@ -767,6 +768,7 @@ function ProjectChat({
             ))}
           </select>
         </label>
+        <UsageMeter key={chat?.id} label={active?.name || "Provider"} usage={current?.selection?.adapterId === chat?.selection?.adapterId && current?.selection?.modelId === chat?.selection?.modelId ? current?.usage : null}/>
       </div>
     </Panel>
   );

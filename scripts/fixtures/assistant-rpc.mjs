@@ -14,6 +14,7 @@ for await (const line of readline.createInterface({input: process.stdin})) {
   let result = {};
   try {
     if (method === 'model/list') result = {data: [{id: 'test-model', model: 'test-model', displayName: 'Test model', isDefault: true, supportedReasoningEfforts: [{reasoningEffort: 'low'}, {reasoningEffort: 'high'}], defaultReasoningEffort: 'low'}, {id: 'second-model', model: 'second-model', displayName: 'Second model', supportedReasoningEfforts: [{reasoningEffort: 'low'}], defaultReasoningEffort: 'low'}], nextCursor: null};
+    if (method === 'account/rateLimits/read') result = {rateLimits:{limitId:'codex',primary:{usedPercent:35,windowDurationMins:300,resetsAt:1900000000}}};
     if (method === 'config/read') result = {config: {model: 'test-model', model_reasoning_effort: 'low', privateToken: 'NEVER-EXPOSE-FIXTURE'}};
     if (method === 'thread/start' || method === 'thread/resume' || method === 'thread/fork') {
       session = method !== 'thread/start' ? JSON.parse(await readFile(store(p.threadId), 'utf8')) : {id: randomUUID(), turns: 0};
@@ -95,6 +96,7 @@ for await (const line of readline.createInterface({input: process.stdin})) {
         event('item/completed', {item: {type: 'agentMessage', text: 'Root is still working'}});
       }
       setTimeout(() => {
+        event('thread/tokenUsage/updated', {tokenUsage:{last:{totalTokens:2000},total:{totalTokens:99000},modelContextWindow:10000}});
         event('item/started', {item: {type: 'commandExecution', command: 'private raw output'}});
         event('item/completed', {item: {type: 'fileChange'}});
         if (request.includes('FIXTURE_HANG')) return;

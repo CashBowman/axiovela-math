@@ -1,3 +1,4 @@
+import {codexContext, codexLimits} from './provider-usage.mjs';
 import {messageStream} from './message-stream.mjs';
 import {profileId} from './research-profiles.mjs';
 import {spawn} from 'node:child_process';
@@ -168,6 +169,9 @@ export async function runAssistant(options) {
   signal.addEventListener('abort', abort, {once: true});
   rpc.on('failure', error => { if (!settled) rejectDone(error); });
   rpc.on('notice', label => onEvent({kind: 'input', label, status: 'running'}));
+  let usage = {};
+  const reportUsage = patch => { usage = {...usage, ...patch, measuredAt: new Date().toISOString()}; Promise.resolve(options.onUsage?.(usage)).catch(() => {}); };
+  const readLimits = async () => { try { const value = await rpc.request('account/rateLimits/read', {}, 1500); reportUsage({limits: codexLimits(value)}); } catch { /* Older runtimes and API accounts may not expose quota. */ } };
   let output = '';
   const messages = messageStream();
   const pendingEvents = [];
@@ -175,11 +179,13 @@ export async function runAssistant(options) {
     if (settled) return;
     if (selection.adapterId === 'codex') {
       const p = event.params || {}, item = p.item || {};
+      if (event.method === 'account/rateLimits/updated') { void readLimits(); return; }
       // Workers and resumed historical turns share the notification stream.
       // Only our submitted root turn may update output or complete this job.
       if (!threadId || p.threadId !== threadId) return;
       if (!turnId) { if (pendingEvents.length < 256) pendingEvents.push(event); return; }
       if ((p.turnId || p.turn?.id) !== turnId) return;
+      if (event.method === 'thread/tokenUsage/updated') reportUsage({contextUsage: codexContext(p.tokenUsage)});
       options.onActivity?.();
       if (event.method === 'item/completed' && item.type === 'agentMessage') { output = messages.complete(item.id || 'current', item.text); onOutput(output); }
       if (event.method === 'item/agentMessage/delta') { output = messages.delta(p.itemId || 'current', p.delta); onOutput(output); }
@@ -227,6 +233,7 @@ export async function runAssistant(options) {
       }
       threadId = thread.thread.id;
       await onSession(threadId);
+      await readLimits();
       if (conversationTitle) {
         try { await rpc.request('thread/name/set', {threadId, name: conversationTitle}, 2000); }
         catch { onEvent({kind:'connection',label:'The provider could not update its title. The saved Axiovela title is unchanged.',status:'complete'}); }
@@ -245,7 +252,9 @@ export async function runAssistant(options) {
       turnId = result.turn.id;
       for (const event of pendingEvents.splice(0)) handleEvent(event);
     }
-    return await done;
+    const text = await done;
+    await readLimits();
+    return text;
   } finally {
     settled = true;
     if (options.archiveAfterTurn && nativeCompleted && !signal.aborted) {

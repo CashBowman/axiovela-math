@@ -23,3 +23,5 @@ The README installation buttons adapt Axiovela’s MIT-licensed SVG download car
 The Projects dropdown and connections dialog adapt Axiovela's MIT-licensed `ProjectNavigator.jsx` and `project-navigator.css`. The Math catalog independently adapts its interaction contract to the existing Math workspace store, folder registry and experiment captures.
 
 Navigator reference snapshots: `ProjectNavigator.jsx` SHA-256 `1ec5f66f2803e08d2a2b594e2dce454aca09f7f0ed643edabafa5d45e1a02339`; stylesheet SHA-256 `b070351ec170c837c5b49ee5ab5599a9a472972610aa6a492eb5e8fb0ec720b2`. The original checkout was inspected without modification.
+
+The compact Usage meter and provider usage normalization share Axiovela's MIT-licensed implementation; Math retains its own conversation selection and persistence.

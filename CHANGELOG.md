@@ -1,3 +1,7 @@
+## 0.1.19
+
+Compact chat context and remaining usage details. See the matching release notes.
+
 # Changelog
 
 ## 0.1.18 — 2026-09-29
