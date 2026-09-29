@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# Linux setup entry point, also invoked by the app's fixed terminal action.
+# Linux and macOS setup entry point, invoked by the app's fixed terminal action.
 # Usage: bash lean-setup.sh [certificate-directory] [app-owned-status-directory]
 set -Eeuo pipefail
 project_dir="${1:-}"
-status_dir="${2:-${XDG_DATA_HOME:-$HOME/.local/share}/axiovela-math/lean-setup}"
+if [ "$(uname -s)" = Darwin ]; then
+  default_status_dir="$HOME/Library/Application Support/Axiovela Math/lean-setup"
+else
+  default_status_dir="${XDG_DATA_HOME:-$HOME/.local/share}/axiovela-math/lean-setup"
+fi
+status_dir="${2:-$default_status_dir}"
 export ELAN_HOME="${ELAN_HOME:-$HOME/.elan}"
 mkdir -p "$status_dir"
 if [ -f "$status_dir/lock/pid" ]; then
@@ -31,12 +36,23 @@ exec > >(tee "$status_dir/output.log") 2>&1
 stage() { printf '%s\n' "$1" > "$status_dir/state"; printf '\n%s\n' "$2"; }
 stage prerequisites 'Checking prerequisites…'
 missing_packages=()
-for tool in curl git tar sha256sum; do
+for tool in curl git tar; do
   if ! command -v "$tool" >/dev/null; then
-    if [ "$tool" = sha256sum ]; then missing_packages+=(coreutils); else missing_packages+=("$tool"); fi
+    missing_packages+=("$tool")
   fi
 done
+if command -v sha256sum >/dev/null; then
+  checksum_files() { sha256sum "$@"; }
+elif command -v shasum >/dev/null; then
+  checksum_files() { shasum -a 256 "$@"; }
+else
+  missing_packages+=(checksum-utility)
+fi
 if [ "${#missing_packages[@]}" -gt 0 ]; then
+  if [ "$(uname -s)" = Darwin ]; then
+    printf 'Missing macOS command-line utilities: %s. Install Apple Command Line Tools with xcode-select --install, then retry.\n' "${missing_packages[*]}" >&2
+    exit 1
+  fi
   printf 'Installing missing Linux utilities: %s. Your administrator password may be requested.\n' "${missing_packages[*]}"
   elevate=()
   if [ "$(id -u)" -ne 0 ]; then elevate=(sudo); fi
@@ -104,7 +120,7 @@ lake env lean "$setup_temp/SetupCheck.lean"
 "$ELAN_HOME/bin/elan" which lake > "$status_dir/lake-path"
 printf '%s\n' "$toolchain" > "$status_dir/toolchain"
 if [ -n "$project_dir" ]; then
-  sha256sum lean-toolchain lake-manifest.json lakefile.* > "$status_dir/environment.sha256"
+  checksum_files lean-toolchain lake-manifest.json lakefile.* > "$status_dir/environment.sha256"
 fi
 stage ready 'Lean setup passed. Return to Axiovela Math; the certificate panel updates automatically.'
 printf '%s\n' 'This checks the tools and imports, not the correctness of your research proof.'

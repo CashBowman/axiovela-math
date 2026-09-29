@@ -71,7 +71,7 @@ These locally cross-built DMGs are freshly ad-hoc signed for bundle integrity, w
 
 [Installation and first session](docs/getting-started.md) · [Platform status and local packaging](docs/desktop-platforms.md) · [Update details](docs/updates.md)
 
-First LaTeX rendering may download TeX resources. On Linux, **Lean Certificates → Set up Lean** installs the compiler and project libraries, then runs a small installation test. Allow internet access and several GB for mathlib. Lean setup on Windows and Mac is currently manual.
+First LaTeX rendering may download TeX resources. On Linux, **Lean Certificates → Set up Lean** installs the compiler and project libraries, then runs a small installation test. Allow internet access and several GB for mathlib. Lean setup on Windows is currently manual; Linux and macOS have guided setup.
 
 **Help → Check for updates** checks signed release metadata and guides a manual download. Automatic application replacement is not implemented. Close the app before installing an update; projects and app data remain separate from application files.
 

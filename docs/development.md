@@ -6,7 +6,7 @@ The shared assistant and formalization contract are in `server/chat.mjs`, `share
 
 ## Local platform builds
 
-The repository remains private until explicitly approved for public release. GitHub Actions must not be run during this phase. [Windows and macOS packaging instructions and acceptance requirements](desktop-platforms.md) describe local builds and the distinction between unsigned cross-builds and native validation.
+The repository is public, but release artifacts remain local builds. The manual GitHub Actions workflow is not part of the release process and must not publish packages. [Windows and macOS packaging instructions and acceptance requirements](desktop-platforms.md) distinguish unsigned cross-builds, native validation and publisher trust.
 
 ## Checks
 
@@ -19,7 +19,7 @@ The repository remains private until explicitly approved for public release. Git
 
 GUI checks require a desktop session or a configured virtual display and the OS libraries required by Electron/Chromium. Tests produce ignored local evidence. `lean-setup-acceptance.mjs` additionally requires an explicitly provisioned disposable Lean/mathlib environment; it runs real compilers, not model calls. It is not run by default CI.
 
-GitHub CI runs the unit/integration suite and frontend build. Passing CI does not establish acceptance on every Linux distribution or validate paid provider accounts. macOS/Windows builds and unattended installation are not implemented. Direct APIs have permission-gated project tools; prompts cannot guarantee mathematical success or enforce a dollar ceiling.
+The optional manual GitHub workflow runs the unit/integration suite and frontend build; it is not used for releases. Passing it does not establish acceptance on every Linux distribution or validate paid provider accounts. The Apple silicon DMG and Windows x64 installer are built and tested natively; Mac Intel and unattended installation remain unvalidated. Direct APIs have permission-gated project tools; prompts cannot guarantee mathematical success or enforce a dollar ceiling.
 
 Keep credentials, research projects, private reports and release signing keys outside tracked source. Use isolated profiles for validation. Before a release, validate the packaged app, preserve earlier binaries, scan the exact tracked snapshot and distributables, then sign the exact artifacts. [Release/update procedure](updates.md).
 
@@ -81,14 +81,6 @@ See [Projects and manuscript navigation](project-navigator.md) for the revisione
 
 ## 0.1.15-beta.1 changes
 
-The private preview includes named-theorem Lean audits, concise status labels, automatic checks after project-editing turns, source title repair and consolidation, safe recovery from Codex session writer conflicts, and shorter executive summaries. Annotation capture supplies its initial viewport position before display. Markdown/KaTeX rendering is memoized, unchanged chat polling snapshots are skipped, idle elapsed timers stop, and annotation text projections are reused.
+The 0.1.15 beta includes named-theorem Lean audits, concise status labels, automatic checks after project-editing turns, source title repair and consolidation, safe recovery from Codex session writer conflicts, and shorter executive summaries. Annotation capture supplies its initial viewport position before display. Markdown/KaTeX rendering is memoized, unchanged chat polling snapshots are skipped, idle elapsed timers stop, and annotation text projections are reused.
 
-Run `npm test`, `npm run build`, `npm run test:ui`, `npm run test:lean`, `npm run test:results`, and `npm run test:annotations`. `PERF_LABEL=current PERF_ASSERT=1 node scripts/interaction-perf-smoke.mjs` profiles isolated long mathematical chat/document fixtures; timings are machine-specific. Native Linux acceptance and launch/relaunch checks are separate from cross-building Windows and Mac archives. The repository stays private and all builds run locally.
-
-## 0.1.16-beta.1 testing candidate
-
-Project-based History reuses existing project and conversation IDs, adds bounded search and persistent titles/pins/archives, and preserves transcripts through versioned sidecar metadata and exact migration backups. Completed Math-managed Codex sessions are archived from Recents and restored on follow-up, without deleting native history. See [conversation history](conversation-history.md).
-
-Library and Lean navigation support arrow keys. Write-up assessments stay in chat unless separate files are requested. Missing proof-attempt revisit references are preserved for recovery. The local fixture suite includes migration preservation, session handoffs, sidebar cleanup, concurrent chats and queued follow-ups. Run `npm test`, `npm run test:history`, `npm run test:ui`, and packaged Linux acceptance.
-
-The release branch prepares installer buttons and draft assets; main retains the previous published download links until this candidate is approved. All packages are built locally. Windows x64 and Mac arm64/x64 native acceptance is pending owner testing; Linux x64 is tested on the build host. No GitHub Actions dispatch or public repository visibility change is part of this release preparation.
+Run `npm test`, `npm run build`, `npm run test:ui`, `npm run test:lean`, `npm run test:results`, and `npm run test:annotations`. `PERF_LABEL=current PERF_ASSERT=1 node scripts/interaction-perf-smoke.mjs` profiles isolated long mathematical chat/document fixtures; timings are machine-specific. Native Linux, Windows and Apple silicon acceptance remain separate from cross-build checks. Release builds and signing run locally.

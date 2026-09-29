@@ -48,7 +48,9 @@ Windows and Mac cross-builds still require target-OS acceptance:
 2. Verify native menus, clipboard, file dialogs, full-screen PDF zoom and annotation feedback. Exercise unsaved-edit and running-assistant close protection.
 3. Render a real LaTeX document with bundled Tectonic. Confirm independent Markdown/LaTeX drafts and source navigation.
 4. Connect a provider using an isolated test account. Check CLI lookup, API-key encryption with the OS credential store, simultaneous conversations and cancellation. No live accounts are used by automated fixtures.
-5. Install Elan manually using the [Lean installation guide](https://lean-lang.org/install/), preserve the project's pinned toolchain and dependencies, and run an actual Lean check. One-click setup remains Linux-only. Compiler success remains distinct from full mathematical certification.
+5. Install Elan manually using the [Lean installation guide](https://lean-lang.org/install/), preserve the project's pinned toolchain and dependencies, and run an actual Lean check. One-click setup is available on Linux and macOS. Compiler success remains distinct from full mathematical certification.
 6. Verify Windows publisher/signature handling or Mac signing, notarization and Gatekeeper handling before distribution beyond approved testers.
 
 Help → Check for updates uses signed public release metadata and guides manual installation. The app never contains a GitHub token.
+
+Earlier releases had native Windows x64 and Apple silicon acceptance, preserved in Git history. This release retains those platform fixes; its rebuilt Windows and Mac artifacts still require fresh native acceptance.

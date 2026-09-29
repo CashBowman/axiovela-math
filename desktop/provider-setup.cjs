@@ -6,7 +6,7 @@ const {spawn} = require('node:child_process');
 const packages = {codex: '@openai/codex', claude: '@anthropic-ai/claude-code', gemini: '@google/gemini-cli', opencode: 'opencode-ai', pi: '--ignore-scripts @earendil-works/pi-coding-agent@0.85.1'};
 function setupCommand(id, action, platform = process.platform) {
   if(id==='lean'){
-    if(action!=='install'||platform!=='linux')throw new Error('Lean setup currently supports Linux installation.');
+    if(action!=='install'||!['linux','darwin'].includes(platform))throw new Error('Lean setup currently supports Linux and macOS installation.');
     return leanSetupCommand();
   }
   if (!Object.hasOwn(packages, id) && id !== 'herdr') throw new Error('Unknown setup tool.');

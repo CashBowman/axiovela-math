@@ -18,6 +18,6 @@ test('fixed platform-specific setup and login commands', () => {
 });
 
 test('Lean setup uses only the fixed version-manager installation action',()=>{
- assert.match(setupCommand('lean','install','linux'), /^bash '.+\/desktop\/lean-setup\.sh'$/);
+ for(const platform of ['linux','darwin'])assert.match(setupCommand('lean','install',platform), /^bash '.+\/desktop\/lean-setup\.sh'$/);
  assert.throws(()=>setupCommand('lean','login','linux'));assert.throws(()=>setupCommand('lean','install','win32'));
 });

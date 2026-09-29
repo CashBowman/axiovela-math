@@ -20,12 +20,12 @@ test('setup receipt requires real files and matching environment, and interrupte
  await fs.writeFile(path.join(root,'certificates/lean-toolchain'),'changed');assert.equal((await setup.status('p')).state,'needs-setup');
  await fs.writeFile(path.join(status,'state'),'installing');await fs.utimes(path.join(status,'state'),new Date(0),new Date(0));assert.equal((await setup.status('p')).state,'interrupted');
 }));
-test('failed installer is never ready and preserves existing proof and pins',()=>fixture(async({dir,root,status})=>{
+test('failed installer is never ready and preserves existing proof and pins',{skip:process.platform==='win32'?'Automatic Lean setup is not offered on Windows.':false},()=>fixture(async({dir,root,status})=>{
  const elan=path.join(dir,'elan');await fs.mkdir(path.join(elan,'bin'),{recursive:true});await fs.writeFile(path.join(elan,'bin/elan'),'#!/bin/sh\necho "download failed" >&2\nexit 42\n',{mode:0o755});
  await fs.writeFile(path.join(root,'certificates/Main.lean'),'theorem retained : True := by trivial');await fs.writeFile(path.join(root,'certificates/lean-toolchain'),'leanprover/lean4:v4.19.0\n');
  const r=await run([path.join(root,'certificates'),status],{...process.env,ELAN_HOME:elan});assert.equal(r.code,42);assert.match(r.output,/download failed/);assert.equal((await fs.readFile(path.join(status,'state'),'utf8')).trim(),'failed');assert.equal(await fs.readFile(path.join(root,'certificates/Main.lean'),'utf8'),'theorem retained : True := by trivial');await assert.rejects(fs.access(path.join(status,'lock')));
 }));
-test('existing partial environment is not silently repinned, and setup paths remain shell literals',()=>fixture(async({dir,root,status,setup})=>{
+test('existing partial environment is not silently repinned, and setup paths remain shell literals',{skip:process.platform==='win32'?'Automatic Lean setup is not offered on Windows.':false},()=>fixture(async({dir,root,status,setup})=>{
  const elan=path.join(dir,'elan');await fs.mkdir(path.join(elan,'bin'),{recursive:true});await fs.writeFile(path.join(elan,'bin/elan'),'#!/bin/sh\nexit 99\n',{mode:0o755});await fs.writeFile(path.join(root,'certificates/lakefile.toml'),'retained');
  const r=await run([path.join(root,'certificates'),status],{...process.env,ELAN_HOME:elan});assert.equal(r.code,1);assert.match(r.output,/no pinned Lean version/);await assert.rejects(fs.access(path.join(root,'certificates/lean-toolchain')));
  const {command}=await setup.info('p');const parsed=await new Promise((resolve,reject)=>{const child=spawn('bash',['-c',command.replace(/^bash /,'printf "%s\\n" ')],{stdio:'pipe'});let out='';child.stdout.on('data',x=>out+=x);child.once('error',reject);child.once('exit',code=>code?reject(Error(String(code))):resolve(out.trim().split('\n')));});assert.equal(parsed[1],path.join(root,'certificates'));assert.equal(parsed[2],status);
