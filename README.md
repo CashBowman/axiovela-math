@@ -40,13 +40,13 @@ Use **Projects** beside the tabs to reopen saved work, pin folders, or inspect e
 
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Connect Codex, Claude Code, Gemini CLI, OpenCode, Pi, or a supported API connection. [Connections and first session →](docs/getting-started.md)
 
-Version **0.1.21** restores saved connections automatically, keeps measured context visible while a follow-up starts, and places the compact usage meter beside Access. New chats reuse the last saved connection and model for their role; access starts at Project editing.
+Version **0.1.21** fixes disappearing PDF passage highlights when clicking or typing in the **Leave feedback** popup, including LaTeX document previews. Saved connections and compact usage improvements from 0.1.20 are included.
 
 ## Start with the desktop app
 
-**Download 0.1.21 · Connection and usage fixes**
+**Download 0.1.21 · PDF annotation fix**
 
-This release is recommended for all users, especially users of non-Codex providers.
+This release is recommended for users annotating PDFs and LaTeX previews.
 
 The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node.js and npm are not required. All builds were produced locally; no GitHub build jobs were used.
 

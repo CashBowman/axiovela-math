@@ -1,6 +1,6 @@
 # Updates and releases
 
-Download **0.1.18** from the [release page](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.18). README buttons link to the current assets. Builds run locally with GitHub Actions disabled. Linux x64 is tested locally; Windows x64 and Mac arm64/x64 are cross-built with native acceptance pending. Windows is unsigned. Mac DMGs and ZIPs are freshly ad-hoc signed, without Developer ID signing or Apple notarization.
+Download **0.1.21** from the [release page](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.21). README buttons link to the current assets. Builds run locally with GitHub Actions disabled. Linux x64 is tested locally; Windows x64 and Mac arm64/x64 are cross-built with native acceptance pending. Windows is unsigned. Mac DMGs and ZIPs are freshly ad-hoc signed, without Developer ID signing or Apple notarization.
 
 Save work, finish active assistants and exports, and close the app before upgrading. Run the Windows installer, replace the Mac application from the DMG, or open the new Linux AppImage. Keep the previous copy until the new one works. Preserve application data and separately stored project folders.
 
