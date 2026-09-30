@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   feedbackExcluded,
   capturePassage,
@@ -30,7 +30,7 @@ export default function AnnotationSurface({
     callbacks = useRef();
   callbacks.current = { onCapture, onSelect, onDraftRect };
   const [marks, setMarks] = useState([]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const element = root.current,
       target = textRef?.current || element;
     if (!element || !target) return;
@@ -42,47 +42,48 @@ export default function AnnotationSurface({
       return;
     }
     let frame;
+    const measure = () => {
+      const projection = textProjection(target),
+        base = element.getBoundingClientRect();
+      const next = [
+        ...annotations,
+        ...(draft ? [{ id: "draft", anchor: draft }] : []),
+      ].flatMap((item) => {
+        if (page && item.anchor.page !== page) return [];
+        const figure =
+          item.anchor.kind === "figure"
+            ? [...target.querySelectorAll("img")][item.anchor.figureIndex]
+            : null;
+        const box = figure?.getBoundingClientRect();
+        const rects =
+          box && figure.getAttribute("src") === item.anchor.asset
+            ? [
+                {
+                  left: box.left - base.left,
+                  top: box.top - base.top,
+                  width: box.width,
+                  height: box.height,
+                },
+              ]
+            : rangeRects(rangeFromAnchor(projection, item.anchor), element);
+        if (item.id === "draft" && rects.length) {
+          const r = rects.at(-1);
+          callbacks.current.onDraftRect?.({
+            left: base.left + r.left,
+            top: base.top + r.top,
+            width: r.width,
+            height: r.height,
+          });
+        }
+        return rects.length ? [{ ...item, rects }] : [];
+      });
+      setMarks((old) =>
+        JSON.stringify(old) === JSON.stringify(next) ? old : next,
+      );
+    };
     const update = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const projection = textProjection(target),
-          base = element.getBoundingClientRect();
-        const next = [
-          ...annotations,
-          ...(draft ? [{ id: "draft", anchor: draft }] : []),
-        ].flatMap((item) => {
-          if (page && item.anchor.page !== page) return [];
-          const figure =
-            item.anchor.kind === "figure"
-              ? [...target.querySelectorAll("img")][item.anchor.figureIndex]
-              : null;
-          const box = figure?.getBoundingClientRect();
-          const rects =
-            box && figure.getAttribute("src") === item.anchor.asset
-              ? [
-                  {
-                    left: box.left - base.left,
-                    top: box.top - base.top,
-                    width: box.width,
-                    height: box.height,
-                  },
-                ]
-              : rangeRects(rangeFromAnchor(projection, item.anchor), element);
-          if (item.id === "draft" && rects.length) {
-            const r = rects.at(-1);
-            callbacks.current.onDraftRect?.({
-              left: base.left + r.left,
-              top: base.top + r.top,
-              width: r.width,
-              height: r.height,
-            });
-          }
-          return rects.length ? [{ ...item, rects }] : [];
-        });
-        setMarks((old) =>
-          JSON.stringify(old) === JSON.stringify(next) ? old : next,
-        );
-      });
+      frame = requestAnimationFrame(measure);
     };
     const resize = new ResizeObserver(update);
     resize.observe(element);
@@ -97,7 +98,9 @@ export default function AnnotationSurface({
     });
     document.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
-    update();
+    // Focus in the popup clears native selection. Paint the anchored highlight
+    // in this commit, before the popup can appear; only later reflows are deferred.
+    measure();
     return () => {
       cancelAnimationFrame(frame);
       resize.disconnect();

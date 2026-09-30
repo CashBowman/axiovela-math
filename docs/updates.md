@@ -32,3 +32,7 @@ The compact Usage button next to Access shows provider-reported context and acco
 ## 0.1.20: saved connections and compact usage
 
 Connections are discovered automatically on opening chats; model and reasoning choices persist. New chats reuse their role’s last saved connection without inheriting Full access or a native session. The usage meter stays beside Access and retains the last same-session measurement during a pending follow-up.
+
+## 0.1.21: PDF annotation focus
+
+Persistent passage highlights draw before the Leave feedback popup can receive focus. Regression checks cover immediate focus and visible highlighting while typing. Built locally; Windows is unsigned and Mac packages are ad-hoc signed without notarization.

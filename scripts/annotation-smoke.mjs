@@ -40,9 +40,9 @@ async function until(fn) {
   }
   throw Error("Condition did not settle");
 }
-async function selectText(locator, startText, endText = startText) {
-  await locator.evaluate(
-    (root, { startText, endText }) => {
+async function selectText(locator, startText, endText = startText, focusImmediately = false) {
+  return locator.evaluate(
+    (root, { startText, endText, focusImmediately }) => {
       const nodes = [];
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
       let n,
@@ -70,8 +70,21 @@ async function selectText(locator, startText, endText = startText) {
           clientY: rect.top + 3,
         }),
       );
+      if (focusImmediately) return new Promise(resolve => {
+        let frames = 0;
+        const focusFirstFrame = () => {
+          const input = document.querySelector('[aria-label="Annotation feedback"]');
+          if (!input && ++frames < 120) return requestAnimationFrame(focusFirstFrame);
+          input?.focus();
+          resolve({
+            popup: !!input,
+            marks: root.closest('.pdfPage').querySelectorAll('.draftHighlight').length,
+          });
+        };
+        requestAnimationFrame(focusFirstFrame);
+      });
     },
-    { startText, endText },
+    { startText, endText, focusImmediately },
   );
 }
 async function note(text) {
@@ -400,14 +413,27 @@ try {
   await page.getByLabel("PDF page number").fill("1");
   await page.locator('[data-page="1"] .textLayer span').first().waitFor();
 
-  await selectText(
+  const firstFocusFrame = await selectText(
     page.locator('[data-page="1"] .textLayer'),
     "longer passage",
     "their consequences.",
+    true,
   );
+  assert.ok(firstFocusFrame.popup && firstFocusFrame.marks > 1, "PDF highlight must exist when the feedback field first receives focus");
   await page.waitForFunction(
     () => document.querySelectorAll(".draftHighlight").length > 1,
   );
+  const pdfFeedback = page.getByLabel("Annotation feedback");
+  await pdfFeedback.click();
+  await pdfFeedback.pressSequentially("Clarify this longer PDF passage.");
+  const highlight = page.locator('[data-page="1"] .draftHighlight').first();
+  const clip = await highlight.boundingBox();
+  const paintedHighlight = await page.screenshot({clip});
+  await highlight.evaluate(el => { el.style.visibility = "hidden"; });
+  const withoutHighlight = await page.screenshot({clip});
+  await highlight.evaluate(el => { el.style.visibility = ""; });
+  assert.notDeepEqual(paintedHighlight, withoutHighlight, "PDF highlight must remain visibly painted while typing");
+  await page.screenshot({path: ".local/qa/pdf-feedback-focus.png"});
   await note("Clarify this longer PDF passage.");
   await page.getByRole("button", { name: "Comment 1", exact: true }).waitFor();
   await page.keyboard.press("Escape");
@@ -419,7 +445,7 @@ try {
     1,
   );
   checks.push(
-    "continuous four-page PDF, page arrows, Axiovela preview header, Ctrl +/- and pinch events, stable fit width, visible canvas before click, multiline annotation",
+    "immediate popup focus and mouse click/typing retain visible PDF highlight; continuous four-page PDF, page arrows, Axiovela preview header, Ctrl +/- and pinch events, stable fit width, visible canvas before click, multiline annotation",
   );
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(
