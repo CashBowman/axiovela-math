@@ -1,6 +1,6 @@
 # Updates and releases
 
-Download **0.1.21** from the [release page](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.21). README buttons link to the current assets. Builds run locally with GitHub Actions disabled. Linux x64 is tested locally; Windows x64 and Mac arm64/x64 are cross-built with native acceptance pending. Windows is unsigned. Mac DMGs and ZIPs are freshly ad-hoc signed, without Developer ID signing or Apple notarization.
+Download **0.1.22** from the [release page](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.22). README buttons link to the current assets. Builds run locally with GitHub Actions disabled. Linux x64 is tested locally; Windows x64 and Mac arm64/x64 are cross-built with native acceptance pending. Windows is unsigned. Mac DMGs and ZIPs are freshly ad-hoc signed, without Developer ID signing or Apple notarization.
 
 Save work, finish active assistants and exports, and close the app before upgrading. Run the Windows installer, replace the Mac application from the DMG, or open the new Linux AppImage. Keep the previous copy until the new one works. Preserve application data and separately stored project folders.
 
@@ -36,3 +36,7 @@ Connections are discovered automatically on opening chats; model and reasoning c
 ## 0.1.21: PDF annotation focus
 
 Persistent passage highlights draw before the Leave feedback popup can receive focus. Regression checks cover immediate focus and visible highlighting while typing. Built locally; Windows is unsigned and Mac packages are ad-hoc signed without notarization.
+
+## 0.1.22: PDF math annotations
+
+Exact drag selection, persistent page-relative highlights, and equation/figure area feedback. Existing annotations remain compatible. The PDF renderer and LaTeX compiler are unchanged. See [release notes](releases/0.1.22.md).

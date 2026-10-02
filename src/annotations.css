@@ -333,3 +333,8 @@
 .compactPreview>.panelHead{min-height:48px;padding:8px 12px;gap:8px;flex-wrap:wrap}.compactPreview>.panelHead h2{font-size:13px;margin:0;white-space:nowrap}.compactPreview .panelActions{gap:6px;margin-left:auto}.compactPreview .panelActions>button{padding:5px 8px;font-size:11px}.compactPreview .panelActions>.icon{padding:5px}.compactPreview .pdfToolbar{padding:5px 10px;gap:5px;font-size:10px;min-height:38px}.compactPreview .sourceMenu summary{padding:3px 7px}.compactPreview .manuscriptReview{border-top:0}.compactPreview .pdfToolbar a{font-size:10px}
 
 .annotationPopoverFoot { justify-content: flex-end; }
+
+.pdfAreaSelection { position: absolute; inset: 0; z-index: 5; cursor: crosshair; touch-action: none; user-select: none; }
+.pdfAreaSelection:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.pdfAreaBox { position: absolute; border: 1px solid #39698e; background: #4d78983d; pointer-events: none; }
+.pdfToolbar button[aria-pressed="true"] { background: #dce8f2; color: #183f61; }

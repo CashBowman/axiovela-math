@@ -40,11 +40,11 @@ Use **Projects** beside the tabs to reopen saved work, pin folders, or inspect e
 
 Work saves automatically. Panels resize and retain their layout; **Reset layout** restores the current view. Connect Codex, Claude Code, Gemini CLI, OpenCode, Pi, or a supported API connection. [Connections and first session →](docs/getting-started.md)
 
-Version **0.1.21** fixes disappearing PDF passage highlights when clicking or typing in the **Leave feedback** popup, including LaTeX document previews. Saved connections and compact usage improvements from 0.1.20 are included.
+Version **0.1.22** adds exact PDF text selection, highlights that survive focus and zoom, and **Select area** for equations and figures in LaTeX previews. The existing feedback-to-chat workflow and prior typing fixes are preserved.
 
 ## Start with the desktop app
 
-**Download 0.1.21 · PDF annotation fix**
+**Download 0.1.22 · PDF math annotations**
 
 This release is recommended for users annotating PDFs and LaTeX previews.
 
@@ -52,22 +52,22 @@ The desktop downloads include the runtime and Tectonic for LaTeX rendering. Node
 
 **Windows · x64 installer**
 
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.21/Axiovela-Math-0.1.21-win32-x64-unsigned.exe"><img src="docs/assets/downloads/windows.svg" alt="Download Windows x64 unsigned preview installer" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.22/Axiovela-Math-0.1.22-win32-x64-unsigned.exe"><img src="docs/assets/downloads/windows.svg" alt="Download Windows x64 unsigned preview installer" width="320" height="88" /></a>
 
-[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.21/Axiovela-Math-0.1.21-win32-x64-unsigned.zip). Cross-built on Linux; unsigned and not yet launch-tested on Windows.
+[Windows x64 · portable ZIP](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.22/Axiovela-Math-0.1.22-win32-x64-unsigned.zip). Cross-built on Linux; unsigned and not yet launch-tested on Windows.
 
 **macOS · Unnotarized app bundles**
 
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.21/Axiovela-Math-0.1.21-darwin-arm64-adhoc.dmg"><img src="docs/assets/downloads/mac-arm.svg" alt="Download Mac Apple silicon unnotarized DMG" width="320" height="88" /></a>
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.21/Axiovela-Math-0.1.21-darwin-x64-adhoc.dmg"><img src="docs/assets/downloads/mac-intel.svg" alt="Download Mac Intel unnotarized DMG" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.22/Axiovela-Math-0.1.22-darwin-arm64-adhoc.dmg"><img src="docs/assets/downloads/mac-arm.svg" alt="Download Mac Apple silicon unnotarized DMG" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.22/Axiovela-Math-0.1.22-darwin-x64-adhoc.dmg"><img src="docs/assets/downloads/mac-intel.svg" alt="Download Mac Intel unnotarized DMG" width="320" height="88" /></a>
 
 These locally cross-built DMGs are freshly ad-hoc signed for bundle integrity, without Developer ID signing or Apple notarization. Native Mac launch and installation checks remain pending. Portable ZIPs are also available on the release page. [Mac build instructions →](docs/desktop-platforms.md#build-commands)
 
 **Linux · Validated x64 packages**
 
-<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.21/Axiovela-Math-0.1.21-linux-x64.AppImage"><img src="docs/assets/downloads/linux.svg" alt="Download Linux x64 AppImage" width="320" height="88" /></a>
+<a href="https://github.com/CashBowman/axiovela-math/releases/download/v0.1.22/Axiovela-Math-0.1.22-linux-x64.AppImage"><img src="docs/assets/downloads/linux.svg" alt="Download Linux x64 AppImage" width="320" height="88" /></a>
 
-[Linux x64 · portable archive](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.21/Axiovela-Math-0.1.21-linux-x64.tar.gz) · [Release notes and SHA-256 checksums](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.21)
+[Linux x64 · portable archive](https://github.com/CashBowman/axiovela-math/releases/download/v0.1.22/Axiovela-Math-0.1.22-linux-x64.tar.gz) · [Release notes and SHA-256 checksums](https://github.com/CashBowman/axiovela-math/releases/tag/v0.1.22)
 
 [Installation and first session](docs/getting-started.md) · [Platform status and local packaging](docs/desktop-platforms.md) · [Update details](docs/updates.md)
 
@@ -103,3 +103,7 @@ Repository source and installer packages exclude development workspaces, convers
 [Prompt playbook](prompts/README.md) · [Third-party notices](docs/third-party.md) · [Report an issue](https://github.com/CashBowman/axiovela-math/issues)
 
 MIT licensed; see [LICENSE](LICENSE).
+
+### PDF annotation update
+
+Drag to highlight an exact PDF passage, or use **Select area** for an equation or figure. Highlights remain visible while typing feedback, zooming and scrolling. Area notes preserve the selected region and available extracted text; they do not perform OCR or embed annotations in the original PDF. The existing feedback-to-chat workflow is unchanged.

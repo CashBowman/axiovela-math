@@ -1,6 +1,6 @@
 {
   "name": "axiovela-math",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -39,7 +39,8 @@
     "desktop:package:mac:intel": "npm run build && node scripts/package-desktop.mjs darwin-x64",
     "desktop:package:windows:container": "bash scripts/package-windows-container.sh",
     "test:projects": "node scripts/project-navigator-smoke.mjs",
-    "test:history": "node scripts/conversation-history-smoke.mjs"
+    "test:history": "node scripts/conversation-history-smoke.mjs",
+    "test:pdf-annotations": "node scripts/pdf-annotations-smoke.mjs"
   },
   "dependencies": {
     "@citation-js/core": "0.7.21",
